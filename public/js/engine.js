@@ -4,17 +4,24 @@ class PictoEngine {
     this.ctx = canvas.getContext("2d");
     this.animationMs = 900;
     this.partAnimationMs = 650;
+    this.partLabels = {
+      head: { ja: "頭", code: "head" },
+      body: { ja: "胴体", code: "body" },
+      leftArm: { ja: "左腕", code: "leftArm" },
+      rightArm: { ja: "右腕", code: "rightArm" },
+      leftLeg: { ja: "左脚", code: "leftLeg" },
+      rightLeg: { ja: "右脚", code: "rightLeg" },
+    };
     this.reset();
   }
 
   reset() {
     this.state = {
       x: this.canvas.width / 2,
-      y: this.canvas.height / 2 + 30,
+      y: this.canvas.height / 2 + 40,
       direction: 0,
       color: "#2563eb",
       trail: [],
-      stamps: [],
       parts: this.createParts(),
     };
     this.draw();
@@ -22,12 +29,12 @@ class PictoEngine {
 
   createParts() {
     return {
-      head: { dx: 0, dy: 0, rotation: 0 },
-      body: { dx: 0, dy: 0, rotation: 0 },
-      leftArm: { dx: 0, dy: 0, rotation: 0 },
-      rightArm: { dx: 0, dy: 0, rotation: 0 },
-      leftLeg: { dx: 0, dy: 0, rotation: 0 },
-      rightLeg: { dx: 0, dy: 0, rotation: 0 },
+      head: { rotation: 0 },
+      body: { rotation: 0 },
+      leftArm: { rotation: 0 },
+      rightArm: { rotation: 0 },
+      leftLeg: { rotation: 0 },
+      rightLeg: { rotation: 0 },
     };
   }
 
@@ -43,76 +50,39 @@ class PictoEngine {
     const value = command.value;
 
     if (command.name === "moveForward") {
-      onLog(`moveForward(${value ?? 60});`);
-      await this.animateMove(value ?? 60);
+      onLog(`moveForward(${value});`);
+      await this.animateMove(value);
       return;
     }
 
     if (command.name === "moveBack") {
-      onLog(`moveBack(${value ?? 60});`);
-      await this.animateMove(-(value ?? 60));
+      onLog(`moveBack(${value});`);
+      await this.animateMove(-value);
       return;
     }
 
-    if (command.name === "turnLeft") {
-      onLog(`turnLeft(${value ?? 90});`);
-      await this.animateTurn(-(value ?? 90));
+    if (command.name === "rotateLeft") {
+      onLog(`rotateLeft(${value});`);
+      await this.animateTurn(-value);
       return;
     }
 
-    if (command.name === "turnRight") {
-      onLog(`turnRight(${value ?? 90});`);
-      await this.animateTurn(value ?? 90);
+    if (command.name === "rotateRight") {
+      onLog(`rotateRight(${value});`);
+      await this.animateTurn(value);
       return;
     }
 
-    if (command.name === "setColor") {
-      this.state.color = command.color;
-      this.draw();
-      onLog(`setColor("${command.label}");`);
+    if (command.name === "rotatePartLeft") {
+      onLog(`rotatePartLeft("${command.part}", ${value});`);
+      await this.animatePartRotate(command.part, -value);
       return;
     }
 
-    if (command.name === "movePart") {
-      onLog(`movePart("${command.part}", ${command.dx}, ${command.dy});`);
-      await this.animatePartMove(command.part, command.dx, command.dy);
-      return;
+    if (command.name === "rotatePartRight") {
+      onLog(`rotatePartRight("${command.part}", ${value});`);
+      await this.animatePartRotate(command.part, value);
     }
-
-    if (command.name === "rotatePart") {
-      onLog(`rotatePart("${command.part}", ${command.angle});`);
-      await this.animatePartRotate(command.part, command.angle);
-      return;
-    }
-
-    if (command.name === "resetParts") {
-      this.state.parts = this.createParts();
-      this.draw();
-      onLog("resetParts();");
-      return;
-    }
-
-    if (command.name === "stamp") {
-      this.state.stamps.push(this.snapshot());
-      this.draw();
-      onLog("stamp();");
-      return;
-    }
-
-    if (command.name === "wait") {
-      onLog(`wait(${value ?? 1});`);
-      await this.wait((value ?? 1) * 600);
-    }
-  }
-
-  snapshot() {
-    return {
-      x: this.state.x,
-      y: this.state.y,
-      direction: this.state.direction,
-      color: this.state.color,
-      parts: JSON.parse(JSON.stringify(this.state.parts)),
-    };
   }
 
   async animateMove(distance) {
@@ -121,8 +91,8 @@ class PictoEngine {
     const startY = this.state.y;
     const rawX = startX + Math.cos(radians) * distance;
     const rawY = startY + Math.sin(radians) * distance;
-    const endX = Math.max(90, Math.min(this.canvas.width - 90, rawX));
-    const endY = Math.max(130, Math.min(this.canvas.height - 90, rawY));
+    const endX = Math.max(105, Math.min(this.canvas.width - 105, rawX));
+    const endY = Math.max(165, Math.min(this.canvas.height - 130, rawY));
 
     await this.animate(this.animationMs, (progress) => {
       this.state.x = this.lerp(startX, endX, progress);
@@ -143,24 +113,10 @@ class PictoEngine {
     this.draw();
   }
 
-  async animatePartMove(partName, dx, dy) {
-    const part = this.state.parts[partName];
-    const startX = part.dx;
-    const startY = part.dy;
-    const endX = Math.max(-70, Math.min(70, startX + dx));
-    const endY = Math.max(-70, Math.min(70, startY + dy));
-
-    await this.animate(this.partAnimationMs, (progress) => {
-      part.dx = this.lerp(startX, endX, progress);
-      part.dy = this.lerp(startY, endY, progress);
-      this.draw();
-    });
-  }
-
   async animatePartRotate(partName, angle) {
     const part = this.state.parts[partName];
     const start = part.rotation;
-    const end = Math.max(-120, Math.min(120, start + angle));
+    const end = Math.max(-140, Math.min(140, start + angle));
 
     await this.animate(this.partAnimationMs, (progress) => {
       part.rotation = this.lerp(start, end, progress);
@@ -173,8 +129,7 @@ class PictoEngine {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.drawGrid();
     this.drawTrail();
-    this.state.stamps.forEach((stamp) => this.drawPicto(stamp, 0.35));
-    this.drawPicto(this.state, 1);
+    this.drawPicto(this.state);
   }
 
   drawGrid() {
@@ -217,90 +172,118 @@ class PictoEngine {
     ctx.restore();
   }
 
-  drawPicto(state, alpha) {
+  drawPicto(state) {
     const ctx = this.ctx;
-    const color = state.color;
     const parts = state.parts;
 
     ctx.save();
-    ctx.globalAlpha = alpha;
     ctx.translate(state.x, state.y);
     ctx.rotate(state.direction * Math.PI / 180);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = color;
-    ctx.fillStyle = color;
+    ctx.strokeStyle = state.color;
+    ctx.fillStyle = state.color;
 
-    this.drawBodyPart(parts.body, () => {
-      ctx.lineWidth = 16;
-      ctx.beginPath();
-      ctx.moveTo(0, -45);
-      ctx.lineTo(0, 55);
-      ctx.stroke();
-    });
-
-    this.drawBodyPart(parts.leftArm, () => {
-      ctx.lineWidth = 13;
-      ctx.beginPath();
-      ctx.moveTo(-12, -22);
-      ctx.lineTo(-62, 24);
-      ctx.stroke();
-    });
-
-    this.drawBodyPart(parts.rightArm, () => {
-      ctx.lineWidth = 13;
-      ctx.beginPath();
-      ctx.moveTo(12, -22);
-      ctx.lineTo(62, 24);
-      ctx.stroke();
-    });
-
-    this.drawBodyPart(parts.leftLeg, () => {
-      ctx.lineWidth = 14;
-      ctx.beginPath();
-      ctx.moveTo(-6, 48);
-      ctx.lineTo(-42, 118);
-      ctx.stroke();
-    });
-
-    this.drawBodyPart(parts.rightLeg, () => {
-      ctx.lineWidth = 14;
-      ctx.beginPath();
-      ctx.moveTo(6, 48);
-      ctx.lineTo(42, 118);
-      ctx.stroke();
-    });
-
-    this.drawBodyPart(parts.head, () => {
-      ctx.beginPath();
-      ctx.arc(0, -86, 28, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.arc(-9, -90, 4, 0, Math.PI * 2);
-      ctx.arc(9, -90, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = color;
-    });
+    this.drawTorso(parts.body.rotation);
+    this.drawConnectedPart(-18, -42, parts.leftArm.rotation, () => this.drawArm(-70, 58));
+    this.drawConnectedPart(18, -42, parts.rightArm.rotation, () => this.drawArm(70, 58));
+    this.drawConnectedPart(-10, 64, parts.leftLeg.rotation, () => this.drawLeg(-44, 88));
+    this.drawConnectedPart(10, 64, parts.rightLeg.rotation, () => this.drawLeg(44, 88));
+    this.drawConnectedPart(0, -82, parts.head.rotation, () => this.drawHead());
 
     ctx.fillStyle = "#ffffff";
     ctx.beginPath();
-    ctx.moveTo(0, -150);
-    ctx.lineTo(-13, -118);
-    ctx.lineTo(13, -118);
+    ctx.moveTo(0, -174);
+    ctx.lineTo(-13, -142);
+    ctx.lineTo(13, -142);
     ctx.closePath();
     ctx.fill();
 
     ctx.restore();
   }
 
-  drawBodyPart(part, drawFn) {
+  drawTorso(rotation) {
     const ctx = this.ctx;
     ctx.save();
-    ctx.translate(part.dx, part.dy);
-    ctx.rotate(part.rotation * Math.PI / 180);
-    drawFn();
+    ctx.rotate(rotation * Math.PI / 180);
+    ctx.lineWidth = 22;
+    ctx.beginPath();
+    ctx.moveTo(0, -74);
+    ctx.lineTo(0, 70);
+    ctx.stroke();
     ctx.restore();
+  }
+
+  drawConnectedPart(anchorX, anchorY, rotation, drawPart) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(anchorX, anchorY);
+    ctx.rotate(rotation * Math.PI / 180);
+    drawPart();
+    ctx.restore();
+  }
+
+  drawArm(endX, endY) {
+    const ctx = this.ctx;
+    ctx.lineWidth = 15;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+  }
+
+  drawLeg(endX, endY) {
+    const ctx = this.ctx;
+    ctx.lineWidth = 16;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+  }
+
+  drawHead() {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    ctx.arc(0, -36, 31, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(-10, -40, 4.5, 0, Math.PI * 2);
+    ctx.arc(10, -40, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = this.state.color;
+  }
+
+  getPartAt(canvasX, canvasY) {
+    const point = this.toLocalPoint(canvasX, canvasY);
+    if (!point) return null;
+
+    const hitAreas = [
+      { part: "head", x: 0, y: -118, radius: 36 },
+      { part: "body", x: 0, y: 0, radius: 42 },
+      { part: "leftArm", x: -54, y: 0, radius: 42 },
+      { part: "rightArm", x: 54, y: 0, radius: 42 },
+      { part: "leftLeg", x: -32, y: 116, radius: 42 },
+      { part: "rightLeg", x: 32, y: 116, radius: 42 },
+    ];
+
+    const hit = hitAreas.find((area) => this.distance(point.x, point.y, area.x, area.y) <= area.radius);
+    return hit ? this.partLabels[hit.part] : null;
+  }
+
+  toLocalPoint(canvasX, canvasY) {
+    const dx = canvasX - this.state.x;
+    const dy = canvasY - this.state.y;
+    const radians = -this.state.direction * Math.PI / 180;
+    return {
+      x: dx * Math.cos(radians) - dy * Math.sin(radians),
+      y: dx * Math.sin(radians) + dy * Math.cos(radians),
+    };
+  }
+
+  distance(x1, y1, x2, y2) {
+    return Math.hypot(x1 - x2, y1 - y2);
   }
 
   animate(duration, update) {

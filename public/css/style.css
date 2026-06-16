@@ -171,6 +171,7 @@ textarea {
   min-height: 260px;
   padding: 16px;
   background: #f4f7fb;
+  position: relative;
 }
 
 #stage-canvas {
@@ -180,6 +181,20 @@ textarea {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
+}
+
+.part-tooltip {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  padding: 6px 9px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
 }
 
 .log-panel {
@@ -244,15 +259,26 @@ textarea {
 }
 
 .command-help {
+  flex: 0 0 230px;
+  min-height: 0;
   padding: 14px 16px 16px;
   background: var(--surface);
+  display: flex;
+  flex-direction: column;
 }
 
 .help-title {
+  flex-shrink: 0;
   margin-bottom: 8px;
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
+}
+
+.help-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .command-help ul {
@@ -262,6 +288,23 @@ textarea {
   gap: 5px;
   color: #344054;
   font-size: 0.86rem;
+}
+
+.part-name-list {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.part-name-list div {
+  width: 100%;
+  font-weight: 800;
 }
 
 code {

@@ -12,7 +12,7 @@
       <span class="logo-mark" aria-hidden="true">P</span>
       <div>
         <h1>ピクトグラミング</h1>
-        <p>Java の文でピクトグラムの全体や体のパーツを動かす練習画面</p>
+        <p>Java の文でピクトグラムの全体や体の部位を回して動かす練習画面</p>
       </div>
     </div>
     <div class="header-actions">
@@ -26,13 +26,14 @@
       <div class="pane-header">
         <div>
           <h2 id="stage-title">表示エリア</h2>
-          <p>右側に書いた Java 文の結果が、ゆっくりした動きで表示されます。</p>
+          <p>体の部位にカーソルを合わせると、Java で使う名前が表示されます。</p>
         </div>
         <button class="icon-btn" id="btn-clear-stage" type="button" title="表示だけを初期化">↺</button>
       </div>
 
       <div class="stage-frame">
         <canvas id="stage-canvas" width="720" height="560" aria-label="ピクトグラムの表示場所"></canvas>
+        <div class="part-tooltip" id="part-tooltip" hidden></div>
       </div>
 
       <div class="log-panel" aria-live="polite">
@@ -50,30 +51,34 @@
       </div>
 
       <textarea id="java-editor" spellcheck="false" aria-label="Java 文の入力欄">moveForward(80);
-turnRight(45);
-moveForward(60);
-rotateLeftArm(-45);
-rotateRightArm(45);
-moveHead(0, -18);
-setColor("red");
-stamp();
-resetParts();</textarea>
+rotateRight(45);
+moveBack(40);
+rotateLeft(30);
+rotatePartLeft("leftArm", 45);
+rotatePartRight("rightArm", 45);
+rotatePartLeft("head", 20);</textarea>
 
       <div class="command-help">
         <div class="help-title">使える文</div>
-        <ul>
-          <li><code>moveForward(80);</code> 全体を前に進める</li>
-          <li><code>moveBack(40);</code> 全体を後ろに下げる</li>
-          <li><code>turnLeft(90);</code> 全体を左に回す</li>
-          <li><code>turnRight(90);</code> 全体を右に回す</li>
-          <li><code>movePart("head", 0, -20);</code> パーツを動かす</li>
-          <li><code>rotatePart("leftArm", -45);</code> パーツを回す</li>
-          <li><code>moveHead(0, -20);</code> 頭を動かす短い書き方</li>
-          <li><code>rotateLeftArm(-45);</code> 左腕を回す短い書き方</li>
-          <li><code>resetParts();</code> パーツの位置を戻す</li>
-          <li><code>setColor("blue");</code> 色を変える</li>
-          <li><code>stamp();</code> 今の姿を残す</li>
-        </ul>
+        <div class="help-scroll">
+          <ul>
+            <li><code>moveForward(数字);</code> 全体を前に進める</li>
+            <li><code>moveBack(数字);</code> 全体を後ろに下げる</li>
+            <li><code>rotateLeft(数字);</code> 全体を左に回す</li>
+            <li><code>rotateRight(数字);</code> 全体を右に回す</li>
+            <li><code>rotatePartLeft("体の部位", 数字);</code> 体の部位を左に回す</li>
+            <li><code>rotatePartRight("体の部位", 数字);</code> 体の部位を右に回す</li>
+          </ul>
+          <div class="part-name-list">
+            <div>体の部位名</div>
+            <code>head</code>
+            <code>body</code>
+            <code>leftArm</code>
+            <code>rightArm</code>
+            <code>leftLeg</code>
+            <code>rightLeg</code>
+          </div>
+        </div>
       </div>
     </section>
   </main>
