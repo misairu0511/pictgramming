@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ピクトグラミング</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="header-left">
+      <span class="logo">🎭</span>
+      <h1>ピクトグラミング</h1>
+      <span class="tagline">ピクトグラムでプログラミング</span>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-secondary" id="btn-clear">🗑 クリア</button>
+      <button class="btn btn-primary" id="btn-run">▶ 実行</button>
+    </div>
+  </header>
+
+  <main class="app-body">
+
+    <!-- パレット -->
+    <aside class="palette" id="palette">
+      <div class="palette-section">
+        <h3>🔄 制御</h3>
+        <div class="palette-grid">
+          <div class="block-item" draggable="true" data-type="repeat" data-label="くりかえす" title="くりかえす">
+            <div class="picto">🔁</div>
+            <span>くりかえす</span>
+          </div>
+          <div class="block-item" draggable="true" data-type="if" data-label="もしも" title="もしも">
+            <div class="picto">❓</div>
+            <span>もしも</span>
+          </div>
+          <div class="block-item" draggable="true" data-type="wait" data-label="まつ" title="まつ">
+            <div class="picto">⏳</div>
+            <span>まつ</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="palette-section">
+        <h3>🏃 うごき</h3>
+        <div class="palette-grid">
+          <div class="block-item" draggable="true" data-type="move-forward" data-label="まえにすすむ" title="まえにすすむ">
+            <div class="picto">⬆️</div>
+            <span>まえへ</span>
+          </div>
+          <div class="block-item" draggable="true" data-type="move-back" data-label="うしろにさがる" title="うしろにさがる">
+            <div class="picto">⬇️</div>
+            <span>うしろへ</span>
+          </div>
+          <div class="block-item" draggable="true" data-type="turn-left" data-label="ひだりをむく" title="ひだりをむく">
+            <div class="picto">↰</div>
+            <span>ひだり</span>
+          </div>
+          <div class="block-item" draggable="true" data-type="turn-right" data-label="みぎをむく" title="みぎをむく">
+            <div class="picto">↱</div>
+            <span>みぎ</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="palette-section">
+        <h3>🎨 みため</h3>
+        <div class="palette-grid">
+          <div class="block-item" draggable="true" data-type="color-red" data-label="あかにする" title="あかにする">
+            <div class="picto" style="background:#ff4d4d;border-radius:50%;width:36px;height:36px;margin:auto;"></div>
+            <span>あか</span>
+          </div>
+          <div class="block-item" draggable="true" data-type="color-blue" data-label="あおにする" title="あおにする">
+            <div class="picto" style="background:#4d9fff;border-radius:50%;width:36px;height:36px;margin:auto;"></div>
+            <span>あお</span>
+          </div>
+          <div class="block-item" draggable="true" data-type="color-green" data-label="みどりにする" title="みどりにする">
+            <div class="picto" style="background:#4dcc88;border-radius:50%;width:36px;height:36px;margin:auto;"></div>
+            <span>みどり</span>
+          </div>
+          <div class="block-item" draggable="true" data-type="stamp" data-label="スタンプ" title="スタンプ">
+            <div class="picto">🖊️</div>
+            <span>かく</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="palette-section">
+        <h3>🔊 おと</h3>
+        <div class="palette-grid">
+          <div class="block-item" draggable="true" data-type="sound-beep" data-label="ピッとなる" title="ピッとなる">
+            <div class="picto">🔔</div>
+            <span>ピッ</span>
+          </div>
+          <div class="block-item" draggable="true" data-type="sound-tada" data-label="かんせい" title="かんせい">
+            <div class="picto">🎉</div>
+            <span>かんせい</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- プログラムエリア -->
+    <section class="program-area" id="program-area">
+      <div class="program-start">
+        <div class="start-flag">🚩 スタート</div>
+      </div>
+      <div class="block-list" id="block-list">
+        <div class="drop-hint" id="drop-hint">
+          ← ブロックをここにドラッグしよう！
+        </div>
+      </div>
+    </section>
+
+    <!-- ステージ -->
+    <section class="stage-area">
+      <div class="stage-header">
+        <span>🖥 ステージ</span>
+        <div class="stage-controls">
+          <button class="btn-icon" id="btn-step" title="1ステップ実行">⏭</button>
+          <button class="btn-icon" id="btn-reset-stage" title="リセット">↺</button>
+        </div>
+      </div>
+      <canvas id="stage-canvas" width="360" height="300"></canvas>
+      <div class="stage-log" id="stage-log"></div>
+    </section>
+
+  </main>
+
+  <script src="js/engine.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
