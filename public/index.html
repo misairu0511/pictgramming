@@ -7,125 +7,69 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
   <header class="app-header">
-    <div class="header-left">
-      <span class="logo">🎭</span>
-      <h1>ピクトグラミング</h1>
-      <span class="tagline">ピクトグラムでプログラミング</span>
+    <div class="header-title">
+      <span class="logo-mark" aria-hidden="true">P</span>
+      <div>
+        <h1>ピクトグラミング</h1>
+        <p>Java の文でピクトグラムを動かす練習画面</p>
+      </div>
     </div>
-    <div class="header-right">
-      <button class="btn btn-secondary" id="btn-clear">🗑 クリア</button>
-      <button class="btn btn-primary" id="btn-run">▶ 実行</button>
+    <div class="header-actions">
+      <button class="btn btn-secondary" id="btn-reset" type="button">リセット</button>
+      <button class="btn btn-primary" id="btn-run" type="button">実行</button>
     </div>
   </header>
 
-  <main class="app-body">
-
-    <!-- パレット -->
-    <aside class="palette" id="palette">
-      <div class="palette-section">
-        <h3>🔄 制御</h3>
-        <div class="palette-grid">
-          <div class="block-item" draggable="true" data-type="repeat" data-label="くりかえす" title="くりかえす">
-            <div class="picto">🔁</div>
-            <span>くりかえす</span>
-          </div>
-          <div class="block-item" draggable="true" data-type="if" data-label="もしも" title="もしも">
-            <div class="picto">❓</div>
-            <span>もしも</span>
-          </div>
-          <div class="block-item" draggable="true" data-type="wait" data-label="まつ" title="まつ">
-            <div class="picto">⏳</div>
-            <span>まつ</span>
-          </div>
+  <main class="workspace">
+    <section class="stage-pane" aria-labelledby="stage-title">
+      <div class="pane-header">
+        <div>
+          <h2 id="stage-title">表示エリア</h2>
+          <p>右側に書いた Java 文の結果がここに出ます。</p>
         </div>
+        <button class="icon-btn" id="btn-clear-stage" type="button" title="表示だけを初期化">↺</button>
       </div>
 
-      <div class="palette-section">
-        <h3>🏃 うごき</h3>
-        <div class="palette-grid">
-          <div class="block-item" draggable="true" data-type="move-forward" data-label="まえにすすむ" title="まえにすすむ">
-            <div class="picto">⬆️</div>
-            <span>まえへ</span>
-          </div>
-          <div class="block-item" draggable="true" data-type="move-back" data-label="うしろにさがる" title="うしろにさがる">
-            <div class="picto">⬇️</div>
-            <span>うしろへ</span>
-          </div>
-          <div class="block-item" draggable="true" data-type="turn-left" data-label="ひだりをむく" title="ひだりをむく">
-            <div class="picto">↰</div>
-            <span>ひだり</span>
-          </div>
-          <div class="block-item" draggable="true" data-type="turn-right" data-label="みぎをむく" title="みぎをむく">
-            <div class="picto">↱</div>
-            <span>みぎ</span>
-          </div>
-        </div>
+      <div class="stage-frame">
+        <canvas id="stage-canvas" width="720" height="520" aria-label="ピクトグラムの表示場所"></canvas>
       </div>
 
-      <div class="palette-section">
-        <h3>🎨 みため</h3>
-        <div class="palette-grid">
-          <div class="block-item" draggable="true" data-type="color-red" data-label="あかにする" title="あかにする">
-            <div class="picto" style="background:#ff4d4d;border-radius:50%;width:36px;height:36px;margin:auto;"></div>
-            <span>あか</span>
-          </div>
-          <div class="block-item" draggable="true" data-type="color-blue" data-label="あおにする" title="あおにする">
-            <div class="picto" style="background:#4d9fff;border-radius:50%;width:36px;height:36px;margin:auto;"></div>
-            <span>あお</span>
-          </div>
-          <div class="block-item" draggable="true" data-type="color-green" data-label="みどりにする" title="みどりにする">
-            <div class="picto" style="background:#4dcc88;border-radius:50%;width:36px;height:36px;margin:auto;"></div>
-            <span>みどり</span>
-          </div>
-          <div class="block-item" draggable="true" data-type="stamp" data-label="スタンプ" title="スタンプ">
-            <div class="picto">🖊️</div>
-            <span>かく</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="palette-section">
-        <h3>🔊 おと</h3>
-        <div class="palette-grid">
-          <div class="block-item" draggable="true" data-type="sound-beep" data-label="ピッとなる" title="ピッとなる">
-            <div class="picto">🔔</div>
-            <span>ピッ</span>
-          </div>
-          <div class="block-item" draggable="true" data-type="sound-tada" data-label="かんせい" title="かんせい">
-            <div class="picto">🎉</div>
-            <span>かんせい</span>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-    <!-- プログラムエリア -->
-    <section class="program-area" id="program-area">
-      <div class="program-start">
-        <div class="start-flag">🚩 スタート</div>
-      </div>
-      <div class="block-list" id="block-list">
-        <div class="drop-hint" id="drop-hint">
-          ← ブロックをここにドラッグしよう！
-        </div>
+      <div class="log-panel" aria-live="polite">
+        <div class="log-title">実行結果</div>
+        <div class="stage-log" id="stage-log"></div>
       </div>
     </section>
 
-    <!-- ステージ -->
-    <section class="stage-area">
-      <div class="stage-header">
-        <span>🖥 ステージ</span>
-        <div class="stage-controls">
-          <button class="btn-icon" id="btn-step" title="1ステップ実行">⏭</button>
-          <button class="btn-icon" id="btn-reset-stage" title="リセット">↺</button>
+    <section class="editor-pane" aria-labelledby="editor-title">
+      <div class="pane-header">
+        <div>
+          <h2 id="editor-title">Java 入力</h2>
+          <p>クラスや main は不要です。一文ずつ書いて実行できます。</p>
         </div>
       </div>
-      <canvas id="stage-canvas" width="360" height="300"></canvas>
-      <div class="stage-log" id="stage-log"></div>
-    </section>
 
+      <textarea id="java-editor" spellcheck="false" aria-label="Java 文の入力欄">moveForward(90);
+turnRight(90);
+moveForward(70);
+setColor("red");
+stamp();
+turnLeft(45);
+moveForward(80);</textarea>
+
+      <div class="command-help">
+        <div class="help-title">使える文</div>
+        <ul>
+          <li><code>moveForward(80);</code> 前に進む</li>
+          <li><code>moveBack(40);</code> 後ろに下がる</li>
+          <li><code>turnLeft(90);</code> 左に回る</li>
+          <li><code>turnRight(90);</code> 右に回る</li>
+          <li><code>setColor("blue");</code> 色を変える</li>
+          <li><code>stamp();</code> 今の場所に印を残す</li>
+          <li><code>wait(1);</code> 少し待つ</li>
+        </ul>
+      </div>
+    </section>
   </main>
 
   <script src="js/engine.js"></script>
