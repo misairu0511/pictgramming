@@ -50,24 +50,21 @@
         </div>
       </div>
 
-      <textarea id="java-editor" spellcheck="false" aria-label="Java 文の入力欄">moveForward(80);
-rotateRight(45);
-moveBack(40);
-rotateLeft(30);
-rotatePartLeft("leftArm", 45);
-rotatePartRight("rightArm", 45);
-rotatePartLeft("head", 20);</textarea>
+      <textarea id="java-editor" spellcheck="false" aria-label="Java 文の入力欄">move(80);
+rotate(45);
+move(-40);
+rotate(-30);
+rotatePart("leftArm", -45);
+rotatePart("rightArm", 45);
+rotatePart("head", -20);</textarea>
 
       <div class="command-help">
         <div class="help-title">使える文</div>
         <div class="help-scroll">
           <ul>
-            <li><code>moveForward(数字);</code> 全体を前に進める</li>
-            <li><code>moveBack(数字);</code> 全体を後ろに下げる</li>
-            <li><code>rotateLeft(数字);</code> 全体を左に回す</li>
-            <li><code>rotateRight(数字);</code> 全体を右に回す</li>
-            <li><code>rotatePartLeft("体の部位", 数字);</code> 体の部位を左に回す</li>
-            <li><code>rotatePartRight("体の部位", 数字);</code> 体の部位を右に回す</li>
+            <li><code>move(数字);</code> 全体を前後に進める（マイナスで後ろ）</li>
+            <li><code>rotate(数字);</code> 全体を回す（プラスで右、マイナスで左）</li>
+            <li><code>rotatePart("体の部位", 数字);</code> 体の部位を回す（プラスで右、マイナスで左）</li>
           </ul>
           <div class="part-name-list">
             <div>体の部位名</div>

@@ -49,39 +49,22 @@ class PictoEngine {
   async execute(command, onLog) {
     const value = command.value;
 
-    if (command.name === "moveForward") {
-      onLog(`moveForward(${value});`);
+    if (command.name === "move") {
+      onLog(`move(${value});`);
       await this.animateMove(value);
       return;
     }
 
-    if (command.name === "moveBack") {
-      onLog(`moveBack(${value});`);
-      await this.animateMove(-value);
-      return;
-    }
-
-    if (command.name === "rotateLeft") {
-      onLog(`rotateLeft(${value});`);
-      await this.animateTurn(-value);
-      return;
-    }
-
-    if (command.name === "rotateRight") {
-      onLog(`rotateRight(${value});`);
+    if (command.name === "rotate") {
+      onLog(`rotate(${value});`);
       await this.animateTurn(value);
       return;
     }
 
-    if (command.name === "rotatePartLeft") {
-      onLog(`rotatePartLeft("${command.part}", ${value});`);
-      await this.animatePartRotate(command.part, -value);
-      return;
-    }
-
-    if (command.name === "rotatePartRight") {
-      onLog(`rotatePartRight("${command.part}", ${value});`);
+    if (command.name === "rotatePart") {
+      onLog(`rotatePart("${command.part}", ${value});`);
       await this.animatePartRotate(command.part, value);
+      return;
     }
   }
 

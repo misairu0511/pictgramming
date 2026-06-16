@@ -160,18 +160,18 @@ function parseStatement(statement) {
   const name = match[1];
   const args = splitArguments(match[2]);
 
-  if (["moveForward", "moveBack", "rotateLeft", "rotateRight"].includes(name)) {
+  if (["move", "rotate"].includes(name)) {
     const number = parseRequiredNumber(args, name);
     if (number.error) return number;
     return { name, value: number.value };
   }
 
-  if (name === "rotatePartLeft" || name === "rotatePartRight") {
+  if (name === "rotatePart") {
     return parseRotatePart(name, args);
   }
 
   return {
-    error: `${name} は使えません。使える文は moveForward, moveBack, rotateLeft, rotateRight, rotatePartLeft, rotatePartRight です。`,
+    error: `${name} は使えません。使える文は move, rotate, rotatePart です。`,
   };
 }
 
