@@ -11,6 +11,10 @@ class PictoEngine {
       rightArm: { ja: "右腕", code: "rightArm" },
       leftLeg: { ja: "左脚", code: "leftLeg" },
       rightLeg: { ja: "右脚", code: "rightLeg" },
+      leftElbow: { ja: "左肘", code: "leftElbow" },
+      rightElbow: { ja: "右肘", code: "rightElbow" },
+      leftKnee: { ja: "左膝", code: "leftKnee" },
+      rightKnee: { ja: "右膝", code: "rightKnee" },
     };
     this.reset();
   }
@@ -35,6 +39,10 @@ class PictoEngine {
       rightArm: { rotation: 0 },
       leftLeg: { rotation: 0 },
       rightLeg: { rotation: 0 },
+      leftElbow: { rotation: 0 },
+      rightElbow: { rotation: 0 },
+      leftKnee: { rotation: 0 },
+      rightKnee: { rotation: 0 },
     };
   }
 
@@ -168,10 +176,10 @@ class PictoEngine {
     ctx.fillStyle = state.color;
 
     this.drawTorso(parts.body.rotation);
-    this.drawConnectedPart(-18, -42, parts.leftArm.rotation, () => this.drawArm(-70, 58));
-    this.drawConnectedPart(18, -42, parts.rightArm.rotation, () => this.drawArm(70, 58));
-    this.drawConnectedPart(-10, 64, parts.leftLeg.rotation, () => this.drawLeg(-44, 88));
-    this.drawConnectedPart(10, 64, parts.rightLeg.rotation, () => this.drawLeg(44, 88));
+    this.drawConnectedPart(-18, -42, parts.leftArm.rotation, () => this.drawArm(-70, 58, parts.leftElbow.rotation));
+    this.drawConnectedPart(18, -42, parts.rightArm.rotation, () => this.drawArm(70, 58, parts.rightElbow.rotation));
+    this.drawConnectedPart(-10, 64, parts.leftLeg.rotation, () => this.drawLeg(-44, 88, parts.leftKnee.rotation));
+    this.drawConnectedPart(10, 64, parts.rightLeg.rotation, () => this.drawLeg(44, 88, parts.rightKnee.rotation));
     this.drawConnectedPart(0, -82, parts.head.rotation, () => this.drawHead());
 
     ctx.fillStyle = "#ffffff";
@@ -206,22 +214,46 @@ class PictoEngine {
     ctx.restore();
   }
 
-  drawArm(endX, endY) {
+  drawArm(endX, endY, jointRotation = 0) {
     const ctx = this.ctx;
     ctx.lineWidth = 15;
+    const midX = endX / 2;
+    const midY = endY / 2;
+    
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    ctx.lineTo(endX, endY);
+    ctx.lineTo(midX, midY);
     ctx.stroke();
+
+    ctx.save();
+    ctx.translate(midX, midY);
+    ctx.rotate(jointRotation * Math.PI / 180);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(midX, midY);
+    ctx.stroke();
+    ctx.restore();
   }
 
-  drawLeg(endX, endY) {
+  drawLeg(endX, endY, jointRotation = 0) {
     const ctx = this.ctx;
     ctx.lineWidth = 16;
+    const midX = endX / 2;
+    const midY = endY / 2;
+    
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    ctx.lineTo(endX, endY);
+    ctx.lineTo(midX, midY);
     ctx.stroke();
+
+    ctx.save();
+    ctx.translate(midX, midY);
+    ctx.rotate(jointRotation * Math.PI / 180);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(midX, midY);
+    ctx.stroke();
+    ctx.restore();
   }
 
   drawHead() {
@@ -244,11 +276,15 @@ class PictoEngine {
 
     const hitAreas = [
       { part: "head", x: 0, y: -118, radius: 36 },
+      { part: "leftElbow", x: -70, y: 2, radius: 26 },
+      { part: "rightElbow", x: 70, y: 2, radius: 26 },
+      { part: "leftKnee", x: -43, y: 130, radius: 26 },
+      { part: "rightKnee", x: 43, y: 130, radius: 26 },
+      { part: "leftArm", x: -35, y: -27, radius: 28 },
+      { part: "rightArm", x: 35, y: -27, radius: 28 },
+      { part: "leftLeg", x: -21, y: 86, radius: 28 },
+      { part: "rightLeg", x: 21, y: 86, radius: 28 },
       { part: "body", x: 0, y: 0, radius: 42 },
-      { part: "leftArm", x: -54, y: 0, radius: 42 },
-      { part: "rightArm", x: 54, y: 0, radius: 42 },
-      { part: "leftLeg", x: -32, y: 116, radius: 42 },
-      { part: "rightLeg", x: 32, y: 116, radius: 42 },
     ];
 
     const hit = hitAreas.find((area) => this.distance(point.x, point.y, area.x, area.y) <= area.radius);

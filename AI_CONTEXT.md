@@ -30,7 +30,7 @@ pictgramming/
 * **`rotatePart("体の部位", 数値)`**
   * 指定した体の部位のみを回転させます。
   * `正の数` で右回転、`負の数` で左回転します。
-  * 指定可能な部位（文字列）: `"head"`, `"body"`, `"leftArm"`, `"rightArm"`, `"leftLeg"`, `"rightLeg"`
+  * 指定可能な部位（文字列）: `"head"`, `"body"`, `"leftArm"`, `"rightArm"`, `"leftElbow"`, `"rightElbow"`, `"leftLeg"`, `"rightLeg"`, `"leftKnee"`, `"rightKnee"`
 
 ## 4. 各モジュールの役割
 
