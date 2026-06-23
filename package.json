@@ -1,0 +1,12 @@
+{
+  "name": "pictgramming",
+  "version": "1.0.0",
+  "description": "Pictogramming tool with Java-like syntax",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
