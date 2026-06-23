@@ -131,7 +131,7 @@ function transpileToJava(javaCode) {
   jsCode = jsCode.replace(/\b(for|while)\s*\((.*?)\)\s*\{/g, '$1($2) { await picto.yield(); ');
   
   // Replace picto commands
-  jsCode = jsCode.replace(/\b(move|rotate|rotatePart)\s*\(/g, 'await picto.$1(');
+  jsCode = jsCode.replace(/\b(move|rotate|rotatePart|grab|release)\s*\(/g, 'await picto.$1(');
   
   return jsCode;
 }
@@ -163,6 +163,18 @@ function createPictoContext() {
       
       addLog(`rotatePart("${realPart}", ${val});`);
       await engine.animatePartRotate(realPart, val);
+    },
+    grab: async () => {
+      checkStop();
+      addLog(`grab();`);
+      engine.grabItem();
+      await engine.wait(120);
+    },
+    release: async () => {
+      checkStop();
+      addLog(`release();`);
+      engine.releaseItem();
+      await engine.wait(120);
     },
     yield: async () => {
       checkStop();

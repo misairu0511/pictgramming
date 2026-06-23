@@ -16,6 +16,11 @@ class PictoEngine {
       leftKnee: { ja: "左膝", code: "leftKnee" },
       rightKnee: { ja: "右膝", code: "rightKnee" },
     };
+    
+    this.itemImg = new Image();
+    this.itemImg.src = "img/item1.png";
+    this.itemImg.onload = () => { if (!this.isStopped) this.draw(); };
+
     this.reset();
   }
 
@@ -28,6 +33,13 @@ class PictoEngine {
       color: "#2563eb",
       trail: [],
       parts: this.createParts(),
+      item: {
+        x: this.canvas.width / 2 + 100,
+        y: this.canvas.height / 2 + 100,
+        attachedTo: null,
+        offsetX: 0,
+        offsetY: 0
+      }
     };
     this.draw();
   }
@@ -50,6 +62,57 @@ class PictoEngine {
 
   stop() {
     this.isStopped = true;
+  }
+
+  grabItem() {
+    const item = this.state.item;
+    if (item.attachedTo) return;
+
+    const leftHand = this.getHandPosition("leftArm");
+    const rightHand = this.getHandPosition("rightArm");
+    const grabRadius = 50;
+
+    const distL = this.distance(leftHand.x, leftHand.y, item.x, item.y);
+    const distR = this.distance(rightHand.x, rightHand.y, item.x, item.y);
+
+    if (distL <= grabRadius) {
+      item.attachedTo = "leftArm";
+      item.offsetX = item.x - leftHand.x;
+      item.offsetY = item.y - leftHand.y;
+    } else if (distR <= grabRadius) {
+      item.attachedTo = "rightArm";
+      item.offsetX = item.x - rightHand.x;
+      item.offsetY = item.y - rightHand.y;
+    }
+    this.draw();
+  }
+
+  releaseItem() {
+    this.state.item.attachedTo = null;
+    this.draw();
+  }
+
+  getHandPosition(arm) {
+    const parts = this.state.parts;
+    const m = new DOMMatrix();
+    m.translateSelf(this.state.x, this.state.y);
+    m.rotateSelf(this.state.direction);
+    m.rotateSelf(parts.body.rotation);
+
+    if (arm === "leftArm") {
+      m.translateSelf(-18, -42);
+      m.rotateSelf(parts.leftArm.rotation);
+      m.translateSelf(-35, 29);
+      m.rotateSelf(parts.leftElbow.rotation);
+      m.translateSelf(-35, 29);
+    } else {
+      m.translateSelf(18, -42);
+      m.rotateSelf(parts.rightArm.rotation);
+      m.translateSelf(35, 29);
+      m.rotateSelf(parts.rightElbow.rotation);
+      m.translateSelf(35, 29);
+    }
+    return { x: m.e, y: m.f };
   }
 
   async run(commands, onLog) {
@@ -125,6 +188,42 @@ class PictoEngine {
     this.drawGrid();
     this.drawTrail();
     this.drawPicto(this.state);
+    this.drawItem();
+  }
+
+  drawItem() {
+    const item = this.state.item;
+    let cx = item.x;
+    let cy = item.y;
+
+    if (item.attachedTo) {
+      const handPos = this.getHandPosition(item.attachedTo);
+      cx = handPos.x + item.offsetX;
+      cy = handPos.y + item.offsetY;
+      item.x = cx;
+      item.y = cy;
+    }
+
+    // 当たり判定の可視化
+    this.ctx.save();
+    this.ctx.strokeStyle = "rgba(239, 68, 68, 0.4)"; // 少し目立つ赤色の半透明
+    this.ctx.lineWidth = 2;
+    this.ctx.setLineDash([6, 4]);
+    this.ctx.beginPath();
+    this.ctx.arc(cx, cy, 50, 0, Math.PI * 2);
+    this.ctx.stroke();
+    this.ctx.restore();
+
+    if (this.itemImg.complete && this.itemImg.naturalWidth > 0) {
+      const w = 60;
+      const h = (w / this.itemImg.naturalWidth) * this.itemImg.naturalHeight;
+      this.ctx.drawImage(this.itemImg, cx - w/2, cy - h/2, w, h);
+    } else {
+      this.ctx.fillStyle = "#f59e0b";
+      this.ctx.beginPath();
+      this.ctx.arc(cx, cy, 30, 0, Math.PI*2);
+      this.ctx.fill();
+    }
   }
 
   drawGrid() {
