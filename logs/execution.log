@@ -1,0 +1,75 @@
+
+========== [2026-06-23T05:11:55.935Z] ==========
+Status: success
+
+[Source Code]
+move(80);
+rotate(45);
+rotatePart("leftArm", -45);
+rotatePart("leftElbow", -60);
+rotatePart("rightArm", 45);
+rotatePart("rightElbow", 60);
+rotatePart("rightLeg", -30);
+rotatePart("rightKnee", 45);
+
+[Execution Events]
+  - [info] move(80);
+  - [info] rotate(45);
+  - [info] rotatePart("leftArm", -45);
+  - [info] rotatePart("leftElbow", -60);
+  - [info] rotatePart("rightArm", 45);
+  - [info] rotatePart("rightElbow", 60);
+  - [info] rotatePart("rightLeg", -30);
+  - [info] rotatePart("rightKnee", 45);
+  - [success] 完了しました。
+=========================================
+
+========== [2026-06-23T05:12:42.573Z] ==========
+Status: success
+
+[Source Code]
+move(80);
+rotate(45);
+rotatePart("leftArm", -45);
+rotatePart("leftElbow", -60);
+rotatePart("rightArm", 45);
+rotatePart("rightElbow", 60);
+rotatePart("rightLeg", -30);
+rotatePart("rightKnee", 45);
+
+[Execution Events]
+  - [info] move(80);
+  - [info] rotate(45);
+  - [info] rotatePart("leftArm", -45);
+  - [info] rotatePart("leftElbow", -60);
+  - [info] rotatePart("rightArm", 45);
+  - [info] rotatePart("rightElbow", 60);
+  - [info] rotatePart("rightLeg", -30);
+  - [info] rotatePart("rightKnee", 45);
+  - [success] 完了しました。
+=========================================
+
+========== [2026-06-23T05:12:54.796Z] ==========
+Status: success
+
+[Source Code]
+move(80);
+rotate(45);
+rotatePart("leftArm", -45);
+rotatePart("leftElbow", -60);
+rotatePart("rightArm", 45);
+rotatePart("rightElbow", 60);
+rotatePart("rightLeg", -30);
+rotatePart("rightKnee", 45);
+
+[Execution Events]
+  - [info] move(80);
+  - [info] rotate(45);
+  - [info] rotatePart("leftArm", -45);
+  - [info] rotatePart("leftElbow", -60);
+  - [info] rotatePart("rightArm", 45);
+  - [info] rotatePart("rightElbow", 60);
+  - [info] rotatePart("rightLeg", -30);
+  - [info] rotatePart("rightKnee", 45);
+  - [success] 完了しました。
+=========================================

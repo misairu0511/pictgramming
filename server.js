@@ -8,15 +8,20 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+// サーバー起動時に、その時点の時刻でログフォルダを作成する
+const startTimeStr = new Date().toLocaleString("ja-JP", {
+  year: "numeric", month: "2-digit", day: "2-digit",
+  hour: "2-digit", minute: "2-digit", second: "2-digit"
+}).replace(/[/\s:]/g, "-"); // 例: "2026-06-23-14-15-00"
+
+const sessionLogsDir = path.join(__dirname, "logs", startTimeStr);
+if (!fs.existsSync(sessionLogsDir)) {
+  fs.mkdirSync(sessionLogsDir, { recursive: true });
+}
+
 app.post("/api/log", (req, res) => {
   const logData = req.body;
-  const logsDir = path.join(__dirname, "logs");
-  
-  if (!fs.existsSync(logsDir)) {
-    fs.mkdirSync(logsDir, { recursive: true });
-  }
-
-  const logFile = path.join(logsDir, "execution.log");
+  const logFile = path.join(sessionLogsDir, "execution.log");
   
   const timestamp = new Date().toISOString();
   let logText = `\n========== [${timestamp}] ==========\n`;

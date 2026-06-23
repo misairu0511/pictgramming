@@ -1,0 +1,177 @@
+
+========== [2026-06-23T05:16:44.060Z] ==========
+Status: success
+
+[Source Code]
+move(80);
+rotate(45);
+rotatePart("leftArm", -45);
+rotatePart("leftElbow", -60);
+rotatePart("rightArm", 45);
+rotatePart("rightElbow", 60);
+rotatePart("rightLeg", -30);
+rotatePart("rightKnee", 45);
+
+[Execution Events]
+  - [info] move(80);
+  - [info] rotate(45);
+  - [info] rotatePart("leftArm", -45);
+  - [info] rotatePart("leftElbow", -60);
+  - [info] rotatePart("rightArm", 45);
+  - [info] rotatePart("rightElbow", 60);
+  - [info] rotatePart("rightLeg", -30);
+  - [info] rotatePart("rightKnee", 45);
+  - [success] 完了しました。
+=========================================
+
+========== [2026-06-23T05:27:49.328Z] ==========
+Status: success
+
+[Source Code]
+grab();
+
+move(80);
+rotate(45);
+rotatePart("leftArm", -45);
+rotatePart("leftElbow", -60);
+rotatePart("rightArm", 45);
+rotatePart("rightElbow", 60);
+rotatePart("rightLeg", -30);
+rotatePart("rightKnee", 45);
+
+[Execution Events]
+  - [info] grab();
+  - [info] move(80);
+  - [info] rotate(45);
+  - [info] rotatePart("leftArm", -45);
+  - [info] rotatePart("leftElbow", -60);
+  - [info] rotatePart("rightArm", 45);
+  - [info] rotatePart("rightElbow", 60);
+  - [info] rotatePart("rightLeg", -30);
+  - [info] rotatePart("rightKnee", 45);
+  - [success] 完了しました。
+=========================================
+
+========== [2026-06-23T05:27:56.348Z] ==========
+Status: success
+
+[Source Code]
+grab();
+
+move(80);
+rotate(45);
+rotatePart("leftArm", -45);
+rotatePart("leftElbow", -60);
+release();
+
+rotatePart("rightArm", 45);
+rotatePart("rightElbow", 60);
+rotatePart("rightLeg", -30);
+rotatePart("rightKnee", 45);
+
+[Execution Events]
+  - [info] grab();
+  - [info] move(80);
+  - [info] rotate(45);
+  - [info] rotatePart("leftArm", -45);
+  - [info] rotatePart("leftElbow", -60);
+  - [info] release();
+  - [info] rotatePart("rightArm", 45);
+  - [info] rotatePart("rightElbow", 60);
+  - [info] rotatePart("rightLeg", -30);
+  - [info] rotatePart("rightKnee", 45);
+  - [success] 完了しました。
+=========================================
+
+========== [2026-06-23T05:31:02.745Z] ==========
+Status: success
+
+[Source Code]
+grab();
+
+move(80);
+rotate(45);
+rotatePart("leftArm", -45);
+rotatePart("leftElbow", -60);
+release();
+
+rotatePart("rightArm", 45);
+rotatePart("rightElbow", 60);
+rotatePart("rightLeg", -30);
+rotatePart("rightKnee", 45);
+
+[Execution Events]
+  - [info] grab();
+  - [info] move(80);
+  - [info] rotate(45);
+  - [info] rotatePart("leftArm", -45);
+  - [info] rotatePart("leftElbow", -60);
+  - [info] release();
+  - [info] rotatePart("rightArm", 45);
+  - [info] rotatePart("rightElbow", 60);
+  - [info] rotatePart("rightLeg", -30);
+  - [info] rotatePart("rightKnee", 45);
+  - [success] 完了しました。
+=========================================
+
+========== [2026-06-23T05:38:01.711Z] ==========
+Status: stopped
+
+[Source Code]
+grab();
+
+move(80);
+rotate(45);
+rotatePart("leftArm", -45);
+rotatePart("leftElbow", -60);
+release();
+
+rotatePart("rightArm", 45);
+rotatePart("rightElbow", 60);
+rotatePart("rightLeg", -30);
+rotatePart("rightKnee", 45);
+
+[Execution Events]
+  - [info] grab();
+  - [info] move(80);
+  - [info] rotate(45);
+  - [info] rotatePart("leftArm", -45);
+  - [info] rotatePart("leftElbow", -60);
+  - [info] release();
+  - [info] rotatePart("rightArm", 45);
+  - [info] rotatePart("rightElbow", 60);
+  - [info] rotatePart("rightLeg", -30);
+  - [info] rotatePart("rightKnee", 45);
+  - [error] 実行を停止しました。
+=========================================
+
+========== [2026-06-23T05:38:09.331Z] ==========
+Status: success
+
+[Source Code]
+grab();
+
+move(80);
+rotate(45);
+rotatePart("leftArm", -45);
+rotatePart("leftElbow", -60);
+release();
+
+rotatePart("rightArm", 45);
+rotatePart("rightElbow", 60);
+rotatePart("rightLeg", -30);
+rotatePart("rightKnee", 45);
+
+[Execution Events]
+  - [info] grab();
+  - [info] move(80);
+  - [info] rotate(45);
+  - [info] rotatePart("leftArm", -45);
+  - [info] rotatePart("leftElbow", -60);
+  - [info] release();
+  - [info] rotatePart("rightArm", 45);
+  - [info] rotatePart("rightElbow", 60);
+  - [info] rotatePart("rightLeg", -30);
+  - [info] rotatePart("rightKnee", 45);
+  - [success] 完了しました。
+=========================================
