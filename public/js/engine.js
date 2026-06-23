@@ -285,14 +285,6 @@ class PictoEngine {
     this.drawConnectedPart(10, 64, parts.rightLeg.rotation, () => this.drawLeg(44, 88, parts.rightKnee.rotation));
     this.drawConnectedPart(0, -82, parts.head.rotation, () => this.drawHead());
 
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.moveTo(0, -174);
-    ctx.lineTo(-13, -142);
-    ctx.lineTo(13, -142);
-    ctx.closePath();
-    ctx.fill();
-
     ctx.restore();
   }
 
