@@ -4,12 +4,14 @@ const log = document.getElementById("stage-log");
 const runButton = document.getElementById("btn-run");
 const resetButton = document.getElementById("btn-reset");
 const clearStageButton = document.getElementById("btn-clear-stage");
+const stopButton = document.getElementById("btn-stop");
 const partTooltip = document.getElementById("part-tooltip");
 const engine = new PictoEngine(canvas);
 
 const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 
 let isRunning = false;
+let shouldStop = false;
 
 const partNames = {
   head: "head",
@@ -38,6 +40,13 @@ const partAliases = {
 };
 
 runButton.addEventListener("click", runProgram);
+stopButton.addEventListener("click", () => {
+  if (isRunning) {
+    shouldStop = true;
+    engine.stop();
+    addLog("実行を停止しました。", "error");
+  }
+});
 resetButton.addEventListener("click", () => {
   if (isRunning) return;
   editor.value = "";
@@ -60,7 +69,8 @@ editor.addEventListener("keydown", (event) => {
 
 document.querySelectorAll(".snippet-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
-    const snippet = btn.getAttribute("data-snippet");
+    const rawSnippet = btn.getAttribute("data-snippet");
+    const snippet = rawSnippet.replace(/\\n/g, "\n");
     insertSnippet(snippet);
   });
 });
@@ -86,8 +96,10 @@ async function runProgram() {
   }
 
   isRunning = true;
+  shouldStop = false;
   runButton.textContent = "実行中";
   runButton.disabled = true;
+  stopButton.disabled = false;
   resetButton.disabled = true;
 
   try {
@@ -95,13 +107,16 @@ async function runProgram() {
     const picto = createPictoContext();
     const fn = new AsyncFunction('picto', jsCode);
     await fn(picto);
-    addLog("完了しました。", "success");
+    if (!shouldStop) addLog("完了しました。", "success");
   } catch (error) {
-    addLog(`エラー: ${error.message}`, "error");
+    if (error.message !== "STOP") {
+      addLog(`エラー: ${error.message}`, "error");
+    }
   } finally {
     isRunning = false;
     runButton.textContent = "実行";
     runButton.disabled = false;
+    stopButton.disabled = true;
     resetButton.disabled = false;
   }
 }
@@ -122,20 +137,23 @@ function transpileToJava(javaCode) {
 }
 
 function createPictoContext() {
+  const checkStop = () => { if (shouldStop) throw new Error("STOP"); };
+
   return {
     move: async (val) => {
+      checkStop();
       if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("moveの引数は数字である必要があります");
       addLog(`move(${val});`);
       await engine.animateMove(val);
-      await engine.wait(120);
     },
     rotate: async (val) => {
+      checkStop();
       if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("rotateの引数は数字である必要があります");
       addLog(`rotate(${val});`);
       await engine.animateTurn(val);
-      await engine.wait(120);
     },
     rotatePart: async (part, val) => {
+      checkStop();
       if (typeof part !== "string") throw new Error("rotatePartの第1引数は部位の名前(文字列)である必要があります");
       if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("rotatePartの第2引数は数字である必要があります");
       
@@ -145,10 +163,11 @@ function createPictoContext() {
       
       addLog(`rotatePart("${realPart}", ${val});`);
       await engine.animatePartRotate(realPart, val);
-      await engine.wait(120);
     },
     yield: async () => {
+      checkStop();
       await new Promise(r => setTimeout(r, 1));
+      checkStop();
     }
   };
 }

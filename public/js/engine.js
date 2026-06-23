@@ -20,6 +20,7 @@ class PictoEngine {
   }
 
   reset() {
+    this.isStopped = false;
     this.state = {
       x: this.canvas.width / 2,
       y: this.canvas.height / 2 + 40,
@@ -41,9 +42,14 @@ class PictoEngine {
       rightLeg: { rotation: 0 },
       leftElbow: { rotation: 0 },
       rightElbow: { rotation: 0 },
+      rightElbow: { rotation: 0 },
       leftKnee: { rotation: 0 },
       rightKnee: { rotation: 0 },
     };
+  }
+
+  stop() {
+    this.isStopped = true;
   }
 
   async run(commands, onLog) {
@@ -80,10 +86,8 @@ class PictoEngine {
     const radians = (this.state.direction - 90) * Math.PI / 180;
     const startX = this.state.x;
     const startY = this.state.y;
-    const rawX = startX + Math.cos(radians) * distance;
-    const rawY = startY + Math.sin(radians) * distance;
-    const endX = Math.max(105, Math.min(this.canvas.width - 105, rawX));
-    const endY = Math.max(165, Math.min(this.canvas.height - 130, rawY));
+    const endX = startX + Math.cos(radians) * distance;
+    const endY = startY + Math.sin(radians) * distance;
 
     await this.animate(this.animationMs, (progress) => {
       this.state.x = this.lerp(startX, endX, progress);
@@ -309,8 +313,13 @@ class PictoEngine {
     return new Promise((resolve) => {
       const start = performance.now();
       const step = (now) => {
+        if (this.isStopped) {
+          resolve();
+          return;
+        }
+
         const raw = Math.min(1, (now - start) / duration);
-        const eased = 1 - Math.pow(1 - raw, 3);
+        const eased = raw; // Linear easing for continuous movement
         update(eased);
 
         if (raw < 1) {
