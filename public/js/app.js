@@ -42,6 +42,16 @@ const partAliases = {
   migihiji: "rightElbow",
   hidarihiza: "leftKnee",
   migihiza: "rightKnee",
+  "頭": "head",
+  "体": "body",
+  "左腕": "leftArm",
+  "右腕": "rightArm",
+  "左足": "leftLeg",
+  "右足": "rightLeg",
+  "左肘": "leftElbow",
+  "右肘": "rightElbow",
+  "左膝": "leftKnee",
+  "右膝": "rightKnee"
 };
 
 runButton.addEventListener("click", runProgram);
