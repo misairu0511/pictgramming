@@ -52,34 +52,34 @@
         </div>
       </div>
 
-      <textarea id="java-editor" spellcheck="false" aria-label="Java 文の入力欄">move(80);
-rotate(45);
-rotatePart("leftArm", -45);
-rotatePart("leftElbow", -60);
-rotatePart("rightArm", 45);
-rotatePart("rightElbow", 60);
+      <textarea id="java-editor" spellcheck="false" aria-label="Java 文の入力欄">移動(80);
+回転(45);
+部位回転("左腕", -45);
+部位回転("左肘", -60);
+部位回転("右腕", 45);
+部位回転("右肘", 60);
 rotatePart("rightLeg", -30);
 rotatePart("rightKnee", 45);</textarea>
 
-      <div class="snippet-toolbar" aria-label="スニペット入力ボタン群">
-        <button class="snippet-btn" data-snippet="move(50);\n" type="button">move(50);</button>
-        <button class="snippet-btn" data-snippet="rotate(90);\n" type="button">rotate(90);</button>
-        <button class="snippet-btn" data-snippet="rotatePart(&quot;leftArm&quot;, 45);\n" type="button">rotatePart(...);</button>
-        <button class="snippet-btn" data-snippet="grab();\n" type="button">grab();</button>
-        <button class="snippet-btn" data-snippet="release();\n" type="button">release();</button>
+      <div class="snippet-toolbar">
+        <button class="snippet-btn" data-snippet="移動(50);\n" type="button">移動(50);</button>
+        <button class="snippet-btn" data-snippet="回転(90);\n" type="button">回転(90);</button>
+        <button class="snippet-btn" data-snippet="部位回転(&quot;左腕&quot;, 45);\n" type="button">部位回転(...);</button>
+        <button class="snippet-btn" data-snippet="掴む();\n" type="button">掴む();</button>
+        <button class="snippet-btn" data-snippet="離す();\n" type="button">離す();</button>
         <button class="snippet-btn" data-snippet="for (int i = 0; i < 3; i++) {\n  \n}\n" type="button">for(3回)</button>
         <button class="snippet-btn" data-snippet="if (true) {\n  \n}\n" type="button">if(...)</button>
       </div>
 
       <div class="command-help">
         <div class="help-title">使える文</div>
-        <div class="help-scroll">
+        <div class="help-content">
           <ul>
-            <li><code>move(数字);</code> 全体を前後に進める（マイナスで後ろ）</li>
-            <li><code>rotate(数字);</code> 全体を回す（プラスで右、マイナスで左）</li>
-            <li><code>rotatePart("体の部位", 数字);</code> 体の部位を回す（プラスで右、マイナスで左）</li>
-            <li><code>grab();</code> 近くの画像（ヒヨコ）を掴む</li>
-            <li><code>release();</code> 掴んでいる画像をその場に離す</li>
+            <li><code>移動(数字);</code> 全体を前後に進める（マイナスで後ろ）</li>
+            <li><code>回転(数字);</code> 全体を回す（プラスで右、マイナスで左）</li>
+            <li><code>部位回転("体の部位", 数字);</code> 体の部位を回す（プラスで右、マイナスで左）</li>
+            <li><code>掴む();</code> 近くの画像（ヒヨコ）を掴む</li>
+            <li><code>離す();</code> 掴んでいる画像をその場に離す</li>
           </ul>
           <div class="part-name-list">
             <div>体の部位名</div>

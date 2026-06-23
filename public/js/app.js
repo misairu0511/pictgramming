@@ -1,5 +1,8 @@
 const canvas = document.getElementById("stage-canvas");
 const editor = document.getElementById("java-editor");
+if (!editor.value.trim()) {
+  editor.value = `// ピクトグラムを動かすプログラムを書いてみよう！\n移動(50);\n回転(90);\n部位回転("左腕", 45);\n`;
+}
 const log = document.getElementById("stage-log");
 const runButton = document.getElementById("btn-run");
 const resetButton = document.getElementById("btn-reset");
@@ -183,7 +186,7 @@ function transpileToJava(javaCode) {
   jsCode = jsCode.replace(/\b(for|while)\s*\((.*?)\)\s*\{/g, '$1($2) { await picto.yield(); ');
   
   // Replace picto commands
-  jsCode = jsCode.replace(/\b(move|rotate|rotatePart|grab|release)\s*\(/g, 'await picto.$1(');
+  jsCode = jsCode.replace(/(移動|回転|部位回転|掴む|離す)\s*\(/g, 'await picto.$1(');
   
   return jsCode;
 }
@@ -192,41 +195,39 @@ function createPictoContext() {
   const checkStop = () => { if (shouldStop) throw new Error("STOP"); };
 
   return {
-    move: async (val) => {
+    移動: async (val) => {
       checkStop();
-      if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("moveの引数は数字である必要があります");
-      addLog(`move(${val});`);
+      if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("移動の引数は数字である必要があります");
+      addLog(`移動(${val});`);
       await engine.animateMove(val);
     },
-    rotate: async (val) => {
+    回転: async (val) => {
       checkStop();
-      if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("rotateの引数は数字である必要があります");
-      addLog(`rotate(${val});`);
+      if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("回転の引数は数字である必要があります");
+      addLog(`回転(${val});`);
       await engine.animateTurn(val);
     },
-    rotatePart: async (part, val) => {
+    部位回転: async (part, val) => {
       checkStop();
-      if (typeof part !== "string") throw new Error("rotatePartの第1引数は部位の名前(文字列)である必要があります");
-      if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("rotatePartの第2引数は数字である必要があります");
+      if (typeof part !== "string") throw new Error("部位回転の第1引数は部位の名前(文字列)である必要があります");
+      if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("部位回転の第2引数は数字である必要があります");
       
       const label = part.trim();
       const realPart = partNames[label] || partAliases[label.toLowerCase()];
       if (!realPart) throw new Error(`"${label}"は使えない部位名です`);
       
-      addLog(`rotatePart("${realPart}", ${val});`);
+      addLog(`部位回転("${realPart}", ${val});`);
       await engine.animatePartRotate(realPart, val);
     },
-    grab: async () => {
+    掴む: async () => {
       checkStop();
-      addLog(`grab();`);
+      addLog(`掴む();`);
       engine.grabItem();
-      await engine.wait(120);
     },
-    release: async () => {
+    離す: async () => {
       checkStop();
-      addLog(`release();`);
+      addLog(`離す();`);
       engine.releaseItem();
-      await engine.wait(120);
     },
     yield: async () => {
       checkStop();
