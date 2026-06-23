@@ -5,6 +5,7 @@ const runButton = document.getElementById("btn-run");
 const resetButton = document.getElementById("btn-reset");
 const clearStageButton = document.getElementById("btn-clear-stage");
 const stopButton = document.getElementById("btn-stop");
+const pauseButton = document.getElementById("btn-pause");
 const partTooltip = document.getElementById("part-tooltip");
 const engine = new PictoEngine(canvas);
 
@@ -45,7 +46,20 @@ stopButton.addEventListener("click", () => {
   if (isRunning) {
     shouldStop = true;
     engine.stop();
+    pauseButton.disabled = true;
     addLog("実行を停止しました。", "error");
+  }
+});
+pauseButton.addEventListener("click", () => {
+  if (!isRunning || shouldStop) return;
+  if (engine.isPaused) {
+    engine.resume();
+    pauseButton.textContent = "一時停止";
+    addLog("実行を再開しました。", "info");
+  } else {
+    engine.pause();
+    pauseButton.textContent = "再開";
+    addLog("一時停止中...", "info");
   }
 });
 resetButton.addEventListener("click", () => {
@@ -101,6 +115,8 @@ async function runProgram() {
   runButton.textContent = "実行中";
   runButton.disabled = true;
   stopButton.disabled = false;
+  pauseButton.disabled = false;
+  pauseButton.textContent = "一時停止";
   resetButton.disabled = true;
 
   currentLogSession = {
@@ -133,6 +149,8 @@ async function runProgram() {
     runButton.textContent = "実行";
     runButton.disabled = false;
     stopButton.disabled = true;
+    pauseButton.disabled = true;
+    pauseButton.textContent = "一時停止";
     resetButton.disabled = false;
 
     if (currentLogSession) {
@@ -203,6 +221,9 @@ function createPictoContext() {
     },
     yield: async () => {
       checkStop();
+      while (engine.isPaused && !shouldStop) {
+        await new Promise(r => setTimeout(r, 50));
+      }
       await new Promise(r => setTimeout(r, 1));
       checkStop();
     }

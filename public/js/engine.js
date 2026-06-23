@@ -26,6 +26,7 @@ class PictoEngine {
 
   reset() {
     this.isStopped = false;
+    this.isPaused = false;
     this.state = {
       x: this.canvas.width / 2,
       y: this.canvas.height / 2 + 40,
@@ -62,6 +63,14 @@ class PictoEngine {
 
   stop() {
     this.isStopped = true;
+  }
+
+  pause() {
+    this.isPaused = true;
+  }
+
+  resume() {
+    this.isPaused = false;
   }
 
   grabItem() {
@@ -402,14 +411,26 @@ class PictoEngine {
 
   animate(duration, update) {
     return new Promise((resolve) => {
-      const start = performance.now();
+      let startTime = performance.now();
+      let totalElapsed = 0;
+
       const step = (now) => {
         if (this.isStopped) {
           resolve();
           return;
         }
 
-        const raw = Math.min(1, (now - start) / duration);
+        if (this.isPaused) {
+          startTime = now;
+          requestAnimationFrame(step);
+          return;
+        }
+
+        const delta = now - startTime;
+        startTime = now;
+        totalElapsed += delta;
+
+        const raw = Math.min(1, totalElapsed / duration);
         const eased = raw; // Linear easing for continuous movement
         update(eased);
 
