@@ -132,17 +132,26 @@ async function runProgram() {
     await fn(picto);
     if (!shouldStop) {
       addLog("完了しました。", "success");
+      
+      const goalResult = engine.evaluateGoalStatus();
+      const resultType = goalResult === "ゴールした" ? "success" : "info";
+      addLog(`【判定結果】 ${goalResult}`, resultType);
+      
       currentLogSession.status = "success";
+      currentLogSession.goalResult = goalResult;
     } else {
       currentLogSession.status = "stopped";
+      currentLogSession.goalResult = "中断のため判定なし";
     }
   } catch (error) {
     if (error.message !== "STOP") {
       addLog(`エラー: ${error.message}`, "error");
       currentLogSession.status = "error";
       currentLogSession.errorMessage = error.message;
+      currentLogSession.goalResult = "エラー中断のため判定なし";
     } else {
       currentLogSession.status = "stopped";
+      currentLogSession.goalResult = "中断のため判定なし";
     }
   } finally {
     isRunning = false;

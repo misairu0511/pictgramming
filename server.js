@@ -26,6 +26,9 @@ app.post("/api/log", (req, res) => {
   const timestamp = new Date().toISOString();
   let logText = `\n========== [${timestamp}] ==========\n`;
   logText += `Status: ${logData.status}\n`;
+  if (logData.goalResult) {
+    logText += `Goal Result: ${logData.goalResult}\n`;
+  }
   if (logData.errorMessage) {
     logText += `Error: ${logData.errorMessage}\n`;
   }

@@ -27,6 +27,13 @@ class PictoEngine {
   reset() {
     this.isStopped = false;
     this.isPaused = false;
+    
+    this.goal = {
+      x: this.canvas.width - 150,
+      y: 150,
+      radius: 70
+    };
+
     this.state = {
       x: this.canvas.width / 2,
       y: this.canvas.height / 2 + 40,
@@ -40,7 +47,8 @@ class PictoEngine {
         attachedTo: null,
         offsetX: 0,
         offsetY: 0
-      }
+      },
+      hasGrabbedItem: false
     };
     this.draw();
   }
@@ -88,10 +96,12 @@ class PictoEngine {
       item.attachedTo = "leftArm";
       item.offsetX = item.x - leftHand.x;
       item.offsetY = item.y - leftHand.y;
+      this.state.hasGrabbedItem = true;
     } else if (distR <= grabRadius) {
       item.attachedTo = "rightArm";
       item.offsetX = item.x - rightHand.x;
       item.offsetY = item.y - rightHand.y;
+      this.state.hasGrabbedItem = true;
     }
     this.draw();
   }
@@ -122,6 +132,21 @@ class PictoEngine {
       m.translateSelf(35, 29);
     }
     return { x: m.e, y: m.f };
+  }
+
+  evaluateGoalStatus() {
+    const item = this.state.item;
+    const dist = this.distance(item.x, item.y, this.goal.x, this.goal.y);
+    const inGoal = dist <= this.goal.radius;
+    const hasGrabbed = this.state.hasGrabbedItem;
+    const isAttached = item.attachedTo !== null;
+
+    if (!hasGrabbed) return "物を持っていない";
+    if (hasGrabbed && !inGoal) return "持ったがゴールに入れていない";
+    if (inGoal && isAttached) return "ゴールしていたが離していない";
+    if (inGoal && !isAttached) return "ゴールした";
+
+    return "不明なステータス";
   }
 
   async run(commands, onLog) {
@@ -195,9 +220,30 @@ class PictoEngine {
     const { ctx, canvas } = this;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.drawGrid();
+    this.drawGoal();
     this.drawTrail();
     this.drawPicto(this.state);
     this.drawItem();
+  }
+
+  drawGoal() {
+    const { ctx } = this;
+    ctx.save();
+    ctx.fillStyle = "rgba(16, 185, 129, 0.1)"; // 薄い緑色
+    ctx.strokeStyle = "rgba(16, 185, 129, 0.8)";
+    ctx.lineWidth = 4;
+    ctx.setLineDash([10, 5]);
+    ctx.beginPath();
+    ctx.arc(this.goal.x, this.goal.y, this.goal.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(16, 185, 129, 1)";
+    ctx.font = "bold 24px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("GOAL", this.goal.x, this.goal.y);
+    ctx.restore();
   }
 
   drawItem() {
