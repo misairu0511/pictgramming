@@ -87,7 +87,7 @@ class PictoEngine {
 
     const leftHand = this.getHandPosition("leftArm");
     const rightHand = this.getHandPosition("rightArm");
-    const grabRadius = 50;
+    const grabRadius = 35; // 半径を50から35に縮小
 
     const distL = this.distance(leftHand.x, leftHand.y, item.x, item.y);
     const distR = this.distance(rightHand.x, rightHand.y, item.x, item.y);
@@ -265,7 +265,7 @@ class PictoEngine {
     this.ctx.lineWidth = 2;
     this.ctx.setLineDash([6, 4]);
     this.ctx.beginPath();
-    this.ctx.arc(cx, cy, 50, 0, Math.PI * 2);
+    this.ctx.arc(cx, cy, 35, 0, Math.PI * 2); // 描画も50から35に縮小
     this.ctx.stroke();
     this.ctx.restore();
 
