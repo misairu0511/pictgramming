@@ -12,6 +12,7 @@ const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 
 let isRunning = false;
 let shouldStop = false;
+let currentLogSession = null;
 
 const partNames = {
   head: "head",
@@ -102,15 +103,30 @@ async function runProgram() {
   stopButton.disabled = false;
   resetButton.disabled = true;
 
+  currentLogSession = {
+    sourceCode: source,
+    status: "unknown",
+    events: []
+  };
+
   try {
     let jsCode = transpileToJava(source);
     const picto = createPictoContext();
     const fn = new AsyncFunction('picto', jsCode);
     await fn(picto);
-    if (!shouldStop) addLog("完了しました。", "success");
+    if (!shouldStop) {
+      addLog("完了しました。", "success");
+      currentLogSession.status = "success";
+    } else {
+      currentLogSession.status = "stopped";
+    }
   } catch (error) {
     if (error.message !== "STOP") {
       addLog(`エラー: ${error.message}`, "error");
+      currentLogSession.status = "error";
+      currentLogSession.errorMessage = error.message;
+    } else {
+      currentLogSession.status = "stopped";
     }
   } finally {
     isRunning = false;
@@ -118,6 +134,15 @@ async function runProgram() {
     runButton.disabled = false;
     stopButton.disabled = true;
     resetButton.disabled = false;
+
+    if (currentLogSession) {
+      fetch('/api/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentLogSession)
+      }).catch(e => console.error("Log upload failed", e));
+      currentLogSession = null;
+    }
   }
 }
 
@@ -195,6 +220,10 @@ function addLog(message, type = "") {
   row.textContent = message;
   log.appendChild(row);
   log.scrollTop = log.scrollHeight;
+
+  if (currentLogSession && isRunning) {
+    currentLogSession.events.push({ type, message });
+  }
 }
 
 function showPartTooltip(event) {
