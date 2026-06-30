@@ -24,6 +24,17 @@ if (!userId) {
   localStorage.setItem("pictgramming_user_id", userId);
 }
 
+const nicknameInput = document.getElementById("user-nickname");
+if (nicknameInput) {
+  const savedNickname = localStorage.getItem("pictgramming_nickname");
+  if (savedNickname) {
+    nicknameInput.value = savedNickname;
+  }
+  nicknameInput.addEventListener("input", (e) => {
+    localStorage.setItem("pictgramming_nickname", e.target.value.trim());
+  });
+}
+
 const partNames = {
   head: "head",
   body: "body",
@@ -206,6 +217,9 @@ async function runProgram() {
 
     if (currentLogSession) {
       currentLogSession.userId = userId;
+      if (nicknameInput) {
+        currentLogSession.nickname = nicknameInput.value.trim() || "名無し";
+      }
       fetch('/api/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

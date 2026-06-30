@@ -436,3 +436,18 @@ code {
   overflow-x: auto;
   white-space: pre-wrap;
 }
+
+/* Nickname Input */
+.input-nickname {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-dark);
+  font-size: 0.85rem;
+  width: 140px;
+  outline: none;
+}
+.input-nickname:focus {
+  border-color: var(--primary);
+}

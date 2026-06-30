@@ -28,6 +28,9 @@ app.post("/api/log", (req, res) => {
   if (logData.userId) {
     logText += `UserID: ${logData.userId}\n`;
   }
+  if (logData.nickname) {
+    logText += `Nickname: ${logData.nickname}\n`;
+  }
   logText += `Status: ${logData.status}\n`;
   if (logData.goalResult) {
     logText += `Goal Result: ${logData.goalResult}\n`;
