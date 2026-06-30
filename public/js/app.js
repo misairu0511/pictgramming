@@ -111,10 +111,33 @@ document.querySelectorAll(".snippet-btn").forEach((btn) => {
 
 function insertSnippet(snippet) {
   const start = editor.selectionStart;
-  const end = editor.selectionEnd;
   const text = editor.value;
-  editor.value = text.slice(0, start) + snippet + text.slice(end);
-  editor.selectionStart = editor.selectionEnd = start + snippet.length;
+  
+  // 現在の行の末尾を探す
+  let lineEnd = text.indexOf('\n', start);
+  if (lineEnd === -1) lineEnd = text.length;
+  
+  const before = text.slice(0, lineEnd);
+  const after = text.slice(lineEnd);
+  
+  let prefix = "";
+  if (before.length > 0 && !before.endsWith('\n')) {
+    prefix = "\n";
+  }
+
+  let finalSnippet = prefix + snippet;
+  let cursorTarget = finalSnippet.indexOf('$CURSOR$');
+  
+  if (cursorTarget !== -1) {
+    finalSnippet = finalSnippet.replace('$CURSOR$', '');
+  } else {
+    cursorTarget = finalSnippet.length;
+  }
+  
+  editor.value = before + finalSnippet + after;
+  
+  const newCursorPos = before.length + cursorTarget;
+  editor.selectionStart = editor.selectionEnd = newCursorPos;
   editor.focus();
 }
 
