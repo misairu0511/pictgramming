@@ -374,3 +374,65 @@ code {
     min-height: 520px;
   }
 }
+
+/* Modal Styles */
+.log-modal {
+  width: 90%;
+  max-width: 650px;
+  max-height: 85vh;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  padding: 0;
+  background: var(--surface);
+}
+.log-modal::backdrop {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(2px);
+}
+.log-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+.log-modal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-dark);
+}
+.log-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(85vh - 65px);
+}
+.history-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 16px;
+  background: #f8fafc;
+}
+.history-time {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.history-status, .history-goal {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+.history-code {
+  margin-top: 10px;
+  padding: 10px;
+  background: #0f172a;
+  color: #e5eefc;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-family: var(--mono);
+  overflow-x: auto;
+  white-space: pre-wrap;
+}

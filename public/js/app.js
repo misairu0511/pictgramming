@@ -18,6 +18,12 @@ let isRunning = false;
 let shouldStop = false;
 let currentLogSession = null;
 
+let userId = localStorage.getItem("pictgramming_user_id");
+if (!userId) {
+  userId = "user_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+  localStorage.setItem("pictgramming_user_id", userId);
+}
+
 const partNames = {
   head: "head",
   body: "body",
@@ -176,6 +182,7 @@ async function runProgram() {
     resetButton.disabled = false;
 
     if (currentLogSession) {
+      currentLogSession.userId = userId;
       fetch('/api/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -184,6 +191,48 @@ async function runProgram() {
       currentLogSession = null;
     }
   }
+}
+
+// ログ履歴モーダルの処理
+const btnLogHistory = document.getElementById("btn-log-history");
+const logModal = document.getElementById("log-history-modal");
+const logModalClose = document.getElementById("log-modal-close");
+const logModalContent = document.getElementById("log-modal-content");
+
+if (btnLogHistory && logModal) {
+  btnLogHistory.addEventListener("click", async () => {
+    logModal.showModal();
+    logModalContent.innerHTML = "<p>読み込み中...</p>";
+    
+    try {
+      const res = await fetch(`/api/logs/${userId}`);
+      const data = await res.json();
+      
+      if (!data.logs || data.logs.length === 0) {
+        logModalContent.innerHTML = "<p>履歴がありません。</p>";
+        return;
+      }
+      
+      let html = "";
+      data.logs.forEach(log => {
+        html += `
+          <div class="history-card">
+            <div class="history-time">${log.timestamp}</div>
+            <div class="history-status">状態: ${log.status}</div>
+            ${log.goalResult ? `<div class="history-goal">判定: ${log.goalResult}</div>` : ''}
+            <pre class="history-code">${log.sourceCode}</pre>
+          </div>
+        `;
+      });
+      logModalContent.innerHTML = html;
+    } catch (e) {
+      logModalContent.innerHTML = "<p>履歴の取得に失敗しました。</p>";
+    }
+  });
+
+  logModalClose.addEventListener("click", () => {
+    logModal.close();
+  });
 }
 
 function transpileToJava(javaCode) {

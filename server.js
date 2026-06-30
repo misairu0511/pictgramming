@@ -25,6 +25,9 @@ app.post("/api/log", (req, res) => {
   
   const timestamp = new Date().toISOString();
   let logText = `\n========== [${timestamp}] ==========\n`;
+  if (logData.userId) {
+    logText += `UserID: ${logData.userId}\n`;
+  }
   logText += `Status: ${logData.status}\n`;
   if (logData.goalResult) {
     logText += `Goal Result: ${logData.goalResult}\n`;
@@ -55,6 +58,48 @@ app.post("/api/log", (req, res) => {
 app.post("/api/run", (req, res) => {
   const { program } = req.body;
   res.json({ success: true, message: "Program received.", program });
+});
+
+app.get("/api/logs/:userId", (req, res) => {
+  const targetUserId = req.params.userId;
+  const logsBaseDir = path.join(__dirname, "logs");
+  
+  if (!fs.existsSync(logsBaseDir)) {
+    return res.json({ logs: [] });
+  }
+
+  const logEntries = [];
+  const dirs = fs.readdirSync(logsBaseDir);
+  
+  for (const dir of dirs) {
+    const logPath = path.join(logsBaseDir, dir, "execution.log");
+    if (fs.existsSync(logPath)) {
+      const content = fs.readFileSync(logPath, "utf-8");
+      // Split by log block separator
+      const blocks = content.split(/========== \[(.*?)\] ==========/).filter(Boolean);
+      
+      for (let i = 0; i < blocks.length; i += 2) {
+        const timestamp = blocks[i];
+        const text = blocks[i + 1];
+        
+        if (text && text.includes(`UserID: ${targetUserId}`)) {
+          const statusMatch = text.match(/Status: (.*)/);
+          const goalMatch = text.match(/Goal Result: (.*)/);
+          const sourceMatch = text.match(/\[Source Code\]\n([\s\S]*?)\n\[Execution Events\]/);
+          
+          logEntries.push({
+            timestamp,
+            status: statusMatch ? statusMatch[1].trim() : "",
+            goalResult: goalMatch ? goalMatch[1].trim() : null,
+            sourceCode: sourceMatch ? sourceMatch[1].trim() : ""
+          });
+        }
+      }
+    }
+  }
+  
+  logEntries.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  res.json({ logs: logEntries });
 });
 
 app.get("/", (req, res) => {
