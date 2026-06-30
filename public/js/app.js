@@ -38,6 +38,12 @@ if (!userId) {
   localStorage.setItem("pictgramming_user_id", userId);
 }
 
+// 起動ごとのセッションIDを発行（サーバー起動の代わり）
+const sessionId = "session_" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+
+// ログ番号（これまで何回実行したか）を管理
+let logCount = parseInt(localStorage.getItem("pictgramming_log_count") || "0", 10);
+
 const nicknameInput = document.getElementById("user-nickname");
 if (nicknameInput) {
   const savedNickname = localStorage.getItem("pictgramming_nickname");
@@ -235,9 +241,15 @@ async function runProgram() {
         currentLogSession.nickname = nicknameInput.value.trim() || "名無し";
       }
       currentLogSession.timestamp = new Date().toISOString();
+      currentLogSession.sessionId = sessionId;
       
-      db.collection('logs').add(currentLogSession)
-        .then(() => console.log("Log saved to Firebase"))
+      logCount++;
+      localStorage.setItem("pictgramming_log_count", logCount);
+      
+      const customDocId = `${userId}_log${logCount}`;
+      
+      db.collection('logs').doc(customDocId).set(currentLogSession)
+        .then(() => console.log(`Log saved to Firebase with ID: ${customDocId}`))
         .catch(e => console.error("Firebase log upload failed", e));
         
       currentLogSession = null;
