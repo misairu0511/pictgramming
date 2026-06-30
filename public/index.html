@@ -70,8 +70,9 @@
         <button class="snippet-btn" data-snippet="部位回転(&quot;左腕&quot;, 45);\n" type="button">部位回転(...);</button>
         <button class="snippet-btn" data-snippet="掴む();\n" type="button">掴む();</button>
         <button class="snippet-btn" data-snippet="離す();\n" type="button">離す();</button>
-        <button class="snippet-btn" data-snippet="for (int i = 0; i < 3; i++) {\n  \n}\n" type="button">for(3回)</button>
-        <button class="snippet-btn" data-snippet="if (true) {\n  \n}\n" type="button">if(...)</button>
+        <button class="snippet-btn" data-snippet="繰り返し(3回) {\n  \n}\n" type="button">繰り返し</button>
+        <button class="snippet-btn" data-snippet="もし(ヒヨコの近くにいる()) {\n  \n}\n" type="button">もし</button>
+        <button class="snippet-btn" data-snippet="もし(ヒヨコの近くにいる()) {\n  \n} そうでなければ {\n  \n}\n" type="button">もし...else</button>
       </div>
 
       <div class="command-help">
@@ -83,6 +84,8 @@
             <li><code>部位回転("体の部位", 数字);</code> 体の部位を回す（プラスで右、マイナスで左）</li>
             <li><code>掴む();</code> 近くの画像（ヒヨコ）を掴む</li>
             <li><code>離す();</code> 掴んでいる画像をその場に離す</li>
+            <li><code>ヒヨコの近くにいる();</code> 手が届く距離なら true</li>
+            <li><code>ヒヨコを持っている();</code> 掴んでいれば true</li>
           </ul>
           <div class="part-name-list">
             <div>体の部位名</div>

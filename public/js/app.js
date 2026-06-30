@@ -240,12 +240,17 @@ function transpileToJava(javaCode) {
   
   // Replace variable types
   jsCode = jsCode.replace(/\b(?:int|double|float|boolean|String)\b\s+/g, 'let ');
+
+  // Replace Japanese control structures
+  jsCode = jsCode.replace(/繰り返し\s*\(\s*(\d+)\s*回\s*\)\s*\{/g, 'for (let _i = 0; _i < $1; _i++) {');
+  jsCode = jsCode.replace(/もし\s*\((.*?)\)\s*\{/g, 'if ($1) {');
+  jsCode = jsCode.replace(/\}\s*そうでなければ\s*\{/g, '} else {');
   
   // Inject yield into loops to prevent freezing
   jsCode = jsCode.replace(/\b(for|while)\s*\((.*?)\)\s*\{/g, '$1($2) { await picto.yield(); ');
   
-  // Replace picto commands
-  jsCode = jsCode.replace(/(移動|回転|部位回転|掴む|離す)\s*\(/g, 'await picto.$1(');
+  // Replace command keywords to await picto.method
+  jsCode = jsCode.replace(/(移動|回転|部位回転|掴む|離す|ヒヨコの近くにいる|ヒヨコを持っている)\s*\(/g, 'await picto.$1(');
   
   return jsCode;
 }
@@ -278,18 +283,28 @@ function createPictoContext() {
       addLog(`部位回転("${realPart}", ${val});`);
       await engine.animatePartRotate(realPart, val);
     },
-    掴む: async () => {
+    "掴む": async function() {
       checkStop();
-      addLog(`掴む();`);
+      addLog("掴む();");
       engine.grabItem();
+      await new Promise(r => setTimeout(r, 100)); // 少し待機
     },
-    離す: async () => {
+    "離す": async function() {
       checkStop();
-      addLog(`離す();`);
+      addLog("離す();");
       engine.releaseItem();
+      await new Promise(r => setTimeout(r, 100));
     },
-    yield: async () => {
-      checkStop();
+    "ヒヨコの近くにいる": async function() {
+      if (shouldStop) throw new Error("STOP");
+      return engine.isNearItem();
+    },
+    "ヒヨコを持っている": async function() {
+      if (shouldStop) throw new Error("STOP");
+      return engine.state.hasGrabbedItem;
+    },
+    yield: async function() {
+      if (shouldStop) throw new Error("STOP");
       while (engine.isPaused && !shouldStop) {
         await new Promise(r => setTimeout(r, 50));
       }

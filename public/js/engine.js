@@ -106,6 +106,16 @@ class PictoEngine {
     this.draw();
   }
 
+  isNearItem() {
+    const item = this.state.item;
+    const leftHand = this.getHandPosition("leftArm");
+    const rightHand = this.getHandPosition("rightArm");
+    const grabRadius = 35;
+    const distL = this.distance(leftHand.x, leftHand.y, item.x, item.y);
+    const distR = this.distance(rightHand.x, rightHand.y, item.x, item.y);
+    return distL <= grabRadius || distR <= grabRadius;
+  }
+
   releaseItem() {
     this.state.item.attachedTo = null;
     this.draw();
