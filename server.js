@@ -75,12 +75,11 @@ app.get("/api/logs/:userId", (req, res) => {
     const logPath = path.join(logsBaseDir, dir, "execution.log");
     if (fs.existsSync(logPath)) {
       const content = fs.readFileSync(logPath, "utf-8");
-      // Split by log block separator
-      const blocks = content.split(/========== \[(.*?)\] ==========/).filter(Boolean);
+      const parts = content.split(/========== \[(.*?)\] ==========/);
       
-      for (let i = 0; i < blocks.length; i += 2) {
-        const timestamp = blocks[i];
-        const text = blocks[i + 1];
+      for (let i = 1; i < parts.length; i += 2) {
+        const timestamp = parts[i];
+        const text = parts[i + 1];
         
         if (text && text.includes(`UserID: ${targetUserId}`)) {
           const statusMatch = text.match(/Status: (.*)/);
