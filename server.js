@@ -62,37 +62,28 @@ app.post("/api/run", (req, res) => {
 
 app.get("/api/logs/:userId", (req, res) => {
   const targetUserId = req.params.userId;
-  const logsBaseDir = path.join(__dirname, "logs");
-  
-  if (!fs.existsSync(logsBaseDir)) {
-    return res.json({ logs: [] });
-  }
-
   const logEntries = [];
-  const dirs = fs.readdirSync(logsBaseDir);
+  const logPath = path.join(sessionLogsDir, "execution.log");
   
-  for (const dir of dirs) {
-    const logPath = path.join(logsBaseDir, dir, "execution.log");
-    if (fs.existsSync(logPath)) {
-      const content = fs.readFileSync(logPath, "utf-8");
-      const parts = content.split(/========== \[(.*?)\] ==========/);
+  if (fs.existsSync(logPath)) {
+    const content = fs.readFileSync(logPath, "utf-8");
+    const parts = content.split(/========== \[(.*?)\] ==========/);
+    
+    for (let i = 1; i < parts.length; i += 2) {
+      const timestamp = parts[i];
+      const text = parts[i + 1];
       
-      for (let i = 1; i < parts.length; i += 2) {
-        const timestamp = parts[i];
-        const text = parts[i + 1];
+      if (text && text.includes(`UserID: ${targetUserId}`)) {
+        const statusMatch = text.match(/Status: (.*)/);
+        const goalMatch = text.match(/Goal Result: (.*)/);
+        const sourceMatch = text.match(/\[Source Code\]\n([\s\S]*?)\n\[Execution Events\]/);
         
-        if (text && text.includes(`UserID: ${targetUserId}`)) {
-          const statusMatch = text.match(/Status: (.*)/);
-          const goalMatch = text.match(/Goal Result: (.*)/);
-          const sourceMatch = text.match(/\[Source Code\]\n([\s\S]*?)\n\[Execution Events\]/);
-          
-          logEntries.push({
-            timestamp,
-            status: statusMatch ? statusMatch[1].trim() : "",
-            goalResult: goalMatch ? goalMatch[1].trim() : null,
-            sourceCode: sourceMatch ? sourceMatch[1].trim() : ""
-          });
-        }
+        logEntries.push({
+          timestamp,
+          status: statusMatch ? statusMatch[1].trim() : "",
+          goalResult: goalMatch ? goalMatch[1].trim() : null,
+          sourceCode: sourceMatch ? sourceMatch[1].trim() : ""
+        });
       }
     }
   }
