@@ -3,6 +3,20 @@ const editor = document.getElementById("java-editor");
 if (!editor.value.trim()) {
   editor.value = `// ピクトグラムを動かすプログラムを書いてみよう！\n移動(50);\n回転(90);\n部位回転("左腕", 45);\n`;
 }
+
+// Firebase Setup
+const firebaseConfig = {
+  apiKey: "AIzaSyBc4s66rHugPmNVV_Ra-S7P4vOfe2tNxQA",
+  authDomain: "pictgramming.firebaseapp.com",
+  projectId: "pictgramming",
+  storageBucket: "pictgramming.firebasestorage.app",
+  messagingSenderId: "835896621128",
+  appId: "1:835896621128:web:e5ae40c7d4b91ff1e6407d",
+  measurementId: "G-6RP66BRFLG"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 const log = document.getElementById("stage-log");
 const runButton = document.getElementById("btn-run");
 const resetButton = document.getElementById("btn-reset");
@@ -220,11 +234,12 @@ async function runProgram() {
       if (nicknameInput) {
         currentLogSession.nickname = nicknameInput.value.trim() || "名無し";
       }
-      fetch('/api/log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentLogSession)
-      }).catch(e => console.error("Log upload failed", e));
+      currentLogSession.timestamp = new Date().toISOString();
+      
+      db.collection('logs').add(currentLogSession)
+        .then(() => console.log("Log saved to Firebase"))
+        .catch(e => console.error("Firebase log upload failed", e));
+        
       currentLogSession = null;
     }
   }
@@ -242,16 +257,21 @@ if (btnLogHistory && logModal) {
     logModalContent.innerHTML = "<p>読み込み中...</p>";
     
     try {
-      const res = await fetch(`/api/logs/${userId}`);
-      const data = await res.json();
-      
-      if (!data.logs || data.logs.length === 0) {
+      const snapshot = await db.collection('logs')
+        .where('userId', '==', userId)
+        .get();
+        
+      if (snapshot.empty) {
         logModalContent.innerHTML = "<p>履歴がありません。</p>";
         return;
       }
       
+      let logs = [];
+      snapshot.forEach(doc => logs.push(doc.data()));
+      logs.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+      
       let html = "";
-      data.logs.forEach(log => {
+      logs.forEach(log => {
         html += `
           <div class="history-card">
             <div class="history-time">${log.timestamp}</div>
@@ -263,6 +283,7 @@ if (btnLogHistory && logModal) {
       });
       logModalContent.innerHTML = html;
     } catch (e) {
+      console.error(e);
       logModalContent.innerHTML = "<p>履歴の取得に失敗しました。</p>";
     }
   });

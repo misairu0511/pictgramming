@@ -19,80 +19,9 @@ if (!fs.existsSync(sessionLogsDir)) {
   fs.mkdirSync(sessionLogsDir, { recursive: true });
 }
 
-app.post("/api/log", (req, res) => {
-  const logData = req.body;
-  const logFile = path.join(sessionLogsDir, "execution.log");
-  
-  const timestamp = new Date().toISOString();
-  let logText = `\n========== [${timestamp}] ==========\n`;
-  if (logData.userId) {
-    logText += `UserID: ${logData.userId}\n`;
-  }
-  if (logData.nickname) {
-    logText += `Nickname: ${logData.nickname}\n`;
-  }
-  logText += `Status: ${logData.status}\n`;
-  if (logData.goalResult) {
-    logText += `Goal Result: ${logData.goalResult}\n`;
-  }
-  if (logData.errorMessage) {
-    logText += `Error: ${logData.errorMessage}\n`;
-  }
-  logText += `\n[Source Code]\n${logData.sourceCode}\n`;
-  logText += `\n[Execution Events]\n`;
-  if (logData.events && logData.events.length > 0) {
-    logData.events.forEach(e => {
-      logText += `  - [${e.type || "info"}] ${e.message}\n`;
-    });
-  } else {
-    logText += `  (No events recorded)\n`;
-  }
-  logText += `=========================================\n`;
-
-  fs.appendFile(logFile, logText, (err) => {
-    if (err) {
-      console.error("Failed to write log", err);
-      return res.status(500).json({ success: false });
-    }
-    res.json({ success: true });
-  });
-});
-
 app.post("/api/run", (req, res) => {
   const { program } = req.body;
   res.json({ success: true, message: "Program received.", program });
-});
-
-app.get("/api/logs/:userId", (req, res) => {
-  const targetUserId = req.params.userId;
-  const logEntries = [];
-  const logPath = path.join(sessionLogsDir, "execution.log");
-  
-  if (fs.existsSync(logPath)) {
-    const content = fs.readFileSync(logPath, "utf-8");
-    const parts = content.split(/========== \[(.*?)\] ==========/);
-    
-    for (let i = 1; i < parts.length; i += 2) {
-      const timestamp = parts[i];
-      const text = parts[i + 1];
-      
-      if (text && text.includes(`UserID: ${targetUserId}`)) {
-        const statusMatch = text.match(/Status: (.*)/);
-        const goalMatch = text.match(/Goal Result: (.*)/);
-        const sourceMatch = text.match(/\[Source Code\]\n([\s\S]*?)\n\[Execution Events\]/);
-        
-        logEntries.push({
-          timestamp,
-          status: statusMatch ? statusMatch[1].trim() : "",
-          goalResult: goalMatch ? goalMatch[1].trim() : null,
-          sourceCode: sourceMatch ? sourceMatch[1].trim() : ""
-        });
-      }
-    }
-  }
-  
-  logEntries.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-  res.json({ logs: logEntries });
 });
 
 app.get("/", (req, res) => {
