@@ -28,7 +28,25 @@ const engine = new PictoEngine(canvas);
 const stageSelect = document.getElementById("stage-select");
 if (stageSelect) {
   stageSelect.addEventListener("change", (e) => {
+    if (isRunning) {
+      shouldStop = true;
+      engine.stop();
+      isRunning = false;
+      runButton.textContent = "実行";
+      runButton.disabled = false;
+      stopButton.disabled = true;
+      pauseButton.disabled = true;
+      pauseButton.textContent = "一時停止";
+      resetButton.disabled = false;
+      
+      const btnShowHint = document.getElementById("btn-show-hint");
+      if (btnShowHint) {
+        btnShowHint.disabled = false;
+        btnShowHint.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>\n          ゴースト再生`;
+      }
+    }
     engine.loadStage(e.target.value);
+    clearOutput();
   });
 }
 
@@ -316,6 +334,11 @@ async function runProgram() {
         .catch(e => console.error("Firebase log upload failed", e));
         
       currentLogSession = null;
+      
+      // クリア成功ならロック状態を更新
+      if (goalResult === "ゴールした") {
+        updateStageLocks();
+      }
     }
   }
 }
@@ -484,3 +507,59 @@ function showPartTooltip(event) {
 function hidePartTooltip() {
   partTooltip.hidden = true;
 }
+
+// ----------------------------------------------------
+// ステージのアンロック（進行）管理
+// ----------------------------------------------------
+async function updateStageLocks() {
+  if (!stageSelect) return;
+  const options = stageSelect.options;
+  
+  try {
+    // ユーザーの全ログを取得して、クリアしたステージIDを抽出
+    const snapshot = await db.collection('logs')
+      .where('userId', '==', userId)
+      .get();
+      
+    const clearedStages = new Set();
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.goalResult === 'ゴールした') {
+        clearedStages.add(data.stageId);
+      }
+    });
+    
+    const hasCleared1 = clearedStages.has('stage1');
+    const hasCleared2 = clearedStages.has('stage2');
+    
+    // ステージ1は常に解放
+    options[0].disabled = false;
+    options[0].text = "ステージ1: 目の前のヒヨコ";
+    
+    // ステージ2 (ステージ1クリアで解放)
+    if (hasCleared1) {
+      options[1].disabled = false;
+      options[1].text = "ステージ2: 後ろのヒヨコ";
+    } else {
+      options[1].disabled = true;
+      options[1].text = "🔒 ステージ2 (ステージ1をクリアで解放)";
+      if (stageSelect.value === 'stage2') stageSelect.value = 'stage1';
+    }
+    
+    // ステージ3 (ステージ2クリアで解放)
+    if (hasCleared2) {
+      options[2].disabled = false;
+      options[2].text = "ステージ3: 遠い道のり";
+    } else {
+      options[2].disabled = true;
+      options[2].text = "🔒 ステージ3 (ステージ2をクリアで解放)";
+      if (stageSelect.value === 'stage3') stageSelect.value = (hasCleared1 ? 'stage2' : 'stage1');
+    }
+    
+  } catch (e) {
+    console.error("ステージロック状況の取得に失敗しました", e);
+  }
+}
+
+// ページ読み込み時にロック状況を更新
+updateStageLocks();
