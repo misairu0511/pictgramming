@@ -369,6 +369,7 @@ async function runProgram() {
     events: []
   };
 
+  let finalGoalResult = null;
   try {
     let jsCode = transpileToJava(source);
     const picto = createPictoContext();
@@ -378,6 +379,7 @@ async function runProgram() {
       addLog("完了しました。", "success");
       
       const goalResult = engine.evaluateGoalStatus();
+      finalGoalResult = goalResult;
       const resultType = goalResult === "ゴールした" ? "success" : "info";
       addLog(`【判定結果】 ${goalResult}`, resultType);
       
@@ -426,8 +428,7 @@ async function runProgram() {
         
       currentLogSession = null;
       
-      // クリア成功ならロック状態を更新
-      if (goalResult === "ゴールした") {
+      if (finalGoalResult === "ゴールした") {
         updateStageLocks();
       }
     }
