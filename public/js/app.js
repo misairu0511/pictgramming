@@ -141,7 +141,7 @@ if (btnShowHint) {
       const stageId = engine.currentStageId;
       const snapshot = await db.collection('logs')
         .where('stageId', '==', stageId)
-        .where('status', '==', 'success')
+        .where('goalResult', '==', 'ゴールした')
         .limit(20)
         .get();
         
@@ -272,7 +272,7 @@ async function runProgram() {
       const resultType = goalResult === "ゴールした" ? "success" : "info";
       addLog(`【判定結果】 ${goalResult}`, resultType);
       
-      currentLogSession.status = "success";
+      currentLogSession.status = goalResult === "ゴールした" ? "success" : "failed";
       currentLogSession.goalResult = goalResult;
     } else {
       currentLogSession.status = "stopped";
