@@ -437,6 +437,14 @@ async function runProgram() {
       
       if (finalGoalResult === "ゴールした") {
         updateStageLocks();
+        const clearOverlay = document.getElementById("clear-overlay");
+        if (clearOverlay) {
+          clearOverlay.hidden = false;
+          // 4秒後に自動で消す
+          setTimeout(() => {
+            clearOverlay.hidden = true;
+          }, 4000);
+        }
       }
     }
   }
@@ -572,6 +580,8 @@ function createPictoContext() {
 function clearOutput() {
   log.innerHTML = "";
   engine.reset();
+  const clearOverlay = document.getElementById("clear-overlay");
+  if (clearOverlay) clearOverlay.hidden = true;
 }
 
 function addLog(message, type = "") {
@@ -662,3 +672,10 @@ async function updateStageLocks() {
 
 // ページ読み込み時にロック状況を更新
 updateStageLocks();
+
+const clearOverlay = document.getElementById("clear-overlay");
+if (clearOverlay) {
+  clearOverlay.addEventListener("click", () => {
+    clearOverlay.hidden = true;
+  });
+}
