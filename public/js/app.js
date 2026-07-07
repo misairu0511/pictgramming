@@ -146,7 +146,9 @@ if (btnShowHint) {
         .get();
         
       if (snapshot.empty) {
-        alert("まだこのステージをクリアした人がいないため、ヒントを表示できません！");
+        addLog("まだこのステージをクリアした人がいないため、ヒントを表示できません！", "error");
+        btnShowHint.disabled = false;
+        btnShowHint.innerHTML = originalText;
         return;
       }
       
@@ -156,7 +158,9 @@ if (btnShowHint) {
       const randomLog = logs[Math.floor(Math.random() * logs.length)];
       
       if (!randomLog.events || randomLog.events.length === 0) {
-        alert("ヒントデータの読み込みに失敗しました。");
+        addLog("ヒントデータの読み込みに失敗しました。", "error");
+        btnShowHint.disabled = false;
+        btnShowHint.innerHTML = originalText;
         return;
       }
       
@@ -170,7 +174,7 @@ if (btnShowHint) {
       
     } catch (e) {
       console.error(e);
-      alert("ヒントの取得に失敗しました。");
+      addLog("ヒントの取得に失敗しました。", "error");
     } finally {
       isRunning = false;
       stopButton.disabled = true;
