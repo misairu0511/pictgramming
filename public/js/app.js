@@ -477,16 +477,35 @@ if (btnLogHistory && logModal) {
       
       let html = "";
       logs.forEach(log => {
+        const encodedCode = encodeURIComponent(log.sourceCode);
         html += `
           <div class="history-card">
-            <div class="history-time">${log.timestamp}</div>
-            <div class="history-status">状態: ${log.status}</div>
-            ${log.goalResult ? `<div class="history-goal">判定: ${log.goalResult}</div>` : ''}
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <div class="history-time">${log.timestamp}</div>
+                <div class="history-status">状態: ${log.status}</div>
+                ${log.goalResult ? `<div class="history-goal">判定: ${log.goalResult}</div>` : ''}
+              </div>
+              <button class="btn btn-secondary btn-copy" style="font-size: 11px; padding: 4px 8px;" data-code="${encodedCode}">コピー</button>
+            </div>
             <pre class="history-code">${log.sourceCode}</pre>
           </div>
         `;
       });
       logModalContent.innerHTML = html;
+      
+      // コピーボタンのイベントリスナー
+      document.querySelectorAll(".btn-copy").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          const code = decodeURIComponent(e.target.getAttribute("data-code"));
+          navigator.clipboard.writeText(code).then(() => {
+            e.target.textContent = "コピー完了!";
+            setTimeout(() => {
+              e.target.textContent = "コピー";
+            }, 2000);
+          });
+        });
+      });
     } catch (e) {
       console.error(e);
       logModalContent.innerHTML = "<p>履歴の取得に失敗しました。</p>";
