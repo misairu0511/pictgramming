@@ -128,6 +128,58 @@ clearStageButton.addEventListener("click", () => {
   clearOutput();
 });
 
+const btnShowHint = document.getElementById("btn-show-hint");
+if (btnShowHint) {
+  btnShowHint.addEventListener("click", async () => {
+    if (isRunning) return;
+    
+    btnShowHint.disabled = true;
+    const originalText = btnShowHint.innerHTML;
+    btnShowHint.innerHTML = "取得中...";
+    
+    try {
+      const stageId = engine.currentStageId;
+      const snapshot = await db.collection('logs')
+        .where('stageId', '==', stageId)
+        .where('status', '==', 'success')
+        .limit(20)
+        .get();
+        
+      if (snapshot.empty) {
+        alert("まだこのステージをクリアした人がいないため、ヒントを表示できません！");
+        return;
+      }
+      
+      const logs = [];
+      snapshot.forEach(doc => logs.push(doc.data()));
+      
+      const randomLog = logs[Math.floor(Math.random() * logs.length)];
+      
+      if (!randomLog.events || randomLog.events.length === 0) {
+        alert("ヒントデータの読み込みに失敗しました。");
+        return;
+      }
+      
+      addLog(`【ヒント再生】${randomLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
+      
+      isRunning = true;
+      shouldStop = false;
+      stopButton.disabled = false;
+      
+      await engine.playGhost(randomLog.events);
+      
+    } catch (e) {
+      console.error(e);
+      alert("ヒントの取得に失敗しました。");
+    } finally {
+      isRunning = false;
+      stopButton.disabled = true;
+      btnShowHint.disabled = false;
+      btnShowHint.innerHTML = originalText;
+    }
+  });
+}
+
 canvas.addEventListener("mousemove", showPartTooltip);
 canvas.addEventListener("mouseleave", hidePartTooltip);
 

@@ -295,6 +295,10 @@ class PictoEngine {
     this.ctx.stroke();
     this.ctx.restore();
 
+    if (this.isGhostMode) {
+      this.ctx.globalAlpha = 0.5;
+    }
+
     if (this.itemImg.complete && this.itemImg.naturalWidth > 0) {
       const w = 60;
       const h = (w / this.itemImg.naturalWidth) * this.itemImg.naturalHeight;
@@ -304,6 +308,10 @@ class PictoEngine {
       this.ctx.beginPath();
       this.ctx.arc(cx, cy, 30, 0, Math.PI*2);
       this.ctx.fill();
+    }
+    
+    if (this.isGhostMode) {
+      this.ctx.globalAlpha = 1.0;
     }
   }
 
@@ -358,6 +366,10 @@ class PictoEngine {
     ctx.lineJoin = "round";
     ctx.strokeStyle = state.color;
     ctx.fillStyle = state.color;
+    
+    if (this.isGhostMode) {
+      ctx.globalAlpha = 0.5; // ゴーストは半透明にする
+    }
 
     this.drawTorso(parts.body.rotation);
     this.drawConnectedPart(-18, -42, parts.leftArm.rotation, () => this.drawArm(-70, 58, parts.leftElbow.rotation));
@@ -444,6 +456,39 @@ class PictoEngine {
     ctx.arc(10, -40, 4.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = this.state.color;
+  }
+
+  async playGhost(events) {
+    this.reset();
+    this.isGhostMode = true;
+    this.state.color = "#9ca3af"; // ゴースト用のグレー色
+    
+    for (const evt of events) {
+      if (this.isStopped) break;
+      
+      const msg = evt.message;
+      if (!msg) continue;
+
+      if (msg.startsWith("移動")) {
+        const match = msg.match(/移動\(([-.\d]+)\)/);
+        if (match) await this.animateMove(parseFloat(match[1]));
+      } else if (msg.startsWith("回転")) {
+        const match = msg.match(/回転\(([-.\d]+)\)/);
+        if (match) await this.animateTurn(parseFloat(match[1]));
+      } else if (msg.startsWith("部位回転")) {
+        const match = msg.match(/部位回転\("([^"]+)",\s*([-.\d]+)\)/);
+        if (match) await this.animatePartRotate(match[1], parseFloat(match[2]));
+      } else if (msg.startsWith("掴む")) {
+        this.grabItem();
+        await this.wait(300);
+      } else if (msg.startsWith("離す")) {
+        this.releaseItem();
+        await this.wait(300);
+      }
+      await this.wait(120);
+    }
+    
+    this.isGhostMode = false;
   }
 
   getPartAt(canvasX, canvasY) {
