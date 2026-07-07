@@ -71,6 +71,19 @@
         </div>
       </div>
 
+      <div class="editor-toolbar" style="display: flex; gap: 8px; margin-bottom: 8px; background-color: #f1f5f9; padding: 6px; border-radius: 6px;">
+        <button type="button" id="btn-undo" title="元に戻す (Ctrl+Z)" style="background:none; border:none; cursor:pointer; padding:4px; border-radius:4px; color:#475569;" onmouseover="this.style.backgroundColor='#e2e8f0'" onmouseout="this.style.backgroundColor='transparent'">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h10a5 5 0 015 5v2a5 5 0 01-5 5H3"/><path d="M3 10l5-5M3 10l5 5"/></svg>
+        </button>
+        <button type="button" id="btn-redo" title="やり直す (Ctrl+Y)" style="background:none; border:none; cursor:pointer; padding:4px; border-radius:4px; color:#475569;" onmouseover="this.style.backgroundColor='#e2e8f0'" onmouseout="this.style.backgroundColor='transparent'">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10H11a5 5 0 00-5 5v2a5 5 0 005 5h10"/><path d="M21 10l-5-5M21 10l-5 5"/></svg>
+        </button>
+        <div style="flex-grow: 1;"></div>
+        <button type="button" id="btn-clear-editor" title="全て消去" style="background:none; border:none; cursor:pointer; padding:4px; color:#ef4444; border-radius:4px;" onmouseover="this.style.backgroundColor='#fee2e2'" onmouseout="this.style.backgroundColor='transparent'">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>
+
       <textarea id="java-editor" spellcheck="false" aria-label="Java 文の入力欄">移動(80);
 回転(45);
 部位回転("左腕", -45);

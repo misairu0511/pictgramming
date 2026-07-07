@@ -146,6 +146,31 @@ clearStageButton.addEventListener("click", () => {
   clearOutput();
 });
 
+const btnUndo = document.getElementById("btn-undo");
+const btnRedo = document.getElementById("btn-redo");
+const btnClearEditor = document.getElementById("btn-clear-editor");
+
+if (btnUndo) {
+  btnUndo.addEventListener("click", () => {
+    editor.focus();
+    document.execCommand('undo');
+  });
+}
+if (btnRedo) {
+  btnRedo.addEventListener("click", () => {
+    editor.focus();
+    document.execCommand('redo');
+  });
+}
+if (btnClearEditor) {
+  btnClearEditor.addEventListener("click", () => {
+    if (confirm("入力したプログラムをすべて消去しますか？")) {
+      editor.value = "";
+      editor.focus();
+    }
+  });
+}
+
 const btnShowHint = document.getElementById("btn-show-hint");
 if (btnShowHint) {
   btnShowHint.addEventListener("click", async () => {
