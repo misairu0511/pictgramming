@@ -140,6 +140,7 @@ resetButton.addEventListener("click", () => {
   if (isRunning) return;
   editor.value = "";
   clearOutput();
+  saveHistory();
 });
 clearStageButton.addEventListener("click", () => {
   if (isRunning) return;
@@ -150,26 +151,90 @@ const btnUndo = document.getElementById("btn-undo");
 const btnRedo = document.getElementById("btn-redo");
 const btnClearEditor = document.getElementById("btn-clear-editor");
 
+const historyStack = [{ val: editor.value, start: 0, end: 0 }];
+let historyIndex = 0;
+let isUndoRedoAction = false;
+
+function updateToolbarState() {
+  if (btnUndo) {
+    btnUndo.disabled = (historyIndex <= 0);
+    btnUndo.style.opacity = btnUndo.disabled ? "0.3" : "1";
+    btnUndo.style.cursor = btnUndo.disabled ? "not-allowed" : "pointer";
+  }
+  if (btnRedo) {
+    btnRedo.disabled = (historyIndex >= historyStack.length - 1);
+    btnRedo.style.opacity = btnRedo.disabled ? "0.3" : "1";
+    btnRedo.style.cursor = btnRedo.disabled ? "not-allowed" : "pointer";
+  }
+  if (btnClearEditor) {
+    btnClearEditor.disabled = (editor.value.trim() === "");
+    btnClearEditor.style.opacity = btnClearEditor.disabled ? "0.3" : "1";
+    btnClearEditor.style.cursor = btnClearEditor.disabled ? "not-allowed" : "pointer";
+  }
+}
+
+function saveHistory() {
+  if (isUndoRedoAction) return;
+  const currentVal = editor.value;
+  if (historyIndex >= 0 && historyStack[historyIndex].val === currentVal) return;
+  
+  historyStack.length = historyIndex + 1;
+  historyStack.push({
+    val: currentVal,
+    start: editor.selectionStart,
+    end: editor.selectionEnd
+  });
+  if (historyStack.length > 50) {
+    historyStack.shift();
+  } else {
+    historyIndex++;
+  }
+  updateToolbarState();
+}
+
+editor.addEventListener("input", saveHistory);
+
 if (btnUndo) {
   btnUndo.addEventListener("click", () => {
-    editor.focus();
-    document.execCommand('undo');
+    if (historyIndex > 0) {
+      isUndoRedoAction = true;
+      historyIndex--;
+      const state = historyStack[historyIndex];
+      editor.value = state.val;
+      editor.selectionStart = state.start;
+      editor.selectionEnd = state.end;
+      editor.focus();
+      updateToolbarState();
+      isUndoRedoAction = false;
+    }
   });
 }
 if (btnRedo) {
   btnRedo.addEventListener("click", () => {
-    editor.focus();
-    document.execCommand('redo');
+    if (historyIndex < historyStack.length - 1) {
+      isUndoRedoAction = true;
+      historyIndex++;
+      const state = historyStack[historyIndex];
+      editor.value = state.val;
+      editor.selectionStart = state.start;
+      editor.selectionEnd = state.end;
+      editor.focus();
+      updateToolbarState();
+      isUndoRedoAction = false;
+    }
   });
 }
 if (btnClearEditor) {
   btnClearEditor.addEventListener("click", () => {
-    if (confirm("入力したプログラムをすべて消去しますか？")) {
+    if (editor.value.trim() !== "" && confirm("入力したプログラムをすべて消去しますか？")) {
       editor.value = "";
       editor.focus();
+      saveHistory();
     }
   });
 }
+
+updateToolbarState();
 
 const btnShowHint = document.getElementById("btn-show-hint");
 if (btnShowHint) {
@@ -275,6 +340,7 @@ function insertSnippet(snippet) {
   const newCursorPos = before.length + cursorTarget;
   editor.selectionStart = editor.selectionEnd = newCursorPos;
   editor.focus();
+  saveHistory();
 }
 
 async function runProgram() {
