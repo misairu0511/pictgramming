@@ -25,6 +25,12 @@ const stopButton = document.getElementById("btn-stop");
 const pauseButton = document.getElementById("btn-pause");
 const partTooltip = document.getElementById("part-tooltip");
 const engine = new PictoEngine(canvas);
+const stageSelect = document.getElementById("stage-select");
+if (stageSelect) {
+  stageSelect.addEventListener("change", (e) => {
+    engine.loadStage(e.target.value);
+  });
+}
 
 const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 
@@ -242,6 +248,7 @@ async function runProgram() {
       }
       currentLogSession.timestamp = new Date().toISOString();
       currentLogSession.sessionId = sessionId;
+      currentLogSession.stageId = engine.currentStageId;
       
       logCount++;
       localStorage.setItem("pictgramming_log_count", logCount);

@@ -16,7 +16,18 @@
       </div>
     </div>
     <div class="header-actions">
-      <input type="text" id="user-nickname" class="input-nickname" placeholder="ニックネーム" aria-label="ニックネーム" maxlength="20">
+      <div class="user-info">
+        <select id="stage-select" class="stage-select">
+          <option value="stage1">ステージ1: 目の前のヒヨコ</option>
+          <option value="stage2">ステージ2: 後ろのヒヨコ</option>
+          <option value="stage3">ステージ3: 遠い道のり</option>
+        </select>
+        <input type="text" id="user-nickname" class="input-nickname" placeholder="ニックネーム (ログ用)" maxlength="15">
+        <button id="btn-log-history" class="btn btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          履歴を見る
+        </button>
+      </div>
       <button class="btn btn-secondary" id="btn-reset" type="button">リセット</button>
       <button class="btn btn-secondary" id="btn-pause" type="button" disabled>一時停止</button>
       <button class="btn btn-secondary" id="btn-stop" type="button" disabled>停止</button>

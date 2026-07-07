@@ -1,9 +1,16 @@
+const STAGES = {
+  stage1: { itemOffset: { x: 100, y: 100 }, goalOffset: { x: 250, y: -100 } },
+  stage2: { itemOffset: { x: -120, y: 0 }, goalOffset: { x: 250, y: -100 } },
+  stage3: { itemOffset: { x: 0, y: -180 }, goalOffset: { x: -200, y: 150 } }
+};
+
 class PictoEngine {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.animationMs = 900;
     this.partAnimationMs = 650;
+    this.currentStageId = "stage1";
     this.partLabels = {
       head: { ja: "頭", code: "head" },
       body: { ja: "胴体", code: "body" },
@@ -24,26 +31,35 @@ class PictoEngine {
     this.reset();
   }
 
+  loadStage(stageId) {
+    this.currentStageId = stageId;
+    this.reset();
+  }
+
   reset() {
     this.isStopped = false;
     this.isPaused = false;
     
+    const stage = STAGES[this.currentStageId] || STAGES.stage1;
+    const centerX = this.canvas.width / 2;
+    const centerY = this.canvas.height / 2 + 40;
+    
     this.goal = {
-      x: this.canvas.width - 150,
-      y: 150,
+      x: centerX + stage.goalOffset.x,
+      y: centerY + stage.goalOffset.y,
       radius: 70
     };
 
     this.state = {
-      x: this.canvas.width / 2,
-      y: this.canvas.height / 2 + 40,
+      x: centerX,
+      y: centerY,
       direction: 0,
       color: "#2563eb",
       trail: [],
       parts: this.createParts(),
       item: {
-        x: this.canvas.width / 2 + 100,
-        y: this.canvas.height / 2 + 100,
+        x: centerX + stage.itemOffset.x,
+        y: centerY + stage.itemOffset.y,
         attachedTo: null,
         offsetX: 0,
         offsetY: 0
