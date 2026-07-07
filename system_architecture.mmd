@@ -1,0 +1,52 @@
+graph TD
+    %% サービスとインフラ
+    subgraph Services ["外部サービス (インフラ)"]
+        GitHub["GitHub (ソースコード)"]
+        Netlify["Netlify (Webホスティング)"]
+        Firestore["Firebase Firestore (データベース)"]
+    end
+
+    %% ブラウザ側の処理
+    subgraph Browser ["ユーザーのブラウザ (手元のPC・スマホ)"]
+        HTML["index.html<br>(画面の枠組み・ボタン入力)"]
+        
+        subgraph AppJS ["app.js (司令塔・通信)"]
+            runProgram["runProgram()<br>実行ボタンが押された時の全体の進行役"]
+            transpileToJava["transpileToJava()<br>日本語コードをJS言語に翻訳する"]
+            dbAdd["db.collection('logs').doc().set()<br>Firebaseへ実行結果を送信・保存する"]
+            getLogs["db.collection('logs').get()<br>Firebaseから自分の履歴を取得する"]
+        end
+        
+        subgraph EngineJS ["engine.js (描画・物理計算)"]
+            animateMove["animateMove() / animateTurn()<br>ピクトグラムの座標や角度を計算して動かす"]
+            grabItem["grabItem() / isNearItem()<br>ヒヨコとの距離を計算し、掴めるか判定する"]
+            draw["draw()<br>Canvasにピクトグラムの絵をパラパラ漫画のように描画する"]
+            evaluate["evaluateGoalStatus()<br>ゴールに到達したか(判定結果)を計算する"]
+        end
+    end
+
+    %% デプロイの流れ
+    GitHub -- "git pushで自動更新" --> Netlify
+    Netlify -- "アプリ一式を配信" --> HTML
+
+    %% ブラウザ内のフロー（関数の繋がり）
+    HTML -- "「実行」ボタンを押す" --> runProgram
+    HTML -- "「履歴を見る」ボタンを押す" --> getLogs
+
+    runProgram -- "①コードを渡す" --> transpileToJava
+    transpileToJava -- "②翻訳済みのコードを返す" --> runProgram
+    
+    runProgram -- "③動きの命令を出す" --> animateMove
+    runProgram -- "③掴む命令を出す" --> grabItem
+    
+    animateMove -- "④動かすたびに画面を更新" --> draw
+    grabItem -- "④掴んだ状態を画面に反映" --> draw
+
+    runProgram -- "⑤全て終わったら判定を依頼" --> evaluate
+    evaluate -- "⑥ゴールできたかの結果を返す" --> runProgram
+
+    runProgram -- "⑦最終結果(ログ)をFirebaseに送る" --> dbAdd
+
+    %% 外部サービスとの通信
+    dbAdd -- "ログ保存通信" --> Firestore
+    getLogs -- "ログ取得通信" --> Firestore
