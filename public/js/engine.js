@@ -294,6 +294,32 @@ class PictoEngine {
     return null;
   }
 
+  checkNeedleCollision() {
+    if (!this.state.needleZone) return null;
+    if (this.isFullyEquipped()) return null;
+    
+    // 体の中心、頭、両手、両足をチェック
+    const dirRad = this.state.direction * Math.PI / 180;
+    const headX = this.state.x + Math.sin(dirRad) * 100;
+    const headY = this.state.y - Math.cos(dirRad) * 100;
+    
+    const points = [
+      { x: this.state.x, y: this.state.y },
+      { x: headX, y: headY },
+      this.getHandPosition("rightArm"),
+      this.getHandPosition("leftArm"),
+      this.getLegPosition("rightLeg"),
+      this.getLegPosition("leftLeg")
+    ];
+    
+    for (const p of points) {
+      if (this.isPointInRect(p.x, p.y, this.state.needleZone)) {
+        return new Error("靴をすべて履かずに針山に触れてしまった！");
+      }
+    }
+    return null;
+  }
+
   evaluateGoalStatus() {
     const item = this.state.item;
     const dist = this.distance(item.x, item.y, this.goal.x, this.goal.y);
@@ -334,7 +360,7 @@ class PictoEngine {
 
     if (command.name === "rotatePart") {
       onLog(`rotatePart("${command.part}", ${value});`);
-      await this.animatePartRotate(command.part, value);
+      await this.animatePartTurn(command.part, value);
       return;
     }
   }
@@ -352,11 +378,10 @@ class PictoEngine {
       this.state.x = this.lerp(startX, endX, progress);
       this.state.y = this.lerp(startY, endY, progress);
       
-      if (this.state.needleZone && this.isPointInRect(this.state.x, this.state.y, this.state.needleZone)) {
-        if (!this.isFullyEquipped()) {
-          moveError = new Error("靴をすべて履かずに針山を踏んでしまった！");
-          this.isStopped = true;
-        }
+      const err = this.checkNeedleCollision();
+      if (err) {
+        moveError = err;
+        this.isStopped = true;
       }
       this.draw();
     });
