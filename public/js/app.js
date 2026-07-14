@@ -363,13 +363,13 @@ if (btnShowHint) {
       
       // 後半: 自動補完（現在地からゴールへのベクトルを計算して実行）
       if (engine.state.hasGrabbedItem) {
-        const currentPos = engine.state.itemPosition;
-        const goalPos = engine.state.goalPosition;
+        const currentPos = engine.state.item;
+        const goalPos = engine.goal;
         const dx = goalPos.x - currentPos.x;
         const dy = goalPos.y - currentPos.y;
         
         const targetAngle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-        let rotateAmount = targetAngle - engine.state.rotation;
+        let rotateAmount = targetAngle - engine.state.direction;
         rotateAmount = ((rotateAmount % 360) + 540) % 360 - 180;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
