@@ -42,13 +42,45 @@ class PictoEngine {
 
     this.shoeRightImg = new Image();
     this.shoeRightImg.src = "img/shoe_right.jpg";
-    this.shoeRightImg.onload = () => { if (!this.isStopped) this.draw(); };
+    this.shoeRightImg.onload = () => {
+      this.removeWhiteBackground(this.shoeRightImg, (newImg) => {
+        this.shoeRightImg = newImg;
+        if (!this.isStopped) this.draw();
+      });
+    };
 
     this.shoeLeftImg = new Image();
     this.shoeLeftImg.src = "img/shoe_left.jpg";
-    this.shoeLeftImg.onload = () => { if (!this.isStopped) this.draw(); };
+    this.shoeLeftImg.onload = () => {
+      this.removeWhiteBackground(this.shoeLeftImg, (newImg) => {
+        this.shoeLeftImg = newImg;
+        if (!this.isStopped) this.draw();
+      });
+    };
 
     this.reset();
+  }
+
+  removeWhiteBackground(originalImg, callback) {
+    const tempCanvas = document.createElement("canvas");
+    tempCanvas.width = originalImg.naturalWidth;
+    tempCanvas.height = originalImg.naturalHeight;
+    const tCtx = tempCanvas.getContext("2d");
+    tCtx.drawImage(originalImg, 0, 0);
+    const imageData = tCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      // 白（に近い）ピクセルを透過させる
+      if (r > 230 && g > 230 && b > 230) {
+        data[i + 3] = 0;
+      }
+    }
+    tCtx.putImageData(imageData, 0, 0);
+    
+    const newImg = new Image();
+    newImg.onload = () => callback(newImg);
+    newImg.src = tempCanvas.toDataURL("image/png");
   }
 
   loadStage(stageId) {
@@ -245,6 +277,23 @@ class PictoEngine {
     return x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height;
   }
 
+  getShoeAt(canvasX, canvasY) {
+    const s = this.state.shoes;
+    const hitRadius = 40;
+    const checkShoe = (shoeState, side) => {
+      let cx = shoeState.x, cy = shoeState.y;
+      if (shoeState.isWorn) {
+        const legPart = side === "right" ? "rightLeg" : "leftLeg";
+        const pos = this.getLegPosition(legPart);
+        cx = pos.x; cy = pos.y;
+      }
+      return this.distance(canvasX, canvasY, cx, cy) <= hitRadius;
+    };
+    if (s.right && s.right.exists && checkShoe(s.right, "right")) return "右靴";
+    if (s.left && s.left.exists && checkShoe(s.left, "left")) return "左靴";
+    return null;
+  }
+
   evaluateGoalStatus() {
     const item = this.state.item;
     const dist = this.distance(item.x, item.y, this.goal.x, this.goal.y);
@@ -431,14 +480,35 @@ class PictoEngine {
     if (this.isGhostMode) {
       this.ctx.globalAlpha = 0.5;
     }
+    
+    if (shoeState.isWorn) {
+      this.ctx.save();
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, 40, 0, Math.PI * 2);
+      this.ctx.fillStyle = "rgba(239, 68, 68, 0.2)";
+      this.ctx.fill();
+      this.ctx.lineWidth = 4;
+      this.ctx.strokeStyle = "rgba(239, 68, 68, 0.9)";
+      this.ctx.stroke();
+      this.ctx.restore();
+    } else {
+      this.ctx.save();
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, 40, 0, Math.PI * 2);
+      this.ctx.strokeStyle = "rgba(239, 68, 68, 0.4)";
+      this.ctx.lineWidth = 2;
+      this.ctx.setLineDash([6, 4]);
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
 
     if (img.complete && img.naturalWidth > 0) {
-      const w = 40;
+      const w = 80;
       const h = (w / img.naturalWidth) * img.naturalHeight;
       this.ctx.drawImage(img, -w/2, -h/2, w, h);
     } else {
       this.ctx.fillStyle = side === "right" ? "#f97316" : "#0ea5e9";
-      this.ctx.fillRect(-15, -10, 30, 20);
+      this.ctx.fillRect(-25, -20, 50, 40);
     }
     this.ctx.restore();
   }

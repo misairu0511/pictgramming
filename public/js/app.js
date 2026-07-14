@@ -824,6 +824,16 @@ function showPartTooltip(event) {
   const rect = canvas.getBoundingClientRect();
   const canvasX = (event.clientX - rect.left) * (canvas.width / rect.width);
   const canvasY = (event.clientY - rect.top) * (canvas.height / rect.height);
+  
+  const shoeName = engine.getShoeAt(canvasX, canvasY);
+  if (shoeName) {
+    partTooltip.textContent = shoeName;
+    partTooltip.style.left = `${event.clientX - rect.left + 14}px`;
+    partTooltip.style.top = `${event.clientY - rect.top + 14}px`;
+    partTooltip.hidden = false;
+    return;
+  }
+  
   const part = engine.getPartAt(canvasX, canvasY);
 
   if (!part) {
