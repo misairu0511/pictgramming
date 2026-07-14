@@ -559,12 +559,14 @@ if (btnLogHistory && logModal) {
     logModalContent.innerHTML = "<p>読み込み中...</p>";
     
     try {
+      const stageId = stageSelect.value;
       const snapshot = await db.collection('logs')
         .where('userId', '==', userId)
+        .where('stageId', '==', stageId)
         .get();
         
       if (snapshot.empty) {
-        logModalContent.innerHTML = "<p>履歴がありません。</p>";
+        logModalContent.innerHTML = "<p>このステージの履歴がありません。</p>";
         return;
       }
       
@@ -575,11 +577,13 @@ if (btnLogHistory && logModal) {
       let html = "";
       logs.forEach(log => {
         const encodedCode = encodeURIComponent(log.sourceCode);
+        const stageName = (log.stageId === 'stage1') ? 'ステージ1' : (log.stageId === 'stage2') ? 'ステージ2' : 'ステージ3';
         html += `
           <div class="history-card">
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
               <div>
                 <div class="history-time">${log.timestamp}</div>
+                <div class="history-status" style="font-weight:bold;">${stageName}</div>
                 <div class="history-status">状態: ${log.status}</div>
                 ${log.goalResult ? `<div class="history-goal">判定: ${log.goalResult}</div>` : ''}
               </div>
@@ -813,6 +817,12 @@ if (btnDeleteAllLogs) {
       
       const logModalContent = document.getElementById("log-modal-content");
       if (logModalContent) logModalContent.innerHTML = "<p>すべての履歴を削除しました。</p>";
+      
+      // ステージ1に戻してロック状況をリセット
+      if (stageSelect) stageSelect.value = "stage1";
+      engine.loadStage("stage1");
+      updateStageLocks();
+      clearOutput();
     } catch (e) {
       console.error(e);
       alert("削除に失敗しました。");
