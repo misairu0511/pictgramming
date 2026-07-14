@@ -15,6 +15,14 @@ const STAGES = {
     goalOffset: { x: 290, y: 200 }, 
     shoes: { right: { x: -80, y: -50 }, left: { x: 80, y: -50 } },
     needleZone: { x: -2000, y: -180, width: 4000, height: 40 }
+  },
+  stage6: {
+    itemOffset: { x: 100, y: 0 },
+    goalOffset: { x: 450, y: 0 },
+    needleZones: [
+      { x: 170, y: -2000, width: 200, height: 1930 }, // 天井 (y=-70まで)
+      { x: 170, y: 65, width: 200, height: 2000 }     // 床 (y=65から)
+    ]
   }
 };
 
@@ -130,14 +138,29 @@ class PictoEngine {
           exists: true, x: centerX + stage.shoes.left.x, y: centerY + stage.shoes.left.y, isWorn: false 
         } : { exists: false, isWorn: false }
       },
-      needleZone: stage.needleZone ? {
+      needleZones: [],
+      hasGrabbedItem: false
+    };
+
+    if (stage.needleZone) {
+      this.state.needleZones.push({
         x: centerX + stage.needleZone.x,
         y: centerY + stage.needleZone.y,
         width: stage.needleZone.width,
         height: stage.needleZone.height
-      } : null,
-      hasGrabbedItem: false
-    };
+      });
+    }
+    if (stage.needleZones) {
+      for (const nz of stage.needleZones) {
+        this.state.needleZones.push({
+          x: centerX + nz.x,
+          y: centerY + nz.y,
+          width: nz.width,
+          height: nz.height
+        });
+      }
+    }
+    
     this.draw();
   }
 
@@ -301,17 +324,25 @@ class PictoEngine {
   }
 
   checkNeedleCollision() {
-    if (!this.state.needleZone) return null;
-    if (this.isFullyEquipped()) return null;
+    if (this.state.needleZones.length === 0) return null;
+    if (this.isFullyEquipped()) return null; // 靴を完全に履いていれば針山無効 (ステージ4,5用)
     
     // 体の中心、頭、両手、両足をチェック
     const dirRad = this.state.direction * Math.PI / 180;
-    const headX = this.state.x + Math.sin(dirRad) * 100;
-    const headY = this.state.y - Math.cos(dirRad) * 100;
+    
+    // 頭の先は首からの距離だけでなく、bodyの回転も考慮する必要がある
+    // 簡易的に、頭の座標を計算する
+    let m = new DOMMatrix();
+    m.translateSelf(this.state.x, this.state.y);
+    m.rotateSelf(this.state.direction);
+    m.rotateSelf(this.state.parts.body.rotation);
+    m.rotateSelf(this.state.parts.head.rotation);
+    m.translateSelf(0, -80); // 頭の先端
+    const headPos = { x: m.e, y: m.f };
     
     const points = [
       { x: this.state.x, y: this.state.y },
-      { x: headX, y: headY },
+      headPos,
       this.getHandPosition("rightArm"),
       this.getHandPosition("leftArm"),
       this.getLegPosition("rightLeg"),
@@ -319,8 +350,10 @@ class PictoEngine {
     ];
     
     for (const p of points) {
-      if (this.isPointInRect(p.x, p.y, this.state.needleZone)) {
-        return new Error("靴をすべて履かずに針山に触れてしまった！");
+      for (const nz of this.state.needleZones) {
+        if (this.isPointInRect(p.x, p.y, nz)) {
+          return new Error("針山に触れてしまった！");
+        }
       }
     }
     return null;
@@ -451,31 +484,6 @@ class PictoEngine {
   }
 
   drawNeedles() {
-    if (!this.state.needleZone) return;
-    const nz = this.state.needleZone;
-    const ctx = this.ctx;
-    
-    ctx.save();
-    ctx.fillStyle = "rgba(255, 0, 0, 0.2)";
-    ctx.fillRect(nz.x, nz.y, nz.width, nz.height);
-    
-    ctx.strokeStyle = "rgba(200, 50, 50, 0.8)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    
-    if (nz.height > nz.width) {
-      for (let y = nz.y; y <= nz.y + nz.height - 15; y += 15) {
-        ctx.moveTo(nz.x, y);
-        ctx.lineTo(nz.x + nz.width / 2, y + 10);
-        ctx.lineTo(nz.x + nz.width, y);
-      }
-    } else {
-      for (let x = nz.x; x <= nz.x + nz.width - 15; x += 15) {
-        ctx.moveTo(x, nz.y);
-        ctx.lineTo(x + 10, nz.y + nz.height / 2);
-        ctx.lineTo(x, nz.y + nz.height);
-      }
-    }
     ctx.stroke();
     ctx.restore();
   }
