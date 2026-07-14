@@ -285,13 +285,24 @@ class PictoEngine {
       item.y = cy;
     }
 
-    // 当たり判定の可視化
+    // 当たり判定の可視化 (持っている時は強調)
     this.ctx.save();
-    this.ctx.strokeStyle = "rgba(239, 68, 68, 0.4)"; // 少し目立つ赤色の半透明
-    this.ctx.lineWidth = 2;
-    this.ctx.setLineDash([6, 4]);
     this.ctx.beginPath();
-    this.ctx.arc(cx, cy, 35, 0, Math.PI * 2); // 描画も50から35に縮小
+    this.ctx.arc(cx, cy, 35, 0, Math.PI * 2);
+    
+    if (this.state.hasGrabbedItem) {
+      // 持っている時は太くて濃い赤色の実線＋うっすら赤い背景
+      this.ctx.strokeStyle = "rgba(239, 68, 68, 0.9)";
+      this.ctx.lineWidth = 4;
+      this.ctx.fillStyle = "rgba(239, 68, 68, 0.2)";
+      this.ctx.fill();
+    } else {
+      // 持っていない時は半透明の点線
+      this.ctx.strokeStyle = "rgba(239, 68, 68, 0.4)";
+      this.ctx.lineWidth = 2;
+      this.ctx.setLineDash([6, 4]);
+    }
+    
     this.ctx.stroke();
     this.ctx.restore();
 

@@ -135,7 +135,10 @@
 
   <dialog id="log-history-modal" class="log-modal">
     <div class="log-modal-header">
-      <h2>あなたの実行履歴</h2>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <h2 style="margin: 0;">あなたの実行履歴</h2>
+        <button id="btn-delete-all-logs" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: #ef4444; border-color: #ef4444;">全削除</button>
+      </div>
       <button id="log-modal-close" class="icon-btn">✖</button>
     </div>
     <div id="log-modal-content" class="log-modal-body"></div>

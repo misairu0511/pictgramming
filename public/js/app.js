@@ -261,8 +261,15 @@ if (btnShowHint) {
         .where('goalResult', '==', 'ゴールした')
         .get();
         
-      if (clearSnapshot.empty) {
-        addLog("まだ誰もクリアしていません。最初のクリア者を目指しましょう！", "info");
+      const othersClears = [];
+      clearSnapshot.forEach(doc => {
+        if (doc.data().userId !== userId) {
+          othersClears.push(doc.data());
+        }
+      });
+        
+      if (othersClears.length === 0) {
+        addLog("まだあなた以外にクリアした人がいないため、ヒントを表示できません！", "info");
         btnShowHint.disabled = false;
         btnShowHint.innerHTML = originalText;
         return;
@@ -278,9 +285,7 @@ if (btnShowHint) {
 
       if (!myClearSnapshot.empty) {
         // すでにクリア済みの場合は、他の人の「完全な別解」をフルで再生する
-        const allClears = [];
-        clearSnapshot.forEach(doc => allClears.push(doc.data()));
-        const randomLog = allClears[Math.floor(Math.random() * allClears.length)];
+        const randomLog = othersClears[Math.floor(Math.random() * othersClears.length)];
         
         addLog(`【別解再生】${randomLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
         
@@ -301,9 +306,7 @@ if (btnShowHint) {
         
       if (mySnapshot.empty) {
         // 【今回追加した処理】自分がまだヒヨコを掴んでいない場合は、他の人の前半部分を再生する
-        const clearLogs = [];
-        clearSnapshot.forEach(doc => clearLogs.push(doc.data()));
-        const randomLog = clearLogs[Math.floor(Math.random() * clearLogs.length)];
+        const randomLog = othersClears[Math.floor(Math.random() * othersClears.length)];
         
         if (!randomLog.events || randomLog.events.length === 0) {
           addLog("ヒントデータの読み込みに失敗しました。", "error");
@@ -790,5 +793,32 @@ const clearOverlay = document.getElementById("clear-overlay");
 if (clearOverlay) {
   clearOverlay.addEventListener("click", () => {
     clearOverlay.hidden = true;
+  });
+}
+
+// 全履歴削除ボタン
+const btnDeleteAllLogs = document.getElementById("btn-delete-all-logs");
+if (btnDeleteAllLogs) {
+  btnDeleteAllLogs.addEventListener("click", async () => {
+    if (!confirm("本当に自分の履歴を全て削除しますか？\n（この操作は取り消せません）")) return;
+    
+    btnDeleteAllLogs.disabled = true;
+    btnDeleteAllLogs.textContent = "削除中...";
+    
+    try {
+      const snapshot = await db.collection('logs').where('userId', '==', userId).get();
+      const batch = db.batch();
+      snapshot.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+      
+      const logModalContent = document.getElementById("log-modal-content");
+      if (logModalContent) logModalContent.innerHTML = "<p>すべての履歴を削除しました。</p>";
+    } catch (e) {
+      console.error(e);
+      alert("削除に失敗しました。");
+    } finally {
+      btnDeleteAllLogs.disabled = false;
+      btnDeleteAllLogs.textContent = "全削除";
+    }
   });
 }
