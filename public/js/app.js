@@ -259,7 +259,6 @@ if (btnShowHint) {
       const clearSnapshot = await db.collection('logs')
         .where('stageId', '==', stageId)
         .where('goalResult', '==', 'ゴールした')
-        .limit(1)
         .get();
         
       if (clearSnapshot.empty) {
@@ -277,9 +276,36 @@ if (btnShowHint) {
         .get();
         
       if (mySnapshot.empty) {
-        addLog("ヒントを見るには、まずは自力でヒヨコを掴んでみよう！", "error");
-        btnShowHint.disabled = false;
-        btnShowHint.innerHTML = originalText;
+        // 【今回追加した処理】自分がまだヒヨコを掴んでいない場合は、他の人の前半部分を再生する
+        const clearLogs = [];
+        clearSnapshot.forEach(doc => clearLogs.push(doc.data()));
+        const randomLog = clearLogs[Math.floor(Math.random() * clearLogs.length)];
+        
+        if (!randomLog.events || randomLog.events.length === 0) {
+          addLog("ヒントデータの読み込みに失敗しました。", "error");
+          return;
+        }
+        
+        addLog(`【前半ヒント】${randomLog.nickname || '誰か'}さんがヒヨコを掴むまでを再生します`, "info");
+        
+        // hasGrabbedItem が true になった瞬間を探す
+        let grabIndex = randomLog.events.findIndex(evt => evt.hasGrabbedItem === true);
+        if (grabIndex === -1) {
+          grabIndex = randomLog.events.length;
+        } else {
+          // 掴んだ瞬間の直後、少し余韻を残すために +10 フレーム分確保する
+          grabIndex = Math.min(grabIndex + 10, randomLog.events.length);
+        }
+        
+        const truncatedEvents = randomLog.events.slice(0, grabIndex);
+        
+        isRunning = true;
+        shouldStop = false;
+        stopButton.disabled = false;
+        
+        await engine.playGhost(truncatedEvents);
+        
+        // ここでreturnすればfinallyへ飛ぶので、後半の自分専用ゴースト処理には進まない
         return;
       }
       
