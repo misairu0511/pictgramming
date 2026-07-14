@@ -484,7 +484,44 @@ class PictoEngine {
   }
 
   drawNeedles() {
-    ctx.stroke();
+    if (this.state.needleZones.length === 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    
+    for (const nz of this.state.needleZones) {
+      ctx.fillStyle = "#cbd5e1";
+      ctx.fillRect(nz.x, nz.y, nz.width, nz.height);
+
+      ctx.fillStyle = "#ef4444";
+      ctx.beginPath();
+      // 縦長の針山か横長の針山かでギザギザの向きを変える
+      if (nz.height > nz.width) {
+        const needleCount = Math.floor(nz.height / 20);
+        for (let i = 0; i < needleCount; i++) {
+          const ny = nz.y + i * 20 + 10;
+          ctx.moveTo(nz.x, ny - 8);
+          ctx.lineTo(nz.x, ny + 8);
+          ctx.lineTo(nz.x - 15, ny);
+          
+          ctx.moveTo(nz.x + nz.width, ny - 8);
+          ctx.lineTo(nz.x + nz.width, ny + 8);
+          ctx.lineTo(nz.x + nz.width + 15, ny);
+        }
+      } else {
+        const needleCount = Math.floor(nz.width / 20);
+        for (let i = 0; i < needleCount; i++) {
+          const nx = nz.x + i * 20 + 10;
+          ctx.moveTo(nx - 8, nz.y);
+          ctx.lineTo(nx + 8, nz.y);
+          ctx.lineTo(nx, nz.y - 15);
+          
+          ctx.moveTo(nx - 8, nz.y + nz.height);
+          ctx.lineTo(nx + 8, nz.y + nz.height);
+          ctx.lineTo(nx, nz.y + nz.height + 15);
+        }
+      }
+      ctx.fill();
+    }
     ctx.restore();
   }
 

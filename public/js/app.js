@@ -877,6 +877,7 @@ async function updateStageLocks() {
     const hasCleared2 = clearedStages.has('stage2');
     const hasCleared3 = clearedStages.has('stage3');
     const hasCleared4 = clearedStages.has('stage4');
+    const hasCleared5 = clearedStages.has('stage5');
     
     // ステージ1は常に解放
     options[0].disabled = false;
@@ -927,6 +928,18 @@ async function updateStageLocks() {
         options[4].disabled = true;
         options[4].text = "🔒 ステージ5 (ステージ4をクリアで解放)";
         if (stageSelect.value === 'stage5') stageSelect.value = 'stage4';
+      }
+    }
+    
+    // ステージ6 (ステージ5クリアで解放)
+    if (options.length > 5) {
+      if (hasCleared5) {
+        options[5].disabled = false;
+        options[5].text = "ステージ6: 狭いトンネル";
+      } else {
+        options[5].disabled = true;
+        options[5].text = "🔒 ステージ6 (ステージ5をクリアで解放)";
+        if (stageSelect.value === 'stage6') stageSelect.value = 'stage5';
       }
     }
     
