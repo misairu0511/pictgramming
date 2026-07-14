@@ -17,11 +17,11 @@ const STAGES = {
     needleZone: { x: -2000, y: -180, width: 4000, height: 40 }
   },
   stage6: {
-    itemOffset: { x: 100, y: 0 },
-    goalOffset: { x: 450, y: 0 },
+    itemOffset: { x: 60, y: 0 },
+    goalOffset: { x: 280, y: 0 },
     needleZones: [
-      { x: 170, y: -2000, width: 200, height: 1930 }, // 天井 (y=-70まで)
-      { x: 170, y: 65, width: 200, height: 2000 }     // 床 (y=65から)
+      { x: 130, y: -2000, width: 110, height: 1930 }, // 天井 (y=-70まで)
+      { x: 130, y: 65, width: 110, height: 2000 }     // 床 (y=65から)
     ]
   }
 };
