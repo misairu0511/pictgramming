@@ -363,20 +363,53 @@ if (btnShowHint) {
       
       // 後半: 自動補完（現在地からゴールへのベクトルを計算して実行）
       if (engine.state.hasGrabbedItem) {
-        const currentPos = engine.state.item;
         const goalPos = engine.goal;
-        const dx = goalPos.x - currentPos.x;
-        const dy = goalPos.y - currentPos.y;
+        const attachedPart = engine.state.item.attachedTo || "rightArm";
         
-        const targetAngle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-        let rotateAmount = targetAngle - engine.state.direction;
-        rotateAmount = ((rotateAmount % 360) + 540) % 360 - 180;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        // 角度0の時の手のローカル座標を取得
+        const savedDir = engine.state.direction;
+        engine.state.direction = 0;
+        const handPos0 = engine.getHandPosition(attachedPart);
+        engine.state.direction = savedDir;
         
-        if (Math.abs(rotateAmount) > 1) {
+        const local_x = handPos0.x - engine.state.x;
+        const local_y = handPos0.y - engine.state.y;
+        
+        const dx = goalPos.x - engine.state.x;
+        const dy = goalPos.y - engine.state.y;
+        const R = Math.sqrt(dx * dx + dy * dy);
+        
+        if (R >= Math.abs(local_x)) {
+          const phi = Math.atan2(dy, dx);
+          const acosVal = Math.acos(local_x / R);
+          
+          const theta1 = phi + acosVal;
+          const theta2 = phi - acosVal;
+          
+          const D1 = dx * Math.sin(theta1) - dy * Math.cos(theta1) + local_y;
+          const D2 = dx * Math.sin(theta2) - dy * Math.cos(theta2) + local_y;
+          
+          let targetThetaRad = (D1 > D2) ? theta1 : theta2;
+          let distance = Math.max(D1, D2);
+          
+          const targetAngle = targetThetaRad * 180 / Math.PI;
+          let rotateAmount = targetAngle - engine.state.direction;
+          rotateAmount = ((rotateAmount % 360) + 540) % 360 - 180;
+          
+          if (Math.abs(rotateAmount) > 1) {
+            await engine.animateTurn(rotateAmount);
+          }
+          if (distance > 0) {
+            await engine.animateMove(distance);
+          }
+        } else {
+          // ゴールが近すぎる場合はフォールバック
+          const targetAngle = Math.atan2(goalPos.y - engine.state.item.y, goalPos.x - engine.state.item.x) * 180 / Math.PI + 90;
+          let rotateAmount = targetAngle - engine.state.direction;
+          rotateAmount = ((rotateAmount % 360) + 540) % 360 - 180;
           await engine.animateTurn(rotateAmount);
+          await engine.animateMove(R);
         }
-        await engine.animateMove(distance);
         engine.releaseItem();
       }
       
