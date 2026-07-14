@@ -18,10 +18,12 @@
     <div class="header-actions">
       <div class="user-info">
         <select id="stage-select" class="stage-select">
-          <option value="stage1">ステージ1: 目の前のヒヨコ</option>
-          <option value="stage2">ステージ2: 後ろのヒヨコ</option>
-          <option value="stage3">ステージ3: 遠い道のり</option>
-        </select>
+            <option value="stage1">ステージ1: 目の前のヒヨコ</option>
+            <option value="stage2" disabled>🔒 ステージ2 (ステージ1をクリアで解放)</option>
+            <option value="stage3" disabled>🔒 ステージ3 (ステージ2をクリアで解放)</option>
+            <option value="stage4" disabled>🔒 ステージ4 (ステージ3をクリアで解放)</option>
+            <option value="stage5" disabled>🔒 ステージ5 (ステージ4をクリアで解放)</option>
+          </select>
         <button id="btn-show-hint" class="btn btn-secondary" style="margin-left: 10px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
           ゴースト再生
@@ -98,6 +100,8 @@
         <button class="snippet-btn" data-snippet="部位回転(&quot;左腕&quot;, 45);" type="button">部位回転(...);</button>
         <button class="snippet-btn" data-snippet="掴む();" type="button">掴む();</button>
         <button class="snippet-btn" data-snippet="離す();" type="button">離す();</button>
+        <button class="snippet-btn shoe-snippet" data-snippet="右足で履く();" type="button" style="display:none;">右足で履く();</button>
+        <button class="snippet-btn shoe-snippet" data-snippet="左足で履く();" type="button" style="display:none;">左足で履く();</button>
         <button class="snippet-btn" data-snippet="繰り返し(3回) {\n  $CURSOR$\n}" type="button">繰り返し</button>
         <button class="snippet-btn" data-snippet="もし(ヒヨコの近くにいる()) {\n  $CURSOR$\n}" type="button">もし</button>
         <button class="snippet-btn" data-snippet="もし(ヒヨコの近くにいる()) {\n  $CURSOR$\n} そうでなければ {\n  \n}" type="button">もし...else</button>
@@ -112,6 +116,8 @@
             <li><code>部位回転("体の部位", 数字);</code> 体の部位を回す（プラスで右、マイナスで左）</li>
             <li><code>掴む();</code> 近くの画像（ヒヨコ）を掴む</li>
             <li><code>離す();</code> 掴んでいる画像をその場に離す</li>
+            <li id="shoe-help-1" style="display:none;"><code>右足で履く();</code> 近くの右靴を右足に履く</li>
+            <li id="shoe-help-2" style="display:none;"><code>左足で履く();</code> 近くの左靴を左足に履く</li>
             <li><code>ヒヨコの近くにいる();</code> 手が届く距離なら true</li>
             <li><code>ヒヨコを持っている();</code> 掴んでいれば true</li>
           </ul>
@@ -141,6 +147,8 @@
           <option value="stage1">ステージ1</option>
           <option value="stage2">ステージ2</option>
           <option value="stage3">ステージ3</option>
+          <option value="stage4">ステージ4</option>
+          <option value="stage5">ステージ5</option>
         </select>
         <button id="btn-delete-all-logs" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: #ef4444; border-color: #ef4444;">全削除</button>
       </div>

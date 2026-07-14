@@ -1,7 +1,19 @@
 const STAGES = {
   stage1: { itemOffset: { x: 85, y: 15 }, goalOffset: { x: 250, y: -100 } },
   stage2: { itemOffset: { x: -120, y: 0 }, goalOffset: { x: 250, y: -100 } },
-  stage3: { itemOffset: { x: 0, y: -180 }, goalOffset: { x: -200, y: 150 } }
+  stage3: { itemOffset: { x: 0, y: -180 }, goalOffset: { x: -200, y: 150 } },
+  stage4: { 
+    itemOffset: { x: 220, y: 0 }, 
+    goalOffset: { x: 300, y: -150 }, 
+    shoes: { right: { x: 50, y: -50 } },
+    needleZone: { x: 120, y: -300, width: 40, height: 600 }
+  },
+  stage5: { 
+    itemOffset: { x: 0, y: -220 }, 
+    goalOffset: { x: 0, y: -320 }, 
+    shoes: { right: { x: -80, y: -50 }, left: { x: 80, y: -50 } },
+    needleZone: { x: -300, y: -140, width: 600, height: 40 }
+  }
 };
 
 class PictoEngine {
@@ -27,6 +39,14 @@ class PictoEngine {
     this.itemImg = new Image();
     this.itemImg.src = "img/item1.png";
     this.itemImg.onload = () => { if (!this.isStopped) this.draw(); };
+
+    this.shoeRightImg = new Image();
+    this.shoeRightImg.src = "img/shoe_right.jpg";
+    this.shoeRightImg.onload = () => { if (!this.isStopped) this.draw(); };
+
+    this.shoeLeftImg = new Image();
+    this.shoeLeftImg.src = "img/shoe_left.jpg";
+    this.shoeLeftImg.onload = () => { if (!this.isStopped) this.draw(); };
 
     this.reset();
   }
@@ -64,6 +84,20 @@ class PictoEngine {
         offsetX: 0,
         offsetY: 0
       },
+      shoes: {
+        right: stage.shoes && stage.shoes.right ? { 
+          exists: true, x: centerX + stage.shoes.right.x, y: centerY + stage.shoes.right.y, isWorn: false 
+        } : { exists: false, isWorn: false },
+        left: stage.shoes && stage.shoes.left ? { 
+          exists: true, x: centerX + stage.shoes.left.x, y: centerY + stage.shoes.left.y, isWorn: false 
+        } : { exists: false, isWorn: false }
+      },
+      needleZone: stage.needleZone ? {
+        x: centerX + stage.needleZone.x,
+        y: centerY + stage.needleZone.y,
+        width: stage.needleZone.width,
+        height: stage.needleZone.height
+      } : null,
       hasGrabbedItem: false
     };
     this.draw();
@@ -160,6 +194,57 @@ class PictoEngine {
     return { x: m.e, y: m.f };
   }
 
+  getLegPosition(leg) {
+    const parts = this.state.parts;
+    const m = new DOMMatrix();
+    m.translateSelf(this.state.x, this.state.y);
+    m.rotateSelf(this.state.direction);
+    m.rotateSelf(parts.body.rotation);
+
+    if (leg === "leftLeg") {
+      m.translateSelf(-10, 64);
+      m.rotateSelf(parts.leftLeg.rotation);
+      m.translateSelf(-22, 44);
+      m.rotateSelf(parts.leftKnee.rotation);
+      m.translateSelf(-22, 44);
+    } else {
+      m.translateSelf(10, 64);
+      m.rotateSelf(parts.rightLeg.rotation);
+      m.translateSelf(22, 44);
+      m.rotateSelf(parts.rightKnee.rotation);
+      m.translateSelf(22, 44);
+    }
+    return { x: m.e, y: m.f };
+  }
+
+  equipShoe(side) {
+    if (!this.state.shoes[side] || !this.state.shoes[side].exists) return;
+    if (this.state.shoes[side].isWorn) return;
+
+    const shoe = this.state.shoes[side];
+    const legPart = side === "right" ? "rightLeg" : "leftLeg";
+    const legPos = this.getLegPosition(legPart);
+    
+    const grabRadius = 40;
+    const dist = this.distance(legPos.x, legPos.y, shoe.x, shoe.y);
+    if (dist <= grabRadius) {
+      this.state.shoes[side].isWorn = true;
+    }
+    this.draw();
+  }
+
+  isFullyEquipped() {
+    const s = this.state.shoes;
+    if (s.right.exists && !s.right.isWorn) return false;
+    if (s.left.exists && !s.left.isWorn) return false;
+    return true;
+  }
+
+  isPointInRect(x, y, rect) {
+    if (!rect) return false;
+    return x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height;
+  }
+
   evaluateGoalStatus() {
     const item = this.state.item;
     const dist = this.distance(item.x, item.y, this.goal.x, this.goal.y);
@@ -212,11 +297,22 @@ class PictoEngine {
     const endX = startX + Math.cos(radians) * distance;
     const endY = startY + Math.sin(radians) * distance;
 
+    let moveError = null;
+
     await this.animate(this.animationMs, (progress) => {
       this.state.x = this.lerp(startX, endX, progress);
       this.state.y = this.lerp(startY, endY, progress);
+      
+      if (this.state.needleZone && this.isPointInRect(this.state.x, this.state.y, this.state.needleZone)) {
+        if (!this.isFullyEquipped()) {
+          moveError = new Error("靴をすべて履かずに針山を踏んでしまった！");
+          this.isStopped = true;
+        }
+      }
       this.draw();
     });
+
+    if (moveError) throw moveError;
 
     this.state.trail.push({ x1: startX, y1: startY, x2: endX, y2: endY, color: this.state.color });
   }
@@ -247,8 +343,10 @@ class PictoEngine {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.drawGrid();
     this.drawGoal();
+    this.drawNeedles();
     this.drawTrail();
     this.drawPicto(this.state);
+    this.drawShoes();
     this.drawItem();
   }
 
@@ -270,6 +368,79 @@ class PictoEngine {
     ctx.textBaseline = "middle";
     ctx.fillText("GOAL", this.goal.x, this.goal.y);
     ctx.restore();
+  }
+
+  drawNeedles() {
+    if (!this.state.needleZone) return;
+    const nz = this.state.needleZone;
+    const ctx = this.ctx;
+    
+    ctx.save();
+    ctx.fillStyle = "rgba(255, 0, 0, 0.2)";
+    ctx.fillRect(nz.x, nz.y, nz.width, nz.height);
+    
+    ctx.strokeStyle = "rgba(200, 50, 50, 0.8)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    if (nz.height > nz.width) {
+      for (let y = nz.y; y <= nz.y + nz.height - 15; y += 15) {
+        ctx.moveTo(nz.x, y);
+        ctx.lineTo(nz.x + nz.width / 2, y + 10);
+        ctx.lineTo(nz.x + nz.width, y);
+      }
+    } else {
+      for (let x = nz.x; x <= nz.x + nz.width - 15; x += 15) {
+        ctx.moveTo(x, nz.y);
+        ctx.lineTo(x + 10, nz.y + nz.height / 2);
+        ctx.lineTo(x, nz.y + nz.height);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawShoes() {
+    if (this.state.shoes.right && this.state.shoes.right.exists) {
+      this.drawShoe("right", this.state.shoes.right, this.shoeRightImg);
+    }
+    if (this.state.shoes.left && this.state.shoes.left.exists) {
+      this.drawShoe("left", this.state.shoes.left, this.shoeLeftImg);
+    }
+  }
+
+  drawShoe(side, shoeState, img) {
+    let cx, cy, rotation = 0;
+    if (shoeState.isWorn) {
+      const legPart = side === "right" ? "rightLeg" : "leftLeg";
+      const pos = this.getLegPosition(legPart);
+      cx = pos.x;
+      cy = pos.y;
+      
+      const parts = this.state.parts;
+      rotation = this.state.direction + parts.body.rotation + parts[legPart].rotation + parts[side === "right" ? "rightKnee" : "leftKnee"].rotation;
+    } else {
+      cx = shoeState.x;
+      cy = shoeState.y;
+    }
+
+    this.ctx.save();
+    this.ctx.translate(cx, cy);
+    this.ctx.rotate(rotation * Math.PI / 180);
+    
+    if (this.isGhostMode) {
+      this.ctx.globalAlpha = 0.5;
+    }
+
+    if (img.complete && img.naturalWidth > 0) {
+      const w = 40;
+      const h = (w / img.naturalWidth) * img.naturalHeight;
+      this.ctx.drawImage(img, -w/2, -h/2, w, h);
+    } else {
+      this.ctx.fillStyle = side === "right" ? "#f97316" : "#0ea5e9";
+      this.ctx.fillRect(-15, -10, 30, 20);
+    }
+    this.ctx.restore();
   }
 
   drawItem() {

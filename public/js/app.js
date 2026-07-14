@@ -49,12 +49,24 @@ if (stageSelect) {
       setTimeout(() => {
         engine.loadStage(e.target.value);
         clearOutput();
+        updateShoeUI();
       }, 150);
     } else {
       engine.loadStage(e.target.value);
       clearOutput();
+      updateShoeUI();
     }
   });
+}
+
+function updateShoeUI() {
+  if (!stageSelect) return;
+  const isShoeStage = stageSelect.value === "stage4" || stageSelect.value === "stage5";
+  document.querySelectorAll(".shoe-snippet").forEach(el => el.style.display = isShoeStage ? "inline-block" : "none");
+  const shoeHelp1 = document.getElementById("shoe-help-1");
+  const shoeHelp2 = document.getElementById("shoe-help-2");
+  if (shoeHelp1) shoeHelp1.style.display = isShoeStage ? "list-item" : "none";
+  if (shoeHelp2) shoeHelp2.style.display = isShoeStage ? "list-item" : "none";
 }
 
 const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
@@ -153,6 +165,9 @@ clearStageButton.addEventListener("click", () => {
   if (isRunning) return;
   clearOutput();
 });
+
+// 初期化時にUIを更新
+updateShoeUI();
 
 const btnUndo = document.getElementById("btn-undo");
 const btnRedo = document.getElementById("btn-redo");
@@ -665,6 +680,24 @@ if (btnLogHistory && logModal) {
   });
 }
 
+function updateShoeUI() {
+  if (!stageSelect) return;
+  const isShoeStage = stageSelect.value === "stage4" || stageSelect.value === "stage5";
+  document.querySelectorAll(".shoe-snippet").forEach(el => el.style.display = isShoeStage ? "inline-block" : "none");
+  const shoeHelp1 = document.getElementById("shoe-help-1");
+  const shoeHelp2 = document.getElementById("shoe-help-2");
+  if (shoeHelp1) shoeHelp1.style.display = isShoeStage ? "list-item" : "none";
+  if (shoeHelp2) shoeHelp2.style.display = isShoeStage ? "list-item" : "none";
+}
+
+if (stageSelect) {
+  stageSelect.addEventListener("change", () => {
+    engine.loadStage(stageSelect.value);
+    clearOutput();
+    updateShoeUI();
+  });
+}
+
 function transpileToJava(javaCode) {
   let jsCode = javaCode;
   
@@ -680,7 +713,7 @@ function transpileToJava(javaCode) {
   jsCode = jsCode.replace(/\b(for|while)\s*\((.*?)\)\s*\{/g, '$1($2) { await picto.yield(); ');
   
   // Replace command keywords to await picto.method
-  jsCode = jsCode.replace(/(移動|回転|部位回転|掴む|離す|ヒヨコの近くにいる|ヒヨコを持っている)\s*\(/g, 'await picto.$1(');
+  jsCode = jsCode.replace(/(移動|回転|部位回転|掴む|離す|右足で履く|左足で履く|右足で脱ぐ|左足で脱ぐ|ヒヨコの近くにいる|ヒヨコを持っている)\s*\(/g, 'await picto.$1(');
   
   return jsCode;
 }
@@ -723,6 +756,30 @@ function createPictoContext() {
       checkStop();
       addLog("離す();");
       engine.releaseItem();
+      await new Promise(r => setTimeout(r, 100));
+    },
+    "右足で履く": async function() {
+      checkStop();
+      addLog("右足で履く();");
+      engine.equipShoe("right");
+      await new Promise(r => setTimeout(r, 100));
+    },
+    "左足で履く": async function() {
+      checkStop();
+      addLog("左足で履く();");
+      engine.equipShoe("left");
+      await new Promise(r => setTimeout(r, 100));
+    },
+    "右足で脱ぐ": async function() {
+      checkStop();
+      addLog("右足で脱ぐ();");
+      engine.unequipShoe("right");
+      await new Promise(r => setTimeout(r, 100));
+    },
+    "左足で脱ぐ": async function() {
+      checkStop();
+      addLog("左足で脱ぐ();");
+      engine.unequipShoe("left");
       await new Promise(r => setTimeout(r, 100));
     },
     "ヒヨコの近くにいる": async function() {
@@ -807,30 +864,62 @@ async function updateStageLocks() {
     
     const hasCleared1 = clearedStages.has('stage1');
     const hasCleared2 = clearedStages.has('stage2');
+    const hasCleared3 = clearedStages.has('stage3');
+    const hasCleared4 = clearedStages.has('stage4');
     
     // ステージ1は常に解放
     options[0].disabled = false;
     options[0].text = "ステージ1: 目の前のヒヨコ";
     
     // ステージ2 (ステージ1クリアで解放)
-    if (hasCleared1) {
-      options[1].disabled = false;
-      options[1].text = "ステージ2: 後ろのヒヨコ";
-    } else {
-      options[1].disabled = true;
-      options[1].text = "🔒 ステージ2 (ステージ1をクリアで解放)";
-      if (stageSelect.value === 'stage2') stageSelect.value = 'stage1';
+    if (options.length > 1) {
+      if (hasCleared1) {
+        options[1].disabled = false;
+        options[1].text = "ステージ2: 後ろのヒヨコ";
+      } else {
+        options[1].disabled = true;
+        options[1].text = "🔒 ステージ2 (ステージ1をクリアで解放)";
+        if (stageSelect.value === 'stage2') stageSelect.value = 'stage1';
+      }
     }
     
     // ステージ3 (ステージ2クリアで解放)
-    if (hasCleared2) {
-      options[2].disabled = false;
-      options[2].text = "ステージ3: 遠い道のり";
-    } else {
-      options[2].disabled = true;
-      options[2].text = "🔒 ステージ3 (ステージ2をクリアで解放)";
-      if (stageSelect.value === 'stage3') stageSelect.value = (hasCleared1 ? 'stage2' : 'stage1');
+    if (options.length > 2) {
+      if (hasCleared2) {
+        options[2].disabled = false;
+        options[2].text = "ステージ3: 遠い道のり";
+      } else {
+        options[2].disabled = true;
+        options[2].text = "🔒 ステージ3 (ステージ2をクリアで解放)";
+        if (stageSelect.value === 'stage3') stageSelect.value = (hasCleared1 ? 'stage2' : 'stage1');
+      }
     }
+    
+    // ステージ4 (ステージ3クリアで解放)
+    if (options.length > 3) {
+      if (hasCleared3) {
+        options[3].disabled = false;
+        options[3].text = "ステージ4: 針山と右靴";
+      } else {
+        options[3].disabled = true;
+        options[3].text = "🔒 ステージ4 (ステージ3をクリアで解放)";
+        if (stageSelect.value === 'stage4') stageSelect.value = 'stage3';
+      }
+    }
+    
+    // ステージ5 (ステージ4クリアで解放)
+    if (options.length > 4) {
+      if (hasCleared4) {
+        options[4].disabled = false;
+        options[4].text = "ステージ5: 両足の靴";
+      } else {
+        options[4].disabled = true;
+        options[4].text = "🔒 ステージ5 (ステージ4をクリアで解放)";
+        if (stageSelect.value === 'stage5') stageSelect.value = 'stage4';
+      }
+    }
+    
+    updateShoeUI();
     
   } catch (e) {
     console.error("ステージロック状況の取得に失敗しました", e);
