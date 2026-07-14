@@ -622,7 +622,8 @@ async function loadHistoryForStage(stageId) {
     let html = "";
     logs.forEach(log => {
       const encodedCode = encodeURIComponent(log.sourceCode);
-      const stageName = (log.stageId === 'stage1') ? 'ステージ1' : (log.stageId === 'stage2') ? 'ステージ2' : 'ステージ3';
+      const stageNum = log.stageId ? log.stageId.replace('stage', '') : '1';
+      const stageName = `ステージ${stageNum}`;
       html += `
         <div class="history-card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">

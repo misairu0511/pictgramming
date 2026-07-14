@@ -6,13 +6,15 @@ const STAGES = {
     itemOffset: { x: 220, y: 0 }, 
     goalOffset: { x: 300, y: -150 }, 
     shoes: { right: { x: 50, y: -50 } },
-    needleZone: { x: 120, y: -300, width: 40, height: 600 }
+    needleZone: { x: 120, y: -2000, width: 40, height: 4000 }
   },
   stage5: { 
-    itemOffset: { x: 0, y: -220 }, 
-    goalOffset: { x: 0, y: -320 }, 
+    initialDirection: 90,
+    initialOffset: { x: 0, y: 60 },
+    itemOffset: { x: 0, y: -240 }, 
+    goalOffset: { x: 290, y: 200 }, 
     shoes: { right: { x: -80, y: -50 }, left: { x: 80, y: -50 } },
-    needleZone: { x: -300, y: -140, width: 600, height: 40 }
+    needleZone: { x: -2000, y: -180, width: 4000, height: 40 }
   }
 };
 
@@ -102,10 +104,14 @@ class PictoEngine {
       radius: 70
     };
 
+    const initialDir = stage.initialDirection !== undefined ? stage.initialDirection : 0;
+    const initOffsetX = stage.initialOffset ? stage.initialOffset.x : 0;
+    const initOffsetY = stage.initialOffset ? stage.initialOffset.y : 0;
+
     this.state = {
-      x: centerX,
-      y: centerY,
-      direction: 0,
+      x: centerX + initOffsetX,
+      y: centerY + initOffsetY,
+      direction: initialDir,
       color: "#2563eb",
       trail: [],
       parts: this.createParts(),
