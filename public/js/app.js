@@ -268,11 +268,35 @@ if (btnShowHint) {
         return;
       }
       
-      // 2. 自分の最新の「惜しいコード（ヒヨコを掴んだ状態）」を取得
+      // 2. 自分がすでにクリアしているかチェック
+      const myClearSnapshot = await db.collection('logs')
+        .where('stageId', '==', stageId)
+        .where('userId', '==', userId)
+        .where('goalResult', '==', 'ゴールした')
+        .limit(1)
+        .get();
+
+      if (!myClearSnapshot.empty) {
+        // すでにクリア済みの場合は、他の人の「完全な別解」をフルで再生する
+        const allClears = [];
+        clearSnapshot.forEach(doc => allClears.push(doc.data()));
+        const randomLog = allClears[Math.floor(Math.random() * allClears.length)];
+        
+        addLog(`【別解再生】${randomLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
+        
+        isRunning = true;
+        shouldStop = false;
+        stopButton.disabled = false;
+        
+        await engine.playGhost(randomLog.events);
+        return;
+      }
+      
+      // 3. 自分の最新の「惜しいコード（ヒヨコを掴んだ状態）」を取得
       const mySnapshot = await db.collection('logs')
         .where('stageId', '==', stageId)
         .where('userId', '==', userId)
-        .where('goalResult', '==', 'ゴールに届いていない')
+        .where('goalResult', 'in', ['持ったがゴールに入れていない', 'ゴールしていたが離していない'])
         .get();
         
       if (mySnapshot.empty) {
@@ -288,13 +312,13 @@ if (btnShowHint) {
         
         addLog(`【前半ヒント】${randomLog.nickname || '誰か'}さんがヒヨコを掴むまでを再生します`, "info");
         
-        // hasGrabbedItem が true になった瞬間を探す
-        let grabIndex = randomLog.events.findIndex(evt => evt.hasGrabbedItem === true);
+        // 掴むメッセージが含まれているイベントを探す
+        let grabIndex = randomLog.events.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
         if (grabIndex === -1) {
           grabIndex = randomLog.events.length;
         } else {
-          // 掴んだ瞬間の直後、少し余韻を残すために +10 フレーム分確保する
-          grabIndex = Math.min(grabIndex + 10, randomLog.events.length);
+          // 掴んだ瞬間のイベントを含めるために +1 する
+          grabIndex = Math.min(grabIndex + 1, randomLog.events.length);
         }
         
         const truncatedEvents = randomLog.events.slice(0, grabIndex);
