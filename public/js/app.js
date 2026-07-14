@@ -253,46 +253,90 @@ if (btnShowHint) {
     btnShowHint.innerHTML = "取得中...";
     
     try {
-      const stageId = engine.currentStageId;
-      const snapshot = await db.collection('logs')
+      const stageId = stageSelect.value;
+      
+      // 1. 他の人が1人でもクリアしているかチェック
+      const clearSnapshot = await db.collection('logs')
         .where('stageId', '==', stageId)
         .where('goalResult', '==', 'ゴールした')
-        .limit(20)
+        .limit(1)
         .get();
         
-      if (snapshot.empty) {
-        addLog("まだこのステージをクリアした人がいないため、ヒントを表示できません！", "error");
+      if (clearSnapshot.empty) {
+        addLog("まだ誰もクリアしていません。最初のクリア者を目指しましょう！", "info");
         btnShowHint.disabled = false;
         btnShowHint.innerHTML = originalText;
         return;
       }
       
-      const logs = [];
-      snapshot.forEach(doc => logs.push(doc.data()));
-      
-      const randomLog = logs[Math.floor(Math.random() * logs.length)];
-      
-      if (!randomLog.events || randomLog.events.length === 0) {
-        addLog("ヒントデータの読み込みに失敗しました。", "error");
+      // 2. 自分の最新の「惜しいコード（ヒヨコを掴んだ状態）」を取得
+      const mySnapshot = await db.collection('logs')
+        .where('stageId', '==', stageId)
+        .where('userId', '==', userId)
+        .where('goalResult', '==', 'ゴールに届いていない')
+        .get();
+        
+      if (mySnapshot.empty) {
+        addLog("ヒントを見るには、まずは自力でヒヨコを掴んでみよう！", "error");
         btnShowHint.disabled = false;
         btnShowHint.innerHTML = originalText;
         return;
       }
       
-      addLog(`【ヒント再生】${randomLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
+      // 降順ソートして最新を取得
+      const myLogs = [];
+      mySnapshot.forEach(doc => myLogs.push(doc.data()));
+      myLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      const latestLog = myLogs[0];
+      
+      addLog(`【ヒント再生】あなたの動きの続きを自動生成します`, "info");
       
       isRunning = true;
       shouldStop = false;
       stopButton.disabled = false;
       
-      await engine.playGhost(randomLog.events);
+      // 前半: ゴーストモードで自分のコードを再現
+      engine.reset();
+      engine.isGhostMode = true;
+      engine.state.color = "#9ca3af";
+      
+      let jsCode = transpileToJava(latestLog.sourceCode);
+      const picto = createPictoContext();
+      const fn = new AsyncFunction('picto', jsCode);
+      
+      await fn(picto);
+      
+      if (shouldStop) throw new Error("STOP");
+      
+      // 後半: 自動補完（現在地からゴールへのベクトルを計算して実行）
+      if (engine.state.hasGrabbedItem) {
+        const currentPos = engine.state.itemPosition;
+        const goalPos = engine.state.goalPosition;
+        const dx = goalPos.x - currentPos.x;
+        const dy = goalPos.y - currentPos.y;
+        
+        const targetAngle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+        let rotateAmount = targetAngle - engine.state.rotation;
+        rotateAmount = ((rotateAmount % 360) + 540) % 360 - 180;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (Math.abs(rotateAmount) > 1) {
+          await engine.animateTurn(rotateAmount);
+        }
+        await engine.animateMove(distance);
+        engine.releaseItem();
+      }
       
     } catch (e) {
-      console.error(e);
-      addLog("ヒントの取得に失敗しました。", "error");
+      if (e.message !== "STOP") console.error(e);
+      else addLog("ヒントの再生を中断しました。", "error");
     } finally {
+      engine.isGhostMode = false;
       isRunning = false;
+      shouldStop = false;
       stopButton.disabled = true;
+      runButton.textContent = "実行";
+      runButton.disabled = false;
       btnShowHint.disabled = false;
       btnShowHint.innerHTML = originalText;
     }
