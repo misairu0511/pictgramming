@@ -586,65 +586,79 @@ const logModal = document.getElementById("log-history-modal");
 const logModalClose = document.getElementById("log-modal-close");
 const logModalContent = document.getElementById("log-modal-content");
 
-if (btnLogHistory && logModal) {
-  btnLogHistory.addEventListener("click", async () => {
-    logModal.showModal();
-    logModalContent.innerHTML = "<p>読み込み中...</p>";
+async function loadHistoryForStage(stageId) {
+  logModalContent.innerHTML = "<p>読み込み中...</p>";
+  
+  try {
+    const snapshot = await db.collection('logs')
+      .where('userId', '==', userId)
+      .where('stageId', '==', stageId)
+      .get();
+      
+    if (snapshot.empty) {
+      logModalContent.innerHTML = "<p>このステージの履歴がありません。</p>";
+      return;
+    }
     
-    try {
-      const stageId = stageSelect.value;
-      const snapshot = await db.collection('logs')
-        .where('userId', '==', userId)
-        .where('stageId', '==', stageId)
-        .get();
-        
-      if (snapshot.empty) {
-        logModalContent.innerHTML = "<p>このステージの履歴がありません。</p>";
-        return;
-      }
-      
-      let logs = [];
-      snapshot.forEach(doc => logs.push(doc.data()));
-      logs.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-      
-      let html = "";
-      logs.forEach(log => {
-        const encodedCode = encodeURIComponent(log.sourceCode);
-        const stageName = (log.stageId === 'stage1') ? 'ステージ1' : (log.stageId === 'stage2') ? 'ステージ2' : 'ステージ3';
-        html += `
-          <div class="history-card">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-              <div>
-                <div class="history-time">${log.timestamp}</div>
-                <div class="history-status" style="font-weight:bold;">${stageName}</div>
-                <div class="history-status">状態: ${log.status}</div>
-                ${log.goalResult ? `<div class="history-goal">判定: ${log.goalResult}</div>` : ''}
-              </div>
-              <button class="btn btn-secondary btn-copy" style="font-size: 11px; padding: 4px 8px;" data-code="${encodedCode}">コピー</button>
+    let logs = [];
+    snapshot.forEach(doc => logs.push(doc.data()));
+    logs.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    
+    let html = "";
+    logs.forEach(log => {
+      const encodedCode = encodeURIComponent(log.sourceCode);
+      const stageName = (log.stageId === 'stage1') ? 'ステージ1' : (log.stageId === 'stage2') ? 'ステージ2' : 'ステージ3';
+      html += `
+        <div class="history-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div class="history-time">${log.timestamp}</div>
+              <div class="history-status" style="font-weight:bold;">${stageName}</div>
+              <div class="history-status">状態: ${log.status}</div>
+              ${log.goalResult ? `<div class="history-goal">判定: ${log.goalResult}</div>` : ''}
             </div>
-            <pre class="history-code">${log.sourceCode}</pre>
+            <button class="btn btn-secondary btn-copy" style="font-size: 11px; padding: 4px 8px;" data-code="${encodedCode}">コピー</button>
           </div>
-        `;
-      });
-      logModalContent.innerHTML = html;
-      
-      // コピーボタンのイベントリスナー
-      document.querySelectorAll(".btn-copy").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-          const code = decodeURIComponent(e.target.getAttribute("data-code"));
-          navigator.clipboard.writeText(code).then(() => {
-            e.target.textContent = "コピー完了!";
-            setTimeout(() => {
-              e.target.textContent = "コピー";
-            }, 2000);
-          });
+          <pre class="history-code">${log.sourceCode}</pre>
+        </div>
+      `;
+    });
+    logModalContent.innerHTML = html;
+    
+    // コピーボタンのイベントリスナー
+    document.querySelectorAll(".btn-copy").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const code = decodeURIComponent(e.target.getAttribute("data-code"));
+        navigator.clipboard.writeText(code).then(() => {
+          e.target.textContent = "コピー完了!";
+          setTimeout(() => {
+            e.target.textContent = "コピー";
+          }, 2000);
         });
       });
-    } catch (e) {
-      console.error(e);
-      logModalContent.innerHTML = "<p>履歴の取得に失敗しました。</p>";
+    });
+  } catch (e) {
+    console.error(e);
+    logModalContent.innerHTML = "<p>履歴の取得に失敗しました。</p>";
+  }
+}
+
+if (btnLogHistory && logModal) {
+  const modalStageSelect = document.getElementById("modal-stage-select");
+  
+  btnLogHistory.addEventListener("click", () => {
+    logModal.showModal();
+    if (modalStageSelect) {
+      modalStageSelect.value = stageSelect.value;
     }
+    loadHistoryForStage(stageSelect.value);
   });
+  
+  if (modalStageSelect) {
+    modalStageSelect.addEventListener("change", (e) => {
+      loadHistoryForStage(e.target.value);
+    });
+  }
 
   logModalClose.addEventListener("click", () => {
     logModal.close();
