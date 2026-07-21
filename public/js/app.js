@@ -77,6 +77,12 @@ let isRunning = false;
 let shouldStop = false;
 let currentLogSession = null;
 let lastViewedHint = "ヒントなし";
+let hintViewCounts = {
+  "初期状態から他人がヒヨコを掴むまでのゴースト": 0,
+  "掴んだ状態からのゴースト": 0,
+  "別解再生": 0
+};
+let runsSinceHint = 0;
 
 let userId = localStorage.getItem("pictgramming_user_id");
 if (!userId) {
@@ -307,6 +313,8 @@ if (btnShowHint) {
         
         addLog(`【別解再生】${randomLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
         lastViewedHint = "別解再生";
+        hintViewCounts[lastViewedHint]++;
+        runsSinceHint = 0;
         
         isRunning = true;
         shouldStop = false;
@@ -334,6 +342,8 @@ if (btnShowHint) {
         
         addLog(`【前半ヒント】${randomLog.nickname || '誰か'}さんがヒヨコを掴むまでを再生します`, "info");
         lastViewedHint = "初期状態から他人がヒヨコを掴むまでのゴースト";
+        hintViewCounts[lastViewedHint]++;
+        runsSinceHint = 0;
         
         // 掴むメッセージが含まれているイベントを探す
         let grabIndex = randomLog.events.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
@@ -364,6 +374,8 @@ if (btnShowHint) {
       
       addLog(`【ヒント再生】あなたの動きの続きを自動生成します`, "info");
       lastViewedHint = "掴んだ状態からのゴースト";
+      hintViewCounts[lastViewedHint]++;
+      runsSinceHint = 0;
       
       isRunning = true;
       shouldStop = false;
@@ -565,7 +577,6 @@ async function runProgram() {
     pauseButton.disabled = true;
     pauseButton.textContent = "一時停止";
     resetButton.disabled = false;
-    lastViewedHint = "ヒントなし";
 
     if (currentLogSession) {
       currentLogSession.userId = userId;
@@ -575,7 +586,13 @@ async function runProgram() {
       currentLogSession.timestamp = new Date().toISOString();
       currentLogSession.sessionId = sessionId;
       currentLogSession.stageId = engine.currentStageId;
+      
+      if (lastViewedHint !== "ヒントなし") {
+        runsSinceHint++;
+      }
       currentLogSession.hintViewed = lastViewedHint;
+      currentLogSession.hintViewCount = lastViewedHint === "ヒントなし" ? 0 : hintViewCounts[lastViewedHint];
+      currentLogSession.runsSinceHint = lastViewedHint === "ヒントなし" ? 0 : runsSinceHint;
       
       logCount++;
       localStorage.setItem("pictgramming_log_count", logCount);
@@ -708,6 +725,12 @@ if (stageSelect) {
     clearOutput();
     updateShoeUI();
     lastViewedHint = "ヒントなし";
+    hintViewCounts = {
+      "初期状態から他人がヒヨコを掴むまでのゴースト": 0,
+      "掴んだ状態からのゴースト": 0,
+      "別解再生": 0
+    };
+    runsSinceHint = 0;
   });
 }
 
