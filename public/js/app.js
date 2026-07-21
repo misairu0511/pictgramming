@@ -879,67 +879,79 @@ async function updateStageLocks() {
     const hasCleared4 = clearedStages.has('stage4');
     const hasCleared5 = clearedStages.has('stage5');
     
-    // ステージ1は常に解放
+    // ステージ0は常に解放
     options[0].disabled = false;
-    options[0].text = "ステージ1: 目の前のヒヨコ";
+    options[0].text = "ステージ0: チュートリアル";
     
-    // ステージ2 (ステージ1クリアで解放)
+    // ステージ1 (ステージ0クリアで解放)
     if (options.length > 1) {
-      if (hasCleared1) {
+      if (hasCleared0) {
         options[1].disabled = false;
-        options[1].text = "ステージ2: 後ろのヒヨコ";
+        options[1].text = "ステージ1: 目の前のヒヨコ";
       } else {
         options[1].disabled = true;
-        options[1].text = "🔒 ステージ2 (ステージ1をクリアで解放)";
-        if (stageSelect.value === 'stage2') stageSelect.value = 'stage1';
+        options[1].text = "🔒 ステージ1 (ステージ0をクリアで解放)";
+        if (stageSelect.value === 'stage1') stageSelect.value = 'stage0';
+      }
+    }
+    
+    // ステージ2 (ステージ1クリアで解放)
+    if (options.length > 2) {
+      if (hasCleared1) {
+        options[2].disabled = false;
+        options[2].text = "ステージ2: 後ろのヒヨコ";
+      } else {
+        options[2].disabled = true;
+        options[2].text = "🔒 ステージ2 (ステージ1をクリアで解放)";
+        if (stageSelect.value === 'stage2') stageSelect.value = (hasCleared0 ? 'stage1' : 'stage0');
       }
     }
     
     // ステージ3 (ステージ2クリアで解放)
-    if (options.length > 2) {
+    if (options.length > 3) {
       if (hasCleared2) {
-        options[2].disabled = false;
-        options[2].text = "ステージ3: 遠い道のり";
+        options[3].disabled = false;
+        options[3].text = "ステージ3: 遠い道のり";
       } else {
-        options[2].disabled = true;
-        options[2].text = "🔒 ステージ3 (ステージ2をクリアで解放)";
-        if (stageSelect.value === 'stage3') stageSelect.value = (hasCleared1 ? 'stage2' : 'stage1');
+        options[3].disabled = true;
+        options[3].text = "🔒 ステージ3 (ステージ2をクリアで解放)";
+        if (stageSelect.value === 'stage3') stageSelect.value = (hasCleared1 ? 'stage2' : (hasCleared0 ? 'stage1' : 'stage0'));
       }
     }
     
     // ステージ4 (ステージ3クリアで解放)
-    if (options.length > 3) {
+    if (options.length > 4) {
       if (hasCleared3) {
-        options[3].disabled = false;
-        options[3].text = "ステージ4: 針山と右靴";
+        options[4].disabled = false;
+        options[4].text = "ステージ4: 片足の靴";
       } else {
-        options[3].disabled = true;
-        options[3].text = "🔒 ステージ4 (ステージ3をクリアで解放)";
-        if (stageSelect.value === 'stage4') stageSelect.value = 'stage3';
+        options[4].disabled = true;
+        options[4].text = "🔒 ステージ4 (ステージ3をクリアで解放)";
+        if (stageSelect.value === 'stage4') stageSelect.value = (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : (hasCleared0 ? 'stage1' : 'stage0')));
       }
     }
     
     // ステージ5 (ステージ4クリアで解放)
-    if (options.length > 4) {
+    if (options.length > 5) {
       if (hasCleared4) {
-        options[4].disabled = false;
-        options[4].text = "ステージ5: 両足の靴";
+        options[5].disabled = false;
+        options[5].text = "ステージ5: 両足の靴";
       } else {
-        options[4].disabled = true;
-        options[4].text = "🔒 ステージ5 (ステージ4をクリアで解放)";
-        if (stageSelect.value === 'stage5') stageSelect.value = 'stage4';
+        options[5].disabled = true;
+        options[5].text = "🔒 ステージ5 (ステージ4をクリアで解放)";
+        if (stageSelect.value === 'stage5') stageSelect.value = (hasCleared3 ? 'stage4' : (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : (hasCleared0 ? 'stage1' : 'stage0'))));
       }
     }
     
     // ステージ6 (ステージ5クリアで解放)
-    if (options.length > 5) {
+    if (options.length > 6) {
       if (hasCleared5) {
-        options[5].disabled = false;
-        options[5].text = "ステージ6: 狭いトンネル";
+        options[6].disabled = false;
+        options[6].text = "ステージ6: 狭いトンネル";
       } else {
-        options[5].disabled = true;
-        options[5].text = "🔒 ステージ6 (ステージ5をクリアで解放)";
-        if (stageSelect.value === 'stage6') stageSelect.value = 'stage5';
+        options[6].disabled = true;
+        options[6].text = "🔒 ステージ6 (ステージ5をクリアで解放)";
+        if (stageSelect.value === 'stage6') stageSelect.value = (hasCleared4 ? 'stage5' : (hasCleared3 ? 'stage4' : (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : (hasCleared0 ? 'stage1' : 'stage0')))));
       }
     }
     
@@ -1071,25 +1083,19 @@ function initTutorial(force = false) {
   overlay.hidden = false;
   setTimeout(() => { showStep(0); }, 300);
 
-  // イベントリスナーの重複登録を防ぐため、一度クローンして置き換えるか、
-  // もしくは一度だけ登録するようにする。ここでは簡単のため直接登録するが、
-  // 複数回呼ばれると問題になる可能性があるので、既存のリスナーを消す処理を入れる。
-  const newNextBtn = nextBtn.cloneNode(true);
-  nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
-  newNextBtn.addEventListener('click', () => {
+  // 古いイベントリスナーを確実に消すため onclick を使用する
+  nextBtn.onclick = () => {
     currentStep++;
     showStep(currentStep);
-  });
+  };
   
   const skipBtn = document.getElementById('btn-tutorial-skip');
   if (skipBtn) {
-    const newSkipBtn = skipBtn.cloneNode(true);
-    skipBtn.parentNode.replaceChild(newSkipBtn, skipBtn);
-    newSkipBtn.addEventListener('click', () => {
+    skipBtn.onclick = () => {
       overlay.hidden = true;
       localStorage.setItem('tutorialCompleted', 'true');
       editor.value = "移動(85);\n掴む();\n移動(165);\n離す();";
-    });
+    };
   }
 }
 
