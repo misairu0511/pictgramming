@@ -889,16 +889,10 @@ async function updateStageLocks(skipReload = false) {
     options[0].text = "ステージ0: チュートリアル";
     options[0].hidden = true;
     
-    // ステージ1 (ステージ0クリアで解放)
+    // ステージ1は最初から解放
     if (options.length > 1) {
-      if (hasCleared0) {
-        options[1].disabled = false;
-        options[1].text = "ステージ1: 目の前のヒヨコ";
-      } else {
-        options[1].disabled = true;
-        options[1].text = "🔒 ステージ1 (ステージ0をクリアで解放)";
-        if (stageSelect.value === 'stage1') stageSelect.value = 'stage0';
-      }
+      options[1].disabled = false;
+      options[1].text = "ステージ1: 目の前のヒヨコ";
     }
     
     // ステージ2 (ステージ1クリアで解放)
@@ -909,7 +903,7 @@ async function updateStageLocks(skipReload = false) {
       } else {
         options[2].disabled = true;
         options[2].text = "🔒 ステージ2 (ステージ1をクリアで解放)";
-        if (stageSelect.value === 'stage2') stageSelect.value = (hasCleared0 ? 'stage1' : 'stage0');
+        if (stageSelect.value === 'stage2') stageSelect.value = 'stage1';
       }
     }
     
@@ -921,7 +915,7 @@ async function updateStageLocks(skipReload = false) {
       } else {
         options[3].disabled = true;
         options[3].text = "🔒 ステージ3 (ステージ2をクリアで解放)";
-        if (stageSelect.value === 'stage3') stageSelect.value = (hasCleared1 ? 'stage2' : (hasCleared0 ? 'stage1' : 'stage0'));
+        if (stageSelect.value === 'stage3') stageSelect.value = (hasCleared1 ? 'stage2' : 'stage1');
       }
     }
     
@@ -933,7 +927,7 @@ async function updateStageLocks(skipReload = false) {
       } else {
         options[4].disabled = true;
         options[4].text = "🔒 ステージ4 (ステージ3をクリアで解放)";
-        if (stageSelect.value === 'stage4') stageSelect.value = (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : (hasCleared0 ? 'stage1' : 'stage0')));
+        if (stageSelect.value === 'stage4') stageSelect.value = (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : 'stage1'));
       }
     }
     
@@ -945,7 +939,7 @@ async function updateStageLocks(skipReload = false) {
       } else {
         options[5].disabled = true;
         options[5].text = "🔒 ステージ5 (ステージ4をクリアで解放)";
-        if (stageSelect.value === 'stage5') stageSelect.value = (hasCleared3 ? 'stage4' : (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : (hasCleared0 ? 'stage1' : 'stage0'))));
+        if (stageSelect.value === 'stage5') stageSelect.value = (hasCleared3 ? 'stage4' : (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : 'stage1')));
       }
     }
     
@@ -957,7 +951,7 @@ async function updateStageLocks(skipReload = false) {
       } else {
         options[6].disabled = true;
         options[6].text = "🔒 ステージ6 (ステージ5をクリアで解放)";
-        if (stageSelect.value === 'stage6') stageSelect.value = (hasCleared4 ? 'stage5' : (hasCleared3 ? 'stage4' : (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : (hasCleared0 ? 'stage1' : 'stage0')))));
+        if (stageSelect.value === 'stage6') stageSelect.value = (hasCleared4 ? 'stage5' : (hasCleared3 ? 'stage4' : (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : 'stage1'))));
       }
     }
     
