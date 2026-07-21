@@ -884,9 +884,10 @@ async function updateStageLocks(skipReload = false) {
     const hasCleared4 = clearedStages.has('stage4');
     const hasCleared5 = clearedStages.has('stage5');
     
-    // ステージ0は常に解放
+    // ステージ0は常に解放（ただしドロップダウンからは隠す）
     options[0].disabled = false;
     options[0].text = "ステージ0: チュートリアル";
+    options[0].hidden = true;
     
     // ステージ1 (ステージ0クリアで解放)
     if (options.length > 1) {
