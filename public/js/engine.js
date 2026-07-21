@@ -603,6 +603,25 @@ class PictoEngine {
       item.y = cy;
     }
 
+    // 当たり判定の可視化
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.arc(cx, cy, 35, 0, Math.PI * 2);
+    
+    if (this.state.item.attachedTo) {
+      // 持っている時は赤色の実線
+      this.ctx.strokeStyle = "rgba(239, 68, 68, 0.9)";
+      this.ctx.lineWidth = 3;
+    } else {
+      // 持っていない時は点線
+      this.ctx.strokeStyle = "rgba(107, 114, 128, 0.6)";
+      this.ctx.lineWidth = 2;
+      this.ctx.setLineDash([6, 4]);
+    }
+    
+    this.ctx.stroke();
+    this.ctx.restore();
+
 
     if (this.isGhostMode) {
       this.ctx.globalAlpha = 0.5;
