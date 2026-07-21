@@ -970,6 +970,12 @@ async function updateStageLocks() {
   }
 }
 
+// ページロード時の初期設定：チュートリアル完了済みでstage0が選択されている場合、stage1をデフォルトにする
+const isTutorialCompleted = localStorage.getItem('tutorialCompleted');
+if (isTutorialCompleted && stageSelect && stageSelect.value === 'stage0') {
+  stageSelect.value = 'stage1';
+}
+
 // ページ読み込み時にロック状況を更新
 updateStageLocks();
 
@@ -1041,7 +1047,7 @@ function initTutorial(force = false) {
     { target: 'java-editor', text: 'チュートリアルへようこそ！まずはプログラムを書いて動かす練習です。', pos: 'left' },
     { 
       target: 'java-editor', 
-      clickTarget: 'btn-run',
+      onTopElements: ['#btn-run', '.stage-frame'],
       text: '「部位回転」で右腕を曲げます。エディタにコードを追加しました！上の明るくなっている【実行】ボタンを押してみてください。', 
       pos: 'left', 
       codeToAdd: '部位回転("右腕", -45);',
@@ -1050,7 +1056,7 @@ function initTutorial(force = false) {
     },
     { 
       target: 'java-editor', 
-      clickTarget: 'btn-run',
+      onTopElements: ['#btn-run', '.stage-frame'],
       text: '次は「移動」してヒヨコを「掴む」命令を追加しました！もう一度【実行】ボタンを押してください！', 
       pos: 'left', 
       codeToAdd: '移動(100);\n掴む();',
@@ -1059,7 +1065,7 @@ function initTutorial(force = false) {
     },
     { 
       target: 'java-editor', 
-      clickTarget: 'btn-run',
+      onTopElements: ['#btn-run', '.stage-frame'],
       text: '最後に「回転」で向きを変え、移動して「離す」命令でゴールしましょう！【実行】ボタンを押してください！', 
       pos: 'left', 
       codeToAdd: '回転(90);\n移動(150);\n離す();',
@@ -1071,9 +1077,9 @@ function initTutorial(force = false) {
 
   function showStep(index) {
     if (index >= steps.length) {
-      if (window.tutorialLastClickTarget) {
-        window.tutorialLastClickTarget.classList.remove('tutorial-on-top');
-        window.tutorialLastClickTarget = null;
+      if (window.tutorialOnTopElements) {
+        window.tutorialOnTopElements.forEach(el => el.classList.remove('tutorial-on-top'));
+        window.tutorialOnTopElements = null;
       }
       overlay.hidden = true;
       localStorage.setItem('tutorialCompleted', 'true');
@@ -1101,17 +1107,20 @@ function initTutorial(force = false) {
     text.textContent = step.text;
     bubble.className = 'tutorial-bubble ' + step.pos;
     
-    if (window.tutorialLastClickTarget) {
-      window.tutorialLastClickTarget.classList.remove('tutorial-on-top');
-      window.tutorialLastClickTarget = null;
+    if (window.tutorialOnTopElements) {
+      window.tutorialOnTopElements.forEach(el => el.classList.remove('tutorial-on-top'));
+      window.tutorialOnTopElements = null;
     }
 
-    if (step.clickTarget) {
-      const clickEl = document.getElementById(step.clickTarget);
-      if (clickEl) {
-        clickEl.classList.add('tutorial-on-top');
-        window.tutorialLastClickTarget = clickEl;
-      }
+    if (step.onTopElements) {
+      window.tutorialOnTopElements = [];
+      step.onTopElements.forEach(selector => {
+        const el = document.querySelector(selector);
+        if (el) {
+          el.classList.add('tutorial-on-top');
+          window.tutorialOnTopElements.push(el);
+        }
+      });
     }
     
     // 実行待ちステップの場合は次へボタンを隠す
@@ -1161,7 +1170,7 @@ function initTutorial(force = false) {
           currentStep++;
           showStep(currentStep);
         }
-      }, 50);
+      }, 1000); // 動きを見せるために1秒待つ
     }
   };
 
