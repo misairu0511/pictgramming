@@ -1,5 +1,5 @@
 const STAGES = {
-  stage0: { itemOffset: { x: 85, y: 15 }, goalOffset: { x: 250, y: -100 } },
+  stage0: { itemOffset: { x: 85, y: 0 }, goalOffset: { x: 250, y: 0 } },
   stage1: { itemOffset: { x: 85, y: 15 }, goalOffset: { x: 250, y: -100 } },
   stage2: { itemOffset: { x: -120, y: 0 }, goalOffset: { x: 250, y: -100 } },
   stage3: { itemOffset: { x: 0, y: -180 }, goalOffset: { x: -200, y: 150 } },

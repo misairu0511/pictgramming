@@ -557,7 +557,7 @@ code {
 .btn-tutorial-skip {
   position: absolute;
   top: 20px;
-  right: 20px;
+  left: 20px;
   padding: 8px 20px;
   background: rgba(255, 255, 255, 0.15);
   color: #fff;

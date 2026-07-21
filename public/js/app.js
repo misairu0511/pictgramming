@@ -1024,8 +1024,10 @@ function initTutorial(force = false) {
   if (!overlay || !highlight || !bubble) return;
 
   const steps = [
-    { target: 'java-editor', text: 'ここへプログラムを書いて、ピクトグラムを動かしましょう！', pos: 'right' },
-    { target: 'snippet-toolbar', text: '入力が難しい時は、下のボタンを押すと自動で入力されます！', pos: 'top' },
+    { target: 'java-editor', text: 'ここへプログラムを書いて、ピクトグラムを動かしましょう！', pos: 'left' },
+    { target: 'btn-snippet-move', text: '「移動()」は前に進みます。数字を変えて距離を調節できます。', pos: 'top' },
+    { target: 'btn-snippet-rotate', text: '「回転()」は体全体の向きを変えます。プラスで右、マイナスで左に回ります。', pos: 'top' },
+    { target: 'btn-snippet-part-rotate', text: '「部位回転()」を使うと、腕や足など関節を曲げることができます。', pos: 'top' },
     { target: 'btn-run', text: '準備ができたら、実行ボタンを押してみよう！', pos: 'bottom' }
   ];
   let currentStep = 0;
@@ -1063,12 +1065,20 @@ function initTutorial(force = false) {
       if (step.pos === 'right') {
         bubble.style.top = (rect.top + 20) + 'px';
         bubble.style.left = (rect.right + pad + 20) + 'px';
+      } else if (step.pos === 'left') {
+        bubble.style.top = (rect.top + 20) + 'px';
+        bubble.style.left = (rect.left - bubble.offsetWidth - pad - 20) + 'px';
       } else if (step.pos === 'top') {
         bubble.style.top = (rect.top - bubble.offsetHeight - pad - 20) + 'px';
         bubble.style.left = (rect.left) + 'px';
       } else if (step.pos === 'bottom') {
         bubble.style.top = (rect.bottom + pad + 20) + 'px';
-        bubble.style.left = (rect.left) + 'px';
+        // 右端が画面外に出ないように調整
+        if (rect.left + bubble.offsetWidth > window.innerWidth) {
+          bubble.style.left = (window.innerWidth - bubble.offsetWidth - 20) + 'px';
+        } else {
+          bubble.style.left = (rect.left) + 'px';
+        }
       }
     }, 10); // 少し待ってからoffsetHeightを取得
   }
