@@ -1013,13 +1013,13 @@ function initTutorial(force = false) {
   const isCompleted = localStorage.getItem('tutorialCompleted');
   
   // 古いチュートリアルコードが残っていたら強制更新
-  if (editor && editor.value === "移動(85);\n掴む();\n移動(165);\n離す();") {
-    editor.value = "移動(100);\n掴む();\n移動(150);\n離す();";
+  if (editor && (editor.value === "移動(85);\n掴む();\n移動(165);\n離す();" || editor.value === "移動(100);\n掴む();\n移動(150);\n離す();")) {
+    editor.value = "部位回転(\"右腕\", -45);\n移動(100);\n掴む();\n回転(90);\n移動(150);\n離す();";
   }
 
   if (isCompleted && !force) {
     if (stageSelect && stageSelect.value === 'stage0' && !editor.value.includes('掴む()')) {
-      editor.value = "移動(100);\n掴む();\n移動(150);\n離す();";
+      editor.value = "部位回転(\"右腕\", -45);\n移動(100);\n掴む();\n回転(90);\n移動(150);\n離す();";
     }
     return;
   }
@@ -1050,7 +1050,7 @@ function initTutorial(force = false) {
         engine.loadStage('stage0');
         updateShoeUI();
       }
-      editor.value = "移動(100);\n掴む();\n移動(150);\n離す();";
+      editor.value = "部位回転(\"右腕\", -45);\n移動(100);\n掴む();\n回転(90);\n移動(150);\n離す();";
       return;
     }
 
@@ -1113,7 +1113,7 @@ function initTutorial(force = false) {
     skipBtn.onclick = () => {
       overlay.hidden = true;
       localStorage.setItem('tutorialCompleted', 'true');
-      editor.value = "移動(100);\n掴む();\n移動(150);\n離す();";
+      editor.value = "部位回転(\"右腕\", -45);\n移動(100);\n掴む();\n回転(90);\n移動(150);\n離す();";
     };
   }
 }
