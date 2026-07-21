@@ -1,5 +1,5 @@
 const STAGES = {
-  stage0: { itemOffset: { x: 85, y: 0 }, goalOffset: { x: 250, y: 0 } },
+  stage0: { itemOffset: { x: 188, y: 16 }, goalOffset: { x: 338, y: 16 } },
   stage1: { itemOffset: { x: 85, y: 15 }, goalOffset: { x: 250, y: -100 } },
   stage2: { itemOffset: { x: -120, y: 0 }, goalOffset: { x: 250, y: -100 } },
   stage3: { itemOffset: { x: 0, y: -180 }, goalOffset: { x: -200, y: 150 } },
@@ -33,7 +33,7 @@ class PictoEngine {
     this.ctx = canvas.getContext("2d");
     this.animationMs = 900;
     this.partAnimationMs = 650;
-    this.currentStageId = "stage1";
+    this.currentStageId = "stage0";
     this.partLabels = {
       head: { ja: "頭", code: "head" },
       body: { ja: "胴体", code: "body" },
