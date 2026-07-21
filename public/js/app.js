@@ -59,6 +59,8 @@ if (stageSelect) {
   });
 }
 
+let tutorialAdvanceCheck = null;
+
 function updateShoeUI() {
   if (!stageSelect) return;
   const isShoeStage = stageSelect.value === "stage4" || stageSelect.value === "stage5";
@@ -592,6 +594,9 @@ async function runProgram() {
         }
       }
     }
+    
+    // チュートリアルの進行チェック
+    if (tutorialAdvanceCheck) tutorialAdvanceCheck();
   }
 }
 
@@ -1033,11 +1038,31 @@ function initTutorial(force = false) {
   if (!overlay || !highlight || !bubble) return;
 
   const steps = [
-    { target: 'java-editor', text: 'ここへプログラムを書いて、ピクトグラムを動かしましょう！', pos: 'left' },
-    { target: 'btn-snippet-move', text: '「移動()」は前に進みます。数字を変えて距離を調節できます。', pos: 'top' },
-    { target: 'btn-snippet-rotate', text: '「回転()」は体全体の向きを変えます。プラスで右、マイナスで左に回ります。', pos: 'top' },
-    { target: 'btn-snippet-part-rotate', text: '「部位回転()」を使うと、腕や足など関節を曲げることができます。', pos: 'top' },
-    { target: 'btn-run', text: '準備ができたら、実行ボタンを押してみよう！', pos: 'bottom' }
+    { target: 'java-editor', text: 'チュートリアルへようこそ！まずはプログラムを書いて動かす練習です。', pos: 'left' },
+    { 
+      target: 'btn-run', 
+      text: '「部位回転」で右腕を曲げます。エディタにコードを追加しました！上の【実行】ボタンを押してみてください。', 
+      pos: 'bottom', 
+      codeToAdd: '部位回転("右腕", -45);',
+      waitForRun: true,
+      checkCondition: () => editor.value.includes('部位回転')
+    },
+    { 
+      target: 'btn-run', 
+      text: '次は「移動」してヒヨコを「掴む」命令を追加しました！もう一度【実行】を押してください！', 
+      pos: 'bottom', 
+      codeToAdd: '移動(100);\n掴む();',
+      waitForRun: true,
+      checkCondition: () => engine.state.hasGrabbedItem
+    },
+    { 
+      target: 'btn-run', 
+      text: '最後に「回転」で向きを変え、移動して「離す」命令でゴールしましょう！【実行】を押してください！', 
+      pos: 'bottom', 
+      codeToAdd: '回転(90);\n移動(150);\n離す();',
+      waitForRun: true,
+      checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
+    }
   ];
   let currentStep = 0;
 
@@ -1069,6 +1094,20 @@ function initTutorial(force = false) {
     text.textContent = step.text;
     bubble.className = 'tutorial-bubble ' + step.pos;
     
+    // 実行待ちステップの場合は次へボタンを隠す
+    if (step.waitForRun) {
+      nextBtn.style.display = 'none';
+      if (step.codeToAdd && !editor.value.includes(step.codeToAdd)) {
+        if (editor.value.trim() === '') {
+          editor.value = step.codeToAdd;
+        } else {
+          editor.value = editor.value.trim() + '\n' + step.codeToAdd;
+        }
+      }
+    } else {
+      nextBtn.style.display = 'block';
+    }
+    
     // 位置計算
     setTimeout(() => {
       if (step.pos === 'right') {
@@ -1092,11 +1131,29 @@ function initTutorial(force = false) {
     }, 10); // 少し待ってからoffsetHeightを取得
   }
 
+  tutorialAdvanceCheck = () => {
+    if (overlay.hidden) return;
+    const step = steps[currentStep];
+    if (step && step.waitForRun && step.checkCondition) {
+      // 判定処理を少し遅延させて、アニメーション完了後などの確実な状態を取得する
+      setTimeout(() => {
+        if (step.checkCondition()) {
+          currentStep++;
+          showStep(currentStep);
+        }
+      }, 50);
+    }
+  };
+
   // 強制的にステージ0を選択しておく
   if (stageSelect) {
     stageSelect.value = 'stage0';
     engine.loadStage('stage0');
     updateShoeUI();
+  }
+  
+  if (editor) {
+    editor.value = "";
   }
   
   overlay.hidden = false;
