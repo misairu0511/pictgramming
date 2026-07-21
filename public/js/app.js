@@ -872,7 +872,7 @@ async function updateStageLocks() {
         clearedStages.add(data.stageId);
       }
     });
-    
+    const hasCleared0 = clearedStages.has('stage0');
     const hasCleared1 = clearedStages.has('stage1');
     const hasCleared2 = clearedStages.has('stage2');
     const hasCleared3 = clearedStages.has('stage3');
@@ -992,3 +992,91 @@ if (btnDeleteAllLogs) {
     }
   });
 }
+}
+
+// --- チュートリアル・ステージ0制御 ---
+function initTutorial() {
+  const isCompleted = localStorage.getItem('tutorialCompleted');
+  if (isCompleted) {
+    if (stageSelect && stageSelect.value === 'stage0' && !editor.value.includes('掴む()')) {
+      editor.value = "移動(85);\n掴む();\n移動(165);\n離す();";
+    }
+    return;
+  }
+
+  const overlay = document.getElementById('tutorial-overlay');
+  const highlight = document.getElementById('tutorial-highlight');
+  const bubble = document.getElementById('tutorial-bubble');
+  const text = document.getElementById('tutorial-text');
+  const nextBtn = document.getElementById('btn-tutorial-next');
+  
+  if (!overlay || !highlight || !bubble) return;
+
+  const steps = [
+    { target: 'java-editor', text: 'ここへプログラムを書いて、ピクトグラムを動かしましょう！', pos: 'right' },
+    { target: 'snippet-toolbar', text: '入力が難しい時は、下のボタンを押すと自動で入力されます！', pos: 'top' },
+    { target: 'btn-run', text: '準備ができたら、実行ボタンを押してみよう！', pos: 'bottom' }
+  ];
+  let currentStep = 0;
+
+  function showStep(index) {
+    if (index >= steps.length) {
+      overlay.hidden = true;
+      localStorage.setItem('tutorialCompleted', 'true');
+      if (stageSelect) {
+        stageSelect.value = 'stage0';
+        engine.loadStage('stage0');
+        updateShoeUI();
+      }
+      editor.value = "移動(85);\n掴む();\n移動(165);\n離す();";
+      return;
+    }
+
+    const step = steps[index];
+    let el = step.target === 'snippet-toolbar' ? document.querySelector('.snippet-toolbar') : document.getElementById(step.target);
+    if (!el) { showStep(index + 1); return; }
+
+    const rect = el.getBoundingClientRect();
+    const pad = 10;
+    
+    highlight.style.top = (rect.top - pad) + 'px';
+    highlight.style.left = (rect.left - pad) + 'px';
+    highlight.style.width = (rect.width + pad * 2) + 'px';
+    highlight.style.height = (rect.height + pad * 2) + 'px';
+    
+    text.textContent = step.text;
+    bubble.className = 'tutorial-bubble ' + step.pos;
+    
+    // 位置計算
+    setTimeout(() => {
+      if (step.pos === 'right') {
+        bubble.style.top = (rect.top + 20) + 'px';
+        bubble.style.left = (rect.right + pad + 20) + 'px';
+      } else if (step.pos === 'top') {
+        bubble.style.top = (rect.top - bubble.offsetHeight - pad - 20) + 'px';
+        bubble.style.left = (rect.left) + 'px';
+      } else if (step.pos === 'bottom') {
+        bubble.style.top = (rect.bottom + pad + 20) + 'px';
+        bubble.style.left = (rect.left) + 'px';
+      }
+    }, 10); // 少し待ってからoffsetHeightを取得
+  }
+
+  // 強制的にステージ0を選択しておく
+  if (stageSelect) {
+    stageSelect.value = 'stage0';
+    engine.loadStage('stage0');
+    updateShoeUI();
+  }
+  
+  overlay.hidden = false;
+  setTimeout(() => { showStep(0); }, 300);
+
+  nextBtn.addEventListener('click', () => {
+    currentStep++;
+    showStep(currentStep);
+  });
+}
+
+// 少し遅延させてDOMの準備を確実に待つ
+setTimeout(initTutorial, 500);

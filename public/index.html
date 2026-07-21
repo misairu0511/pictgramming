@@ -18,7 +18,8 @@
     <div class="header-actions">
       <div class="user-info">
         <select id="stage-select" class="stage-select">
-            <option value="stage1">ステージ1: 目の前のヒヨコ</option>
+            <option value="stage0">ステージ0: チュートリアル</option>
+            <option value="stage1" disabled>🔒 ステージ1 (ステージ0をクリアで解放)</option>
             <option value="stage2" disabled>🔒 ステージ2 (ステージ1をクリアで解放)</option>
             <option value="stage3" disabled>🔒 ステージ3 (ステージ2をクリアで解放)</option>
             <option value="stage4" disabled>🔒 ステージ4 (ステージ3をクリアで解放)</option>
@@ -157,6 +158,14 @@
     </div>
     <div id="log-modal-content" class="log-modal-body"></div>
   </dialog>
+
+  <div id="tutorial-overlay" class="tutorial-overlay" hidden>
+    <div id="tutorial-highlight" class="tutorial-highlight"></div>
+    <div id="tutorial-bubble" class="tutorial-bubble">
+      <p id="tutorial-text"></p>
+      <button id="btn-tutorial-next" class="btn btn-primary">次へ</button>
+    </div>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>

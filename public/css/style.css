@@ -479,3 +479,77 @@ code {
   0% { transform: scale(0.5); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
+
+/* チュートリアルオーバーレイ */
+.tutorial-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  pointer-events: auto; /* ブロック */
+  background: transparent;
+}
+
+.tutorial-highlight {
+  position: absolute;
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.85); /* 画面全体を暗くする */
+  border-radius: 8px;
+  pointer-events: none;
+  background: transparent;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10000;
+}
+
+.tutorial-bubble {
+  position: absolute;
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  width: 280px;
+  z-index: 10001;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.tutorial-bubble::after {
+  content: '';
+  position: absolute;
+  border: 10px solid transparent;
+}
+
+.tutorial-bubble.left::after {
+  right: -20px;
+  top: 20px;
+  border-left-color: #fff;
+}
+
+.tutorial-bubble.right::after {
+  left: -20px;
+  top: 20px;
+  border-right-color: #fff;
+}
+
+.tutorial-bubble.top::after {
+  bottom: -20px;
+  left: 20px;
+  border-top-color: #fff;
+}
+
+.tutorial-bubble.bottom::after {
+  top: -20px;
+  left: 20px;
+  border-bottom-color: #fff;
+}
+
+#tutorial-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #1e293b;
+  font-weight: 700;
+  line-height: 1.5;
+}
