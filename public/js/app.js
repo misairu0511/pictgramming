@@ -1040,25 +1040,28 @@ function initTutorial(force = false) {
   const steps = [
     { target: 'java-editor', text: 'チュートリアルへようこそ！まずはプログラムを書いて動かす練習です。', pos: 'left' },
     { 
-      target: 'btn-run', 
-      text: '「部位回転」で右腕を曲げます。エディタにコードを追加しました！上の【実行】ボタンを押してみてください。', 
-      pos: 'bottom', 
+      target: 'java-editor', 
+      clickTarget: 'btn-run',
+      text: '「部位回転」で右腕を曲げます。エディタにコードを追加しました！上の明るくなっている【実行】ボタンを押してみてください。', 
+      pos: 'left', 
       codeToAdd: '部位回転("右腕", -45);',
       waitForRun: true,
       checkCondition: () => editor.value.includes('部位回転')
     },
     { 
-      target: 'btn-run', 
-      text: '次は「移動」してヒヨコを「掴む」命令を追加しました！もう一度【実行】を押してください！', 
-      pos: 'bottom', 
+      target: 'java-editor', 
+      clickTarget: 'btn-run',
+      text: '次は「移動」してヒヨコを「掴む」命令を追加しました！もう一度【実行】ボタンを押してください！', 
+      pos: 'left', 
       codeToAdd: '移動(100);\n掴む();',
       waitForRun: true,
       checkCondition: () => engine.state.hasGrabbedItem
     },
     { 
-      target: 'btn-run', 
-      text: '最後に「回転」で向きを変え、移動して「離す」命令でゴールしましょう！【実行】を押してください！', 
-      pos: 'bottom', 
+      target: 'java-editor', 
+      clickTarget: 'btn-run',
+      text: '最後に「回転」で向きを変え、移動して「離す」命令でゴールしましょう！【実行】ボタンを押してください！', 
+      pos: 'left', 
       codeToAdd: '回転(90);\n移動(150);\n離す();',
       waitForRun: true,
       checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
@@ -1068,6 +1071,10 @@ function initTutorial(force = false) {
 
   function showStep(index) {
     if (index >= steps.length) {
+      if (window.tutorialLastClickTarget) {
+        window.tutorialLastClickTarget.classList.remove('tutorial-on-top');
+        window.tutorialLastClickTarget = null;
+      }
       overlay.hidden = true;
       localStorage.setItem('tutorialCompleted', 'true');
       if (stageSelect) {
@@ -1093,6 +1100,19 @@ function initTutorial(force = false) {
     
     text.textContent = step.text;
     bubble.className = 'tutorial-bubble ' + step.pos;
+    
+    if (window.tutorialLastClickTarget) {
+      window.tutorialLastClickTarget.classList.remove('tutorial-on-top');
+      window.tutorialLastClickTarget = null;
+    }
+
+    if (step.clickTarget) {
+      const clickEl = document.getElementById(step.clickTarget);
+      if (clickEl) {
+        clickEl.classList.add('tutorial-on-top');
+        window.tutorialLastClickTarget = clickEl;
+      }
+    }
     
     // 実行待ちステップの場合は次へボタンを隠す
     if (step.waitForRun) {
