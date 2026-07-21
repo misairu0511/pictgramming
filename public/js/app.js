@@ -76,6 +76,7 @@ const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
 let isRunning = false;
 let shouldStop = false;
 let currentLogSession = null;
+let lastViewedHint = "ヒントなし";
 
 let userId = localStorage.getItem("pictgramming_user_id");
 if (!userId) {
@@ -305,6 +306,7 @@ if (btnShowHint) {
         const randomLog = othersClears[Math.floor(Math.random() * othersClears.length)];
         
         addLog(`【別解再生】${randomLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
+        lastViewedHint = "別解再生";
         
         isRunning = true;
         shouldStop = false;
@@ -331,6 +333,7 @@ if (btnShowHint) {
         }
         
         addLog(`【前半ヒント】${randomLog.nickname || '誰か'}さんがヒヨコを掴むまでを再生します`, "info");
+        lastViewedHint = "初期状態から他人がヒヨコを掴むまでのゴースト";
         
         // 掴むメッセージが含まれているイベントを探す
         let grabIndex = randomLog.events.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
@@ -360,6 +363,7 @@ if (btnShowHint) {
       const latestLog = myLogs[0];
       
       addLog(`【ヒント再生】あなたの動きの続きを自動生成します`, "info");
+      lastViewedHint = "掴んだ状態からのゴースト";
       
       isRunning = true;
       shouldStop = false;
@@ -561,6 +565,7 @@ async function runProgram() {
     pauseButton.disabled = true;
     pauseButton.textContent = "一時停止";
     resetButton.disabled = false;
+    lastViewedHint = "ヒントなし";
 
     if (currentLogSession) {
       currentLogSession.userId = userId;
@@ -570,6 +575,7 @@ async function runProgram() {
       currentLogSession.timestamp = new Date().toISOString();
       currentLogSession.sessionId = sessionId;
       currentLogSession.stageId = engine.currentStageId;
+      currentLogSession.hintViewed = lastViewedHint;
       
       logCount++;
       localStorage.setItem("pictgramming_log_count", logCount);
@@ -701,6 +707,7 @@ if (stageSelect) {
     engine.loadStage(stageSelect.value);
     clearOutput();
     updateShoeUI();
+    lastViewedHint = "ヒントなし";
   });
 }
 
