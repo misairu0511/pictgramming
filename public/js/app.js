@@ -143,6 +143,17 @@ const partAliases = {
   "右膝": "rightKnee"
 };
 
+function updateHintBadge() {
+  const badge = document.getElementById("hint-badge");
+  if (!badge) return;
+  if (lastViewedHint === "ヒントなし") {
+    badge.hidden = true;
+  } else {
+    badge.textContent = `💡 視聴中: ${lastViewedHint}`;
+    badge.hidden = false;
+  }
+}
+
 runButton.addEventListener("click", runProgram);
 stopButton.addEventListener("click", () => {
   if (isRunning) {
@@ -313,6 +324,7 @@ if (btnShowHint) {
         
         addLog(`【別解再生】${randomLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
         lastViewedHint = "別解再生";
+        updateHintBadge();
         hintViewCounts[lastViewedHint]++;
         runsSinceHint = 0;
         
@@ -342,6 +354,7 @@ if (btnShowHint) {
         
         addLog(`【前半ヒント】${randomLog.nickname || '誰か'}さんがヒヨコを掴むまでを再生します`, "info");
         lastViewedHint = "初期状態から他人がヒヨコを掴むまでのゴースト";
+        updateHintBadge();
         hintViewCounts[lastViewedHint]++;
         runsSinceHint = 0;
         
@@ -374,6 +387,7 @@ if (btnShowHint) {
       
       addLog(`【ヒント再生】あなたの動きの続きを自動生成します`, "info");
       lastViewedHint = "掴んだ状態からのゴースト";
+      updateHintBadge();
       hintViewCounts[lastViewedHint]++;
       runsSinceHint = 0;
       
@@ -725,6 +739,7 @@ if (stageSelect) {
     clearOutput();
     updateShoeUI();
     lastViewedHint = "ヒントなし";
+    updateHintBadge();
     hintViewCounts = {
       "初期状態から他人がヒヨコを掴むまでのゴースト": 0,
       "掴んだ状態からのゴースト": 0,
