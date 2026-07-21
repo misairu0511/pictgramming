@@ -992,7 +992,6 @@ if (btnDeleteAllLogs) {
     }
   });
 }
-}
 
 // --- チュートリアル・ステージ0制御 ---
 function initTutorial(force = false) {
