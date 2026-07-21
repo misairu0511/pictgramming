@@ -995,9 +995,9 @@ if (btnDeleteAllLogs) {
 }
 
 // --- チュートリアル・ステージ0制御 ---
-function initTutorial() {
+function initTutorial(force = false) {
   const isCompleted = localStorage.getItem('tutorialCompleted');
-  if (isCompleted) {
+  if (isCompleted && !force) {
     if (stageSelect && stageSelect.value === 'stage0' && !editor.value.includes('掴む()')) {
       editor.value = "移動(85);\n掴む();\n移動(165);\n離す();";
     }
@@ -1072,11 +1072,35 @@ function initTutorial() {
   overlay.hidden = false;
   setTimeout(() => { showStep(0); }, 300);
 
-  nextBtn.addEventListener('click', () => {
+  // イベントリスナーの重複登録を防ぐため、一度クローンして置き換えるか、
+  // もしくは一度だけ登録するようにする。ここでは簡単のため直接登録するが、
+  // 複数回呼ばれると問題になる可能性があるので、既存のリスナーを消す処理を入れる。
+  const newNextBtn = nextBtn.cloneNode(true);
+  nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
+  newNextBtn.addEventListener('click', () => {
     currentStep++;
     showStep(currentStep);
   });
+  
+  const skipBtn = document.getElementById('btn-tutorial-skip');
+  if (skipBtn) {
+    const newSkipBtn = skipBtn.cloneNode(true);
+    skipBtn.parentNode.replaceChild(newSkipBtn, skipBtn);
+    newSkipBtn.addEventListener('click', () => {
+      overlay.hidden = true;
+      localStorage.setItem('tutorialCompleted', 'true');
+      editor.value = "移動(85);\n掴む();\n移動(165);\n離す();";
+    });
+  }
 }
 
 // 少し遅延させてDOMの準備を確実に待つ
-setTimeout(initTutorial, 500);
+setTimeout(() => initTutorial(false), 500);
+
+// あとからチュートリアルを開始するボタン
+const btnStartTutorial = document.getElementById("btn-start-tutorial");
+if (btnStartTutorial) {
+  btnStartTutorial.addEventListener("click", () => {
+    initTutorial(true);
+  });
+}
