@@ -583,7 +583,7 @@ async function runProgram() {
       currentLogSession = null;
       
       if (finalGoalResult === "ゴールした") {
-        updateStageLocks();
+        updateStageLocks(true);
         const clearOverlay = document.getElementById("clear-overlay");
         if (clearOverlay) {
           clearOverlay.hidden = false;
@@ -860,7 +860,7 @@ function hidePartTooltip() {
 // ----------------------------------------------------
 // ステージのアンロック（進行）管理
 // ----------------------------------------------------
-async function updateStageLocks() {
+async function updateStageLocks(skipReload = false) {
   if (!stageSelect) return;
   const options = stageSelect.options;
   
@@ -961,7 +961,7 @@ async function updateStageLocks() {
     }
     
     updateShoeUI();
-    if (stageSelect && typeof engine !== 'undefined') {
+    if (!skipReload && stageSelect && typeof engine !== 'undefined') {
       engine.loadStage(stageSelect.value);
     }
     
@@ -1035,7 +1035,7 @@ function initTutorial(force = false) {
     return;
   }
 
-  const overlay = document.getElementById('tutorial-overlay');
+  const overlay = document.getElementById('tutorial-wrapper');
   const highlight = document.getElementById('tutorial-highlight');
   const bubble = document.getElementById('tutorial-bubble');
   const text = document.getElementById('tutorial-text');
@@ -1051,6 +1051,7 @@ function initTutorial(force = false) {
       text: '「部位回転」で右腕を曲げます。エディタにコードを追加しました！上の明るくなっている【実行】ボタンを押してみてください。', 
       pos: 'left', 
       codeToAdd: '部位回転("右腕", -45);',
+      keyword: '部位回転',
       waitForRun: true,
       checkCondition: () => editor.value.includes('部位回転')
     },
@@ -1060,6 +1061,7 @@ function initTutorial(force = false) {
       text: '次は「移動」してヒヨコを「掴む」命令を追加しました！もう一度【実行】ボタンを押してください！', 
       pos: 'left', 
       codeToAdd: '移動(100);\n掴む();',
+      keyword: '掴む()',
       waitForRun: true,
       checkCondition: () => engine.state.hasGrabbedItem
     },
@@ -1069,6 +1071,7 @@ function initTutorial(force = false) {
       text: '最後に「回転」で向きを変え、移動して「離す」命令でゴールしましょう！【実行】ボタンを押してください！', 
       pos: 'left', 
       codeToAdd: '回転(90);\n移動(150);\n離す();',
+      keyword: '離す()',
       waitForRun: true,
       checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
     }
@@ -1084,11 +1087,12 @@ function initTutorial(force = false) {
       overlay.hidden = true;
       localStorage.setItem('tutorialCompleted', 'true');
       if (stageSelect) {
-        stageSelect.value = 'stage0';
-        engine.loadStage('stage0');
+        // チュートリアルが完了したら、自動的にステージ1に進む
+        stageSelect.value = 'stage1';
+        engine.loadStage('stage1');
         updateShoeUI();
       }
-      editor.value = "部位回転(\"右腕\", -45);\n移動(100);\n掴む();\n回転(90);\n移動(150);\n離す();";
+      editor.value = "";
       return;
     }
 
@@ -1126,11 +1130,14 @@ function initTutorial(force = false) {
     // 実行待ちステップの場合は次へボタンを隠す
     if (step.waitForRun) {
       nextBtn.style.display = 'none';
-      if (step.codeToAdd && !editor.value.includes(step.codeToAdd)) {
-        if (editor.value.trim() === '') {
-          editor.value = step.codeToAdd;
-        } else {
-          editor.value = editor.value.trim() + '\n' + step.codeToAdd;
+      if (step.codeToAdd) {
+        const hasCode = step.keyword ? editor.value.includes(step.keyword) : editor.value.replace(/\r\n/g, '\n').includes(step.codeToAdd.replace(/\r\n/g, '\n'));
+        if (!hasCode) {
+          if (editor.value.trim() === '') {
+            editor.value = step.codeToAdd;
+          } else {
+            editor.value = editor.value.trim() + '\n' + step.codeToAdd;
+          }
         }
       }
     } else {
@@ -1199,7 +1206,12 @@ function initTutorial(force = false) {
     skipBtn.onclick = () => {
       overlay.hidden = true;
       localStorage.setItem('tutorialCompleted', 'true');
-      editor.value = "部位回転(\"右腕\", -45);\n移動(100);\n掴む();\n回転(90);\n移動(150);\n離す();";
+      if (stageSelect) {
+        stageSelect.value = 'stage1';
+        engine.loadStage('stage1');
+        updateShoeUI();
+      }
+      editor.value = "";
     };
   }
 }
