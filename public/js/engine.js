@@ -462,6 +462,7 @@ class PictoEngine {
     this.drawPicto(this.state);
     this.drawShoes();
     this.drawItem();
+    this.drawLegend();
   }
 
   drawGoal() {
@@ -888,6 +889,60 @@ class PictoEngine {
       };
       requestAnimationFrame(step);
     });
+  }
+
+  drawLegend() {
+    const ctx = this.ctx;
+    ctx.save();
+    
+    // 背景の半透明白角丸四角
+    const boxX = this.canvas.width - 180;
+    const boxY = this.canvas.height - 70;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.1)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, 160, 50, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    // 距離（1マス = 40）
+    ctx.strokeStyle = "#475569";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(boxX + 20, boxY + 30);
+    ctx.lineTo(boxX + 20, boxY + 36);
+    ctx.lineTo(boxX + 60, boxY + 36); // exactly 40 width
+    ctx.lineTo(boxX + 60, boxY + 30);
+    ctx.stroke();
+    
+    ctx.fillStyle = "#475569";
+    ctx.font = "bold 11px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("1マス(移動40)", boxX + 40, boxY + 22);
+
+    // 回転（90度）
+    ctx.strokeStyle = "#0ea5e9";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(boxX + 110, boxY + 35, 15, Math.PI * 1.5, 0);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#64748b";
+    ctx.beginPath();
+    ctx.moveTo(boxX + 110, boxY + 15);
+    ctx.lineTo(boxX + 110, boxY + 35);
+    ctx.lineTo(boxX + 130, boxY + 35);
+    ctx.stroke();
+
+    ctx.fillStyle = "#0ea5e9";
+    ctx.font = "bold 11px sans-serif";
+    ctx.fillText("90°", boxX + 130, boxY + 20);
+    
+    ctx.fillStyle = "#475569";
+    ctx.fillText("回転", boxX + 120, boxY + 45);
+
+    ctx.restore();
   }
 
   lerp(start, end, progress) {

@@ -601,3 +601,48 @@ code {
   pointer-events: auto !important;
 }
 
+.map-scale-legend {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 24px;
+  z-index: 5;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+  align-items: center;
+}
+
+.legend-scale {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.scale-line {
+  width: 40px;
+  height: 6px;
+  border-left: 2px solid #475569;
+  border-right: 2px solid #475569;
+  border-bottom: 2px solid #475569;
+  margin-top: 4px;
+}
+
+.scale-text {
+  font-size: 0.65rem;
+  color: #475569;
+  font-weight: bold;
+}
+
+.legend-angle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
