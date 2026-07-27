@@ -731,6 +731,22 @@ function updateShoeUI() {
   const shoeHelp2 = document.getElementById("shoe-help-2");
   if (shoeHelp1) shoeHelp1.style.display = isShoeStage ? "list-item" : "none";
   if (shoeHelp2) shoeHelp2.style.display = isShoeStage ? "list-item" : "none";
+
+  // 靴のチュートリアル表示
+  if (isShoeStage && !localStorage.getItem('shoeTutorialCompleted')) {
+    const modal = document.getElementById('shoe-tutorial-modal');
+    if (modal) {
+      modal.showModal();
+      localStorage.setItem('shoeTutorialCompleted', 'true');
+      
+      const closeBtn = document.getElementById('shoe-modal-close');
+      const okBtn = document.getElementById('btn-shoe-modal-ok');
+      
+      const closeModal = () => modal.close();
+      if (closeBtn) closeBtn.onclick = closeModal;
+      if (okBtn) okBtn.onclick = closeModal;
+    }
+  }
 }
 
 if (stageSelect) {
