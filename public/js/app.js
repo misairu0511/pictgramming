@@ -379,14 +379,16 @@ if (btnShowHint) {
         return;
       }
       
-      // 降順ソートして最新を取得
-      const myLogs = [];
-      mySnapshot.forEach(doc => myLogs.push(doc.data()));
-      myLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      const latestLog = myLogs[0];
+      // ヒヨコを掴んだ状態の場合 -> 計算による自動生成をやめ、他人のクリアログを再生する
+      const randomLog = othersClears[Math.floor(Math.random() * othersClears.length)];
       
-      addLog(`【ヒント再生】あなたの動きの続きを自動生成します`, "info");
-      lastViewedHint = "掴んだ状態からのゴースト";
+      if (!randomLog.events || randomLog.events.length === 0) {
+        addLog("ヒントデータの読み込みに失敗しました。", "error");
+        return;
+      }
+      
+      addLog(`【後半ヒント】${randomLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
+      lastViewedHint = "掴んだ状態からゴールまでのゴースト";
       updateHintBadge();
       hintViewCounts[lastViewedHint]++;
       runsSinceHint = 0;
@@ -395,70 +397,7 @@ if (btnShowHint) {
       shouldStop = false;
       stopButton.disabled = false;
       
-      // 前半: ゴーストモードで自分のコードを再現
-      engine.reset();
-      engine.isGhostMode = true;
-      engine.state.color = "#9ca3af";
-      
-      let jsCode = transpileToJava(latestLog.sourceCode);
-      const picto = createPictoContext();
-      const fn = new AsyncFunction('picto', jsCode);
-      
-      await fn(picto);
-      
-      if (shouldStop) throw new Error("STOP");
-      
-      // 後半: 自動補完（現在地からゴールへのベクトルを計算して実行）
-      if (engine.state.hasGrabbedItem) {
-        const goalPos = engine.goal;
-        const attachedPart = engine.state.item.attachedTo || "rightArm";
-        
-        // 角度0の時の手のローカル座標を取得
-        const savedDir = engine.state.direction;
-        engine.state.direction = 0;
-        const handPos0 = engine.getHandPosition(attachedPart);
-        engine.state.direction = savedDir;
-        
-        const local_x = handPos0.x - engine.state.x;
-        const local_y = handPos0.y - engine.state.y;
-        
-        const dx = goalPos.x - engine.state.x;
-        const dy = goalPos.y - engine.state.y;
-        const R = Math.sqrt(dx * dx + dy * dy);
-        
-        if (R >= Math.abs(local_x)) {
-          const phi = Math.atan2(dy, dx);
-          const acosVal = Math.acos(local_x / R);
-          
-          const theta1 = phi + acosVal;
-          const theta2 = phi - acosVal;
-          
-          const D1 = dx * Math.sin(theta1) - dy * Math.cos(theta1) + local_y;
-          const D2 = dx * Math.sin(theta2) - dy * Math.cos(theta2) + local_y;
-          
-          let targetThetaRad = (D1 > D2) ? theta1 : theta2;
-          let distance = Math.max(D1, D2);
-          
-          const targetAngle = targetThetaRad * 180 / Math.PI;
-          let rotateAmount = targetAngle - engine.state.direction;
-          rotateAmount = ((rotateAmount % 360) + 540) % 360 - 180;
-          
-          if (Math.abs(rotateAmount) > 1) {
-            await engine.animateTurn(rotateAmount);
-          }
-          if (distance > 0) {
-            await engine.animateMove(distance);
-          }
-        } else {
-          // ゴールが近すぎる場合はフォールバック
-          const targetAngle = Math.atan2(goalPos.y - engine.state.item.y, goalPos.x - engine.state.item.x) * 180 / Math.PI + 90;
-          let rotateAmount = targetAngle - engine.state.direction;
-          rotateAmount = ((rotateAmount % 360) + 540) % 360 - 180;
-          await engine.animateTurn(rotateAmount);
-          await engine.animateMove(R);
-        }
-        engine.releaseItem();
-      }
+      await engine.playGhost(randomLog.events);
       
     } catch (e) {
       if (e.message !== "STOP") console.error(e);
