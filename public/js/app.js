@@ -78,9 +78,9 @@ let shouldStop = false;
 let currentLogSession = null;
 let lastViewedHint = "ヒントなし";
 let hintViewCounts = {
+  "別解再生": 0,
   "初期状態から他人がヒヨコを掴むまでのゴースト": 0,
-  "掴んだ状態からのゴースト": 0,
-  "別解再生": 0
+  "掴んだ状態からゴールまでのゴースト": 0
 };
 let runsSinceHint = 0;
 
