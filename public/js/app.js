@@ -77,6 +77,7 @@ let isRunning = false;
 let shouldStop = false;
 let currentLogSession = null;
 let lastViewedHint = "ヒントなし";
+let lastViewedHintLogId = null;
 let hintViewCounts = {
   "別解再生": 0,
   "初期状態から他人がヒヨコを掴むまでのゴースト": 0,
@@ -299,7 +300,7 @@ if (btnShowHint) {
       const othersClears = [];
       clearSnapshot.forEach(doc => {
         if (doc.data().userId !== userId) {
-          othersClears.push(doc.data());
+          othersClears.push({ id: doc.id, ...doc.data() });
         }
       });
         
@@ -324,6 +325,7 @@ if (btnShowHint) {
         
         addLog(`【別解再生】${randomLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
         lastViewedHint = "別解再生";
+        lastViewedHintLogId = randomLog.id;
         updateHintBadge();
         hintViewCounts[lastViewedHint]++;
         runsSinceHint = 0;
@@ -336,7 +338,20 @@ if (btnShowHint) {
         return;
       }
       
-      // 3. 自分の最新の「惜しいコード（ヒヨコを掴んだ状態）」を取得
+      // 3. 最新の自分のログを取得して、軌跡を抽出
+      const myLatestSnapshot = await db.collection('logs')
+        .where('stageId', '==', stageId)
+        .where('userId', '==', userId)
+        .orderBy('timestamp', 'desc')
+        .limit(1)
+        .get();
+        
+      let myLatestEvents = [];
+      if (!myLatestSnapshot.empty) {
+        myLatestEvents = myLatestSnapshot.docs[0].data().events || [];
+      }
+
+      // 4. 自分の最新の「惜しいコード（ヒヨコを掴んだ状態）」を取得
       const mySnapshot = await db.collection('logs')
         .where('stageId', '==', stageId)
         .where('userId', '==', userId)
@@ -344,51 +359,50 @@ if (btnShowHint) {
         .get();
         
       if (mySnapshot.empty) {
-        // 【今回追加した処理】自分がまだヒヨコを掴んでいない場合は、他の人の前半部分を再生する
-        const randomLog = othersClears[Math.floor(Math.random() * othersClears.length)];
+        // ヒヨコを掴んでいない場合は、他の人の前半部分を再生する
+        const bestLog = findBestHintLog(othersClears, myLatestEvents, stageId);
         
-        if (!randomLog.events || randomLog.events.length === 0) {
+        if (!bestLog.events || bestLog.events.length === 0) {
           addLog("ヒントデータの読み込みに失敗しました。", "error");
           return;
         }
         
-        addLog(`【前半ヒント】${randomLog.nickname || '誰か'}さんがヒヨコを掴むまでを再生します`, "info");
+        addLog(`【前半ヒント】${bestLog.nickname || '誰か'}さんがヒヨコを掴むまでを再生します（スコア: ${Math.round(bestLog._calculatedDistanceScore || 0)}）`, "info");
         lastViewedHint = "初期状態から他人がヒヨコを掴むまでのゴースト";
+        lastViewedHintLogId = bestLog.id;
         updateHintBadge();
         hintViewCounts[lastViewedHint]++;
         runsSinceHint = 0;
         
         // 掴むメッセージが含まれているイベントを探す
-        let grabIndex = randomLog.events.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
+        let grabIndex = bestLog.events.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
         if (grabIndex === -1) {
-          grabIndex = randomLog.events.length;
+          grabIndex = bestLog.events.length;
         } else {
-          // 掴んだ瞬間のイベントを含めるために +1 する
-          grabIndex = Math.min(grabIndex + 1, randomLog.events.length);
+          grabIndex = Math.min(grabIndex + 1, bestLog.events.length);
         }
         
-        const truncatedEvents = randomLog.events.slice(0, grabIndex);
+        const truncatedEvents = bestLog.events.slice(0, grabIndex);
         
         isRunning = true;
         shouldStop = false;
         stopButton.disabled = false;
         
         await engine.playGhost(truncatedEvents);
-        
-        // ここでreturnすればfinallyへ飛ぶので、後半の自分専用ゴースト処理には進まない
         return;
       }
       
-      // ヒヨコを掴んだ状態の場合 -> 計算による自動生成をやめ、他人のクリアログを再生する
-      const randomLog = othersClears[Math.floor(Math.random() * othersClears.length)];
+      // ヒヨコを掴んだ状態の場合 -> 他人のクリアログを最後まで再生する
+      const bestLog = findBestHintLog(othersClears, myLatestEvents, stageId);
       
-      if (!randomLog.events || randomLog.events.length === 0) {
+      if (!bestLog.events || bestLog.events.length === 0) {
         addLog("ヒントデータの読み込みに失敗しました。", "error");
         return;
       }
       
-      addLog(`【後半ヒント】${randomLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
+      addLog(`【後半ヒント】${bestLog.nickname || '誰か'}さんのクリアの動きを再生します（スコア: ${Math.round(bestLog._calculatedDistanceScore || 0)}）`, "info");
       lastViewedHint = "掴んだ状態からゴールまでのゴースト";
+      lastViewedHintLogId = bestLog.id;
       updateHintBadge();
       hintViewCounts[lastViewedHint]++;
       runsSinceHint = 0;
@@ -432,6 +446,91 @@ document.querySelectorAll(".snippet-btn").forEach((btn) => {
     insertSnippet(snippet);
   });
 });
+
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// 動きの近い度（類似度）をDTWで計算して最適なログを抽出する関数
+function findBestHintLog(othersClears, myEvents, stageId) {
+  if (!myEvents || myEvents.length === 0) {
+    const randomLog = othersClears[Math.floor(Math.random() * othersClears.length)];
+    randomLog._calculatedDistanceScore = 0;
+    return randomLog;
+  }
+  
+  let wPos = 1.0;
+  let wDir = 0.5;
+  let wArm = 0.2;
+  let wLeg = 0.0;
+  
+  // ステージ4以降は靴があるため、足の重みを追加
+  const stageNum = parseInt(stageId.replace('stage', ''), 10);
+  if (!isNaN(stageNum) && stageNum >= 4) {
+    wLeg = 0.2;
+  }
+  
+  let bestLog = null;
+  let minScore = Infinity;
+  
+  for (const log of othersClears) {
+    const pastEvents = log.events;
+    if (!pastEvents || pastEvents.length === 0) continue;
+    
+    let n = myEvents.length;
+    let m = pastEvents.length;
+    
+    // DTW行列の初期化
+    let dtw = Array(n + 1).fill().map(() => Array(m + 1).fill(Infinity));
+    dtw[0][0] = 0;
+    
+    for (let i = 1; i <= n; i++) {
+      for (let j = 1; j <= m; j++) {
+        let ev1 = myEvents[i-1];
+        let ev2 = pastEvents[j-1];
+        
+        let dx = (ev1.x || 0) - (ev2.x || 0);
+        let dy = (ev1.y || 0) - (ev2.y || 0);
+        let posDist = Math.sqrt(dx*dx + dy*dy);
+        
+        let dDir = Math.abs((ev1.direction || 0) - (ev2.direction || 0)) % 360;
+        if (dDir > 180) dDir = 360 - dDir;
+        
+        let dLeftArm = Math.abs((ev1.leftArm || 0) - (ev2.leftArm || 0));
+        let dRightArm = Math.abs((ev1.rightArm || 0) - (ev2.rightArm || 0));
+        let dLeftLeg = Math.abs((ev1.leftLeg || 0) - (ev2.leftLeg || 0));
+        let dRightLeg = Math.abs((ev1.rightLeg || 0) - (ev2.rightLeg || 0));
+        
+        let cost = (posDist * wPos) + (dDir * wDir) + ((dLeftArm + dRightArm) * wArm) + ((dLeftLeg + dRightLeg) * wLeg);
+        
+        dtw[i][j] = cost + Math.min(
+          dtw[i-1][j],    // 挿入
+          dtw[i][j-1],    // 欠損
+          dtw[i-1][j-1]   // マッチ
+        );
+      }
+    }
+    
+    // 学習者の全イベントを、過去ログの任意のプレフィックス（途中まで）にマッチさせた時の最小コスト
+    let logMinScore = Math.min(...dtw[n].slice(1));
+    
+    if (logMinScore < minScore) {
+      minScore = logMinScore;
+      bestLog = log;
+    }
+  }
+  
+  if (bestLog) {
+    bestLog._calculatedDistanceScore = minScore;
+    return bestLog;
+  }
+  
+  const fallbackLog = othersClears[Math.floor(Math.random() * othersClears.length)];
+  fallbackLog._calculatedDistanceScore = 0;
+  return fallbackLog;
+}
 
 function insertSnippet(snippet) {
   const start = editor.selectionStart;
@@ -546,6 +645,14 @@ async function runProgram() {
       currentLogSession.hintViewed = lastViewedHint;
       currentLogSession.hintViewCount = lastViewedHint === "ヒントなし" ? 0 : hintViewCounts[lastViewedHint];
       currentLogSession.runsSinceHint = lastViewedHint === "ヒントなし" ? 0 : runsSinceHint;
+      currentLogSession.usedHintLogId = lastViewedHint === "ヒントなし" ? null : lastViewedHintLogId;
+      
+      currentLogSession.finalState = {
+        x: engine.state.x,
+        y: engine.state.y,
+        direction: engine.state.direction,
+        hasGrabbedItem: engine.state.hasGrabbedItem
+      };
       
       logCount++;
       localStorage.setItem("pictgramming_log_count", logCount);
@@ -822,7 +929,21 @@ function addLog(message, type = "") {
   log.scrollTop = log.scrollHeight;
 
   if (currentLogSession && isRunning) {
-    currentLogSession.events.push({ type, message });
+    currentLogSession.events.push({ 
+      type, 
+      message,
+      x: engine.state.x,
+      y: engine.state.y,
+      direction: engine.state.direction,
+      leftArm: engine.state.leftArm || 0,
+      rightArm: engine.state.rightArm || 0,
+      leftElbow: engine.state.leftElbow || 0,
+      rightElbow: engine.state.rightElbow || 0,
+      leftLeg: engine.state.leftLeg || 0,
+      rightLeg: engine.state.rightLeg || 0,
+      leftKnee: engine.state.leftKnee || 0,
+      rightKnee: engine.state.rightKnee || 0
+    });
   }
 }
 
