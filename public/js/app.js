@@ -501,10 +501,18 @@ function findBestHintLog(othersClears, myEvents, stageId) {
         
         let dLeftArm = Math.abs((ev1.leftArm || 0) - (ev2.leftArm || 0));
         let dRightArm = Math.abs((ev1.rightArm || 0) - (ev2.rightArm || 0));
+        let dLeftElbow = Math.abs((ev1.leftElbow || 0) - (ev2.leftElbow || 0));
+        let dRightElbow = Math.abs((ev1.rightElbow || 0) - (ev2.rightElbow || 0));
+        
         let dLeftLeg = Math.abs((ev1.leftLeg || 0) - (ev2.leftLeg || 0));
         let dRightLeg = Math.abs((ev1.rightLeg || 0) - (ev2.rightLeg || 0));
+        let dLeftKnee = Math.abs((ev1.leftKnee || 0) - (ev2.leftKnee || 0));
+        let dRightKnee = Math.abs((ev1.rightKnee || 0) - (ev2.rightKnee || 0));
         
-        let cost = (posDist * wPos) + (dDir * wDir) + ((dLeftArm + dRightArm) * wArm) + ((dLeftLeg + dRightLeg) * wLeg);
+        let armCost = (dLeftArm + dRightArm + dLeftElbow + dRightElbow) * wArm;
+        let legCost = (dLeftLeg + dRightLeg + dLeftKnee + dRightKnee) * wLeg;
+        
+        let cost = (posDist * wPos) + (dDir * wDir) + armCost + legCost;
         
         dtw[i][j] = cost + Math.min(
           dtw[i-1][j],    // 挿入
