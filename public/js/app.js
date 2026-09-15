@@ -338,17 +338,18 @@ if (btnShowHint) {
         return;
       }
       
-      // 3. 最新の自分のログを取得して、軌跡を抽出
+      // 3. 最新の自分のログを取得して、軌跡を抽出 (Firebaseのインデックスエラー回避のためローカルでソート)
       const myLatestSnapshot = await db.collection('logs')
         .where('stageId', '==', stageId)
         .where('userId', '==', userId)
-        .orderBy('timestamp', 'desc')
-        .limit(1)
         .get();
         
       let myLatestEvents = [];
       if (!myLatestSnapshot.empty) {
-        myLatestEvents = myLatestSnapshot.docs[0].data().events || [];
+        let myLogs = [];
+        myLatestSnapshot.forEach(doc => myLogs.push(doc.data()));
+        myLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        myLatestEvents = myLogs[0].events || [];
       }
 
       // 4. 自分の最新の「惜しいコード（ヒヨコを掴んだ状態）」を取得
@@ -411,7 +412,7 @@ if (btnShowHint) {
       shouldStop = false;
       stopButton.disabled = false;
       
-      await engine.playGhost(randomLog.events);
+      await engine.playGhost(bestLog.events);
       
     } catch (e) {
       if (e.message !== "STOP") console.error(e);
