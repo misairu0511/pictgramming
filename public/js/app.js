@@ -368,7 +368,7 @@ if (btnShowHint) {
           return;
         }
         
-        addLog(`【前半ヒント】${bestLog.nickname || '誰か'}さんがヒヨコを掴むまでを再生します（スコア: ${Math.round(bestLog._calculatedDistanceScore || 0)}）`, "info");
+        addLog(`【前半ヒント】${bestLog.nickname || '誰か'}さんがヒヨコを掴むまでを再生します`, "info");
         lastViewedHint = "初期状態から他人がヒヨコを掴むまでのゴースト";
         lastViewedHintLogId = bestLog.id;
         updateHintBadge();
