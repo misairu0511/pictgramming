@@ -303,7 +303,7 @@ if (btnShowHint) {
 }
 
   btnShowHint.addEventListener("click", async () => {
-    if (isRunning) return;
+    if (isRunning) { console.warn("ShowHint cancelled: isRunning is true"); return; }
     btnShowHint.disabled = true;
     const originalText = btnShowHint.innerHTML;
     btnShowHint.innerHTML = "検索中...";
@@ -345,9 +345,8 @@ if (btnShowHint) {
         runsSinceHint = 0;
         
         isRunning = true;
-        engine.playGhost(randomLog.events, () => {
+        await engine.playGhost(randomLog.events);
           isRunning = false;
-        });
       } else {
         const myLatestSnapshot = await db.collection('logs')
           .where('stageId', '==', stageId)
@@ -382,7 +381,8 @@ if (btnShowHint) {
           updateHintBadge();
           runsSinceHint = 0;
           isRunning = true;
-          engine.playGhost(partialEvents, () => { isRunning = false; });
+          await engine.playGhost(partialEvents);
+            isRunning = false;
         } else {
           addLog(`【後半ヒント】${bestLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
           currentTargetHintLogId = bestLog.id;
@@ -391,7 +391,8 @@ if (btnShowHint) {
           updateHintBadge();
           runsSinceHint = 0;
           isRunning = true;
-          engine.playGhost(bestLog.events, () => { isRunning = false; });
+          await engine.playGhost(bestLog.events);
+            isRunning = false;
         }
       }
     } catch (e) {
@@ -424,7 +425,8 @@ if (btnReplayHint) {
     }
     
     isRunning = true;
-    engine.playGhost(eventsToPlay, () => { isRunning = false; });
+    await engine.playGhost(eventsToPlay);
+      isRunning = false;
   });
 }
 
