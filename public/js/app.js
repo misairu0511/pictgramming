@@ -396,6 +396,7 @@ if (btnShowHint) {
         addLog(`【別解再生】${randomLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
         currentTargetHintLogId = randomLog.id;
         currentTargetHintEvents = randomLog.events;
+        lastViewedHint = "別解再生";
         await saveHintViewLog("new_search", currentTargetHintLogId, null);
         updateHintBadge();
         runsSinceHint = 0;
@@ -433,6 +434,7 @@ if (btnShowHint) {
           let partialEvents = grabIndex >= 0 ? bestLog.events.slice(0, grabIndex + 1) : bestLog.events;
           currentTargetHintLogId = bestLog.id;
           currentTargetHintEvents = bestLog.events;
+          lastViewedHint = "前半ヒント";
           await saveHintViewLog("new_search", currentTargetHintLogId, score);
           updateHintBadge();
           runsSinceHint = 0;
@@ -443,6 +445,7 @@ if (btnShowHint) {
           addLog(`【後半ヒント】${bestLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
           currentTargetHintLogId = bestLog.id;
           currentTargetHintEvents = bestLog.events;
+          lastViewedHint = "後半ヒント";
           await saveHintViewLog("new_search", currentTargetHintLogId, score);
           updateHintBadge();
           runsSinceHint = 0;
@@ -468,11 +471,6 @@ if (btnShowHint) {
         return;
       }
       try {
-        lastViewedHint = "前回のヒント";
-        if (typeof updateHintBadge === 'function') updateHintBadge();
-        addLog(`【前回のヒント】さっきのゴーストをもう一度再生します`, "info");
-        await saveHintViewLog("replay", currentTargetHintLogId, null);
-        
         const stageId = stageSelect ? stageSelect.value : "stage1";
         const myClearSnapshot = await db.collection('logs')
           .where('stageId', '==', stageId)
@@ -486,6 +484,32 @@ if (btnShowHint) {
           .where('userId', '==', userId)
           .where('goalResult', 'in', ['持ったがゴールに入れていない', 'ゴールしているが離していない'])
           .get();
+          
+        let hintTypeStr = "前回のヒント";
+        let actionStr = "動き";
+        if (!myClearSnapshot.empty) {
+          hintTypeStr = "別解再生";
+          actionStr = "クリアの動き";
+        } else if (mySnapshot.empty) {
+          hintTypeStr = "前半ヒント";
+          actionStr = "ヒヨコを掴むまでの動き";
+        } else {
+          hintTypeStr = "後半ヒント";
+          actionStr = "クリアの動き";
+        }
+        
+        let hintNickname = "誰か";
+        if (currentTargetHintLogId) {
+          const doc = await db.collection('logs').doc(currentTargetHintLogId).get();
+          if (doc.exists && doc.data().nickname) {
+            hintNickname = doc.data().nickname;
+          }
+        }
+        
+        lastViewedHint = hintTypeStr;
+        if (typeof updateHintBadge === 'function') updateHintBadge();
+        addLog(`【${hintTypeStr}】さっきの${hintNickname}さんの${actionStr}をもう一度再生します`, "info");
+        await saveHintViewLog("replay", currentTargetHintLogId, null);
           
         let eventsToPlay = currentTargetHintEvents;
         if (myClearSnapshot.empty && mySnapshot.empty) {
@@ -682,6 +706,7 @@ async function runProgram() {
 
   clearOutput();
   let source = editor.value.trim();
+  const initialStageId = engine.currentStageId;
 
   if (!source) {
     addLog("実行できる文がありません。", "error");
@@ -749,7 +774,7 @@ async function runProgram() {
       }
       currentLogSession.timestamp = new Date().toISOString();
       currentLogSession.sessionId = sessionId;
-      currentLogSession.stageId = engine.currentStageId;
+      currentLogSession.stageId = typeof initialStageId !== 'undefined' ? initialStageId : engine.currentStageId;
       
       if (lastViewedHint !== "ヒントなし") {
         runsSinceHint++;
