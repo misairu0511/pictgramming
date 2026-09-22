@@ -401,9 +401,8 @@ if (btnShowHint) {
         runsSinceHint = 0;
         
         isRunning = true;
-        engine.playGhost(randomLog.events, () => {
+        await engine.playGhost(randomLog.events);
           isRunning = false;
-        });
       } else {
         const myLatestSnapshot = await db.collection('logs')
           .where('stageId', '==', stageId)
@@ -438,7 +437,8 @@ if (btnShowHint) {
           updateHintBadge();
           runsSinceHint = 0;
           isRunning = true;
-          engine.playGhost(partialEvents, () => { isRunning = false; });
+          await engine.playGhost(partialEvents);
+            isRunning = false;
         } else {
           addLog(`【後半ヒント】${bestLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
           currentTargetHintLogId = bestLog.id;
@@ -447,7 +447,8 @@ if (btnShowHint) {
           updateHintBadge();
           runsSinceHint = 0;
           isRunning = true;
-          engine.playGhost(bestLog.events, () => { isRunning = false; });
+          await engine.playGhost(bestLog.events);
+            isRunning = false;
         }
       }
     } catch (e) {
@@ -460,29 +461,47 @@ if (btnShowHint) {
   });
 }
 
-if (btnReplayHint) {
-  btnReplayHint.addEventListener("click", async () => {
-    if (isRunning || !currentTargetHintEvents) return;
-    addLog(`【リプレイ】さっきのゴーストをもう一度再生します`, "info");
-    await saveHintViewLog("replay", currentTargetHintLogId, null);
-    
-    const stageId = stageSelect ? stageSelect.value : "stage1";
-    const mySnapshot = await db.collection('logs')
-      .where('stageId', '==', stageId)
-      .where('userId', '==', userId)
-      .where('goalResult', 'in', ['持ったがゴールに入れていない', 'ゴールしているが離していない'])
-      .get();
-      
-    let eventsToPlay = currentTargetHintEvents;
-    if (mySnapshot.empty) {
-      let grabIndex = currentTargetHintEvents.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
-      eventsToPlay = grabIndex >= 0 ? currentTargetHintEvents.slice(0, grabIndex + 1) : currentTargetHintEvents;
-    }
-    
-    isRunning = true;
-    engine.playGhost(eventsToPlay, () => { isRunning = false; });
-  });
-}
+  if (btnReplayHint) {
+    btnReplayHint.addEventListener("click", async () => {
+      if (isRunning || !currentTargetHintEvents) {
+        console.warn("Replay cancelled");
+        return;
+      }
+      try {
+        lastViewedHint = "前回のヒント";
+        if (typeof updateHintBadge === 'function') updateHintBadge();
+        addLog(`【前回のヒント】さっきのゴーストをもう一度再生します`, "info");
+        await saveHintViewLog("replay", currentTargetHintLogId, null);
+        
+        const stageId = stageSelect ? stageSelect.value : "stage1";
+        const myClearSnapshot = await db.collection('logs')
+          .where('stageId', '==', stageId)
+          .where('userId', '==', userId)
+          .where('goalResult', '==', 'ゴールした')
+          .limit(1)
+          .get();
+          
+        const mySnapshot = await db.collection('logs')
+          .where('stageId', '==', stageId)
+          .where('userId', '==', userId)
+          .where('goalResult', 'in', ['持ったがゴールに入れていない', 'ゴールしているが離していない'])
+          .get();
+          
+        let eventsToPlay = currentTargetHintEvents;
+        if (myClearSnapshot.empty && mySnapshot.empty) {
+          let grabIndex = currentTargetHintEvents.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
+          eventsToPlay = grabIndex >= 0 ? currentTargetHintEvents.slice(0, grabIndex + 1) : currentTargetHintEvents;
+        }
+        
+        isRunning = true;
+        await engine.playGhost(eventsToPlay);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        isRunning = false;
+      }
+    });
+  }
 
 
 canvas.addEventListener("mousemove", showPartTooltip);
@@ -510,6 +529,35 @@ function formatTime(seconds) {
 }
 
 // 動きの近い度（類似度）をDTWで計算して最適なログを抽出する関数
+
+function calculateDTWScore(myEvents, pastEvents, stageId) {
+  if (!myEvents || !pastEvents || myEvents.length === 0 || pastEvents.length === 0) return 0;
+  let wPos = 1.0, wDir = 0.5, wArm = 0.2, wLeg = 0.0;
+  const stageNum = parseInt(stageId.replace('stage', ''), 10);
+  if (!isNaN(stageNum) && stageNum >= 4) { wLeg = 0.2; }
+  
+  let n = myEvents.length;
+  let m = pastEvents.length;
+  let dtw = Array(n + 1).fill().map(() => Array(m + 1).fill(Infinity));
+  dtw[0][0] = 0;
+  
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      let ev1 = myEvents[i-1], ev2 = pastEvents[j-1];
+      let dx = (ev1.x || 0) - (ev2.x || 0), dy = (ev1.y || 0) - (ev2.y || 0);
+      let posDist = Math.sqrt(dx*dx + dy*dy);
+      let dDir = Math.abs((ev1.direction || 0) - (ev2.direction || 0)) % 360;
+      if (dDir > 180) dDir = 360 - dDir;
+      let armCost = (Math.abs((ev1.leftArm || 0) - (ev2.leftArm || 0)) + Math.abs((ev1.rightArm || 0) - (ev2.rightArm || 0)) + Math.abs((ev1.leftElbow || 0) - (ev2.leftElbow || 0)) + Math.abs((ev1.rightElbow || 0) - (ev2.rightElbow || 0))) * wArm;
+      let legCost = (Math.abs((ev1.leftLeg || 0) - (ev2.leftLeg || 0)) + Math.abs((ev1.rightLeg || 0) - (ev2.rightLeg || 0)) + Math.abs((ev1.leftKnee || 0) - (ev2.leftKnee || 0)) + Math.abs((ev1.rightKnee || 0) - (ev2.rightKnee || 0))) * wLeg;
+      
+      let cost = (posDist * wPos) + (dDir * wDir) + armCost + legCost;
+      dtw[i][j] = cost + Math.min(dtw[i-1][j], dtw[i][j-1], dtw[i-1][j-1]);
+    }
+  }
+  return Math.min(...dtw[n].slice(1));
+}
+
 function findBestHintLog(othersClears, myEvents, stageId) {
   if (!myEvents || myEvents.length === 0) {
     const randomLog = othersClears[Math.floor(Math.random() * othersClears.length)];
@@ -715,7 +763,7 @@ async function runProgram() {
       currentLogSession.codeLines = editor.value.split('\n').length;
       
       if (currentTargetHintEvents && currentLogSession.events.length > 0) {
-        currentLogSession.distanceToTargetHint = calculateDTWScore(currentLogSession.events, currentTargetHintEvents, stageId);
+        currentLogSession.distanceToTargetHint = calculateDTWScore(currentLogSession.events, currentTargetHintEvents, engine.currentStageId);
       } else {
         currentLogSession.distanceToTargetHint = null;
       }
