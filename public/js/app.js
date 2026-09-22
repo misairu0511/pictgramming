@@ -41,7 +41,49 @@ if (stageSelect) {
       
       const btnShowHint = document.getElementById("btn-show-hint");
 const btnReplayHint = document.getElementById("btn-replay-hint");
-      if (btnShowHint) {
+      
+// Function to restore hint state when switching stages or reloading
+window.restoreHintState = async function(stageId) {
+  if (!userId) return;
+  const btnReplayHint = document.getElementById("btn-replay-hint");
+  if (!btnReplayHint) return;
+  
+  // Hide it initially
+  btnReplayHint.style.display = 'none';
+  currentTargetHintLogId = null;
+  currentTargetHintEvents = null;
+  lastViewedHint = "ヒントなし";
+  
+  try {
+    const hintLogSnapshot = await db.collection('logs')
+      .where('userId', '==', userId)
+      .where('stageId', '==', stageId)
+      .where('eventType', '==', 'hint_view')
+      .orderBy('timestamp', 'desc')
+      .limit(1)
+      .get();
+      
+    if (!hintLogSnapshot.empty) {
+      const targetId = hintLogSnapshot.docs[0].data().targetHintLogId;
+      if (targetId) {
+        const targetDoc = await db.collection('logs').doc(targetId).get();
+        if (targetDoc.exists) {
+          currentTargetHintLogId = targetId;
+          currentTargetHintEvents = targetDoc.data().events;
+          btnReplayHint.style.display = 'inline-flex';
+          lastViewedHint = "前回のヒント";
+          updateHintBadge();
+        }
+      }
+    } else {
+      updateHintBadge();
+    }
+  } catch (e) {
+    console.error("Failed to restore hint state", e);
+  }
+};
+
+if (btnShowHint) {
         btnShowHint.disabled = false;
         btnShowHint.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>\n          ゴースト再生`;
       }
@@ -283,6 +325,48 @@ updateToolbarState();
 
 const btnShowHint = document.getElementById("btn-show-hint");
 const btnReplayHint = document.getElementById("btn-replay-hint");
+
+// Function to restore hint state when switching stages or reloading
+window.restoreHintState = async function(stageId) {
+  if (!userId) return;
+  const btnReplayHint = document.getElementById("btn-replay-hint");
+  if (!btnReplayHint) return;
+  
+  // Hide it initially
+  btnReplayHint.style.display = 'none';
+  currentTargetHintLogId = null;
+  currentTargetHintEvents = null;
+  lastViewedHint = "ヒントなし";
+  
+  try {
+    const hintLogSnapshot = await db.collection('logs')
+      .where('userId', '==', userId)
+      .where('stageId', '==', stageId)
+      .where('eventType', '==', 'hint_view')
+      .orderBy('timestamp', 'desc')
+      .limit(1)
+      .get();
+      
+    if (!hintLogSnapshot.empty) {
+      const targetId = hintLogSnapshot.docs[0].data().targetHintLogId;
+      if (targetId) {
+        const targetDoc = await db.collection('logs').doc(targetId).get();
+        if (targetDoc.exists) {
+          currentTargetHintLogId = targetId;
+          currentTargetHintEvents = targetDoc.data().events;
+          btnReplayHint.style.display = 'inline-flex';
+          lastViewedHint = "前回のヒント";
+          updateHintBadge();
+        }
+      }
+    } else {
+      updateHintBadge();
+    }
+  } catch (e) {
+    console.error("Failed to restore hint state", e);
+  }
+};
+
 if (btnShowHint) {
   window.saveHintViewLog = async function(actionType, targetId, score) {
   if (!userId) return;
@@ -1145,6 +1229,7 @@ if (isTutorialCompleted && stageSelect && stageSelect.value === 'stage0') {
 
 // ページ読み込み時にロック状況を更新
 updateStageLocks();
+  if (stageSelect) window.restoreHintState(stageSelect.value);
 
 const clearOverlay = document.getElementById("clear-overlay");
 if (clearOverlay) {
@@ -1175,6 +1260,7 @@ if (btnDeleteAllLogs) {
       if (stageSelect) stageSelect.value = "stage1";
       engine.loadStage("stage1");
       updateStageLocks();
+  if (stageSelect) window.restoreHintState(stageSelect.value);
       clearOutput();
     } catch (e) {
       console.error(e);
