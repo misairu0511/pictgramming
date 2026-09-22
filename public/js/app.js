@@ -39,7 +39,8 @@ if (stageSelect) {
       pauseButton.textContent = "一時停止";
       resetButton.disabled = false;
       
-      const btnShowHint = document.getElementById("btn-show-hint");
+
+  const btnShowHint = document.getElementById("btn-show-hint");
 const btnReplayHint = document.getElementById("btn-replay-hint");
       if (btnShowHint) {
         btnShowHint.disabled = false;
@@ -51,11 +52,13 @@ const btnReplayHint = document.getElementById("btn-replay-hint");
         engine.loadStage(e.target.value);
         clearOutput();
         updateShoeUI();
+        if (stageSelect && window.restoreHintState) window.restoreHintState(stageSelect.value);
       }, 150);
     } else {
       engine.loadStage(e.target.value);
       clearOutput();
       updateShoeUI();
+      if (stageSelect && window.restoreHintState) window.restoreHintState(stageSelect.value);
     }
   });
 }
@@ -86,6 +89,25 @@ let hintViewCounts = {
 };
 let runsSinceHint = 0;
 
+    async function saveHintViewLog(actionType, targetId, score) {
+  if (!userId) return;
+  const stageId = stageSelect ? stageSelect.value : "stage1";
+  try {
+await db.collection('logs').add({
+  eventType: 'hint_view',
+  userId: userId,
+  stageId: stageId,
+  timestamp: new Date().toISOString(),
+  hintActionType: actionType,
+  targetHintLogId: targetId,
+  scoreWhenHintViewed: score
+});
+  } catch (e) {
+console.error("Failed to save hint view log", e);
+  }
+}
+
+
 let userId = localStorage.getItem("pictgramming_user_id");
 if (!userId) {
   userId = "user_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
@@ -93,12 +115,13 @@ if (!userId) {
 }
 
 
+
 // --- Hint Restoration Logic ---
 window.restoreHintState = async function(stageId) {
-  console.log("[restoreHintState] Called for stageId:", stageId, "userId:", userId);
-  if (!userId) { console.log("[restoreHintState] No userId"); return; }
+  console.log("restoreHintState called for stage: " + stageId);
+  if (!userId) return;
   const btnReplay = document.getElementById("btn-replay-hint");
-  if (!btnReplay) { console.log("[restoreHintState] No btn-replay-hint element"); return; }
+  if (!btnReplay) return;
   
   btnReplay.style.display = 'none';
   currentTargetHintLogId = null;
@@ -106,7 +129,6 @@ window.restoreHintState = async function(stageId) {
   lastViewedHint = "ヒントなし";
   
   try {
-    console.log("[restoreHintState] Fetching logs for stage:", stageId);
     const allMyLogsSnap = await db.collection('logs')
       .where('userId', '==', userId)
       .where('stageId', '==', stageId)
@@ -118,29 +140,27 @@ window.restoreHintState = async function(stageId) {
         myHintLogs.push(doc.data());
       }
     });
-    console.log("[restoreHintState] Found hint_view logs:", myHintLogs.length);
+    console.log("Found hint logs count:", myHintLogs.length);
     
     if (myHintLogs.length > 0) {
       myHintLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       const targetId = myHintLogs[0].targetHintLogId;
-      console.log("[restoreHintState] Latest targetHintLogId:", targetId);
+      console.log("Latest targetId:", targetId);
       if (targetId) {
         const targetDoc = await db.collection('logs').doc(targetId).get();
+        console.log("Target ghost exists:", targetDoc.exists);
         if (targetDoc.exists) {
-          console.log("[restoreHintState] Target doc exists, restoring!");
           currentTargetHintLogId = targetId;
           currentTargetHintEvents = targetDoc.data().events;
           btnReplay.style.display = 'inline-flex';
-          // lastViewedHint remains "ヒントなし" so badge stays hidden
-        } else {
-          console.log("[restoreHintState] Target doc DOES NOT EXIST in DB!");
+          lastViewedHint = "ヒントなし";
+          console.log("Replay button restored successfully!");
         }
       }
     }
   } catch (e) {
-    console.error("[restoreHintState] Failed to restore hint state:", e);
+    console.error("Failed to restore hint state", e);
   } finally {
-    console.log("[restoreHintState] Finally block, lastViewedHint is:", lastViewedHint);
     if (typeof updateHintBadge === 'function') updateHintBadge();
   }
 };
@@ -203,11 +223,11 @@ function updateHintBadge() {
     const badge = document.getElementById("hint-badge");
     if (!badge) return;
     if (!currentTargetHintLogId || lastViewedHint === "ヒントなし") {
-    badge.hidden = true;
-  } else {
-    badge.textContent = `💡 視聴中: ${lastViewedHint}`;
-    badge.hidden = false;
-  }
+      badge.hidden = true;
+    } else {
+      badge.textContent = `💡 視聴中: ${lastViewedHint}`;
+      badge.hidden = false;
+    }
 }
 
 runButton.addEventListener("click", runProgram);
@@ -337,23 +357,7 @@ updateToolbarState();
 const btnShowHint = document.getElementById("btn-show-hint");
 const btnReplayHint = document.getElementById("btn-replay-hint");
 if (btnShowHint) {
-  async function saveHintViewLog(actionType, targetId, score) {
-  if (!userId) return;
-  const stageId = stageSelect ? stageSelect.value : "stage1";
-  try {
-    await db.collection('logs').add({
-      eventType: 'hint_view',
-      userId: userId,
-      stageId: stageId,
-      timestamp: new Date().toISOString(),
-      hintActionType: actionType,
-      targetHintLogId: targetId,
-      scoreWhenHintViewed: score
-    });
-  } catch (e) {
-    console.error("Failed to save hint view log", e);
-  }
-}
+  
 
   btnShowHint.addEventListener("click", async () => {
     if (isRunning) return;
@@ -434,8 +438,7 @@ if (btnShowHint) {
           updateHintBadge();
           runsSinceHint = 0;
           isRunning = true;
-          await engine.playGhost(partialEvents);
-        isRunning = false;
+          engine.playGhost(partialEvents, () => { isRunning = false; });
         } else {
           addLog(`【後半ヒント】${bestLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
           currentTargetHintLogId = bestLog.id;
@@ -444,8 +447,7 @@ if (btnShowHint) {
           updateHintBadge();
           runsSinceHint = 0;
           isRunning = true;
-          await engine.playGhost(bestLog.events);
-        isRunning = false;
+          engine.playGhost(bestLog.events, () => { isRunning = false; });
         }
       }
     } catch (e) {
@@ -460,38 +462,359 @@ if (btnShowHint) {
 
 if (btnReplayHint) {
   btnReplayHint.addEventListener("click", async () => {
-    if (isRunning || !currentTargetHintEvents) {
-      console.warn("Replay cancelled");
-      return;
-    }
-    try {
-      lastViewedHint = "前回のヒント";
-      if (typeof updateHintBadge === 'function') updateHintBadge();
-      addLog(`【前回のヒント】さっきのゴーストをもう一度再生します`, "info");
-      await saveHintViewLog("replay", currentTargetHintLogId, null);
+    if (isRunning || !currentTargetHintEvents) return;
+    addLog(`【リプレイ】さっきのゴーストをもう一度再生します`, "info");
+    await saveHintViewLog("replay", currentTargetHintLogId, null);
+    
+    const stageId = stageSelect ? stageSelect.value : "stage1";
+    const mySnapshot = await db.collection('logs')
+      .where('stageId', '==', stageId)
+      .where('userId', '==', userId)
+      .where('goalResult', 'in', ['持ったがゴールに入れていない', 'ゴールしているが離していない'])
+      .get();
       
-      const stageId = stageSelect ? stageSelect.value : "stage1";
-      const mySnapshot = await db.collection('logs')
-        .where('stageId', '==', stageId)
-        .where('userId', '==', userId)
-        .where('goalResult', 'in', ['持ったがゴールに入れていない', 'ゴールしているが離していない'])
-        .get();
+    let eventsToPlay = currentTargetHintEvents;
+    if (mySnapshot.empty) {
+      let grabIndex = currentTargetHintEvents.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
+      eventsToPlay = grabIndex >= 0 ? currentTargetHintEvents.slice(0, grabIndex + 1) : currentTargetHintEvents;
+    }
+    
+    isRunning = true;
+    engine.playGhost(eventsToPlay, () => { isRunning = false; });
+  });
+}
+
+
+canvas.addEventListener("mousemove", showPartTooltip);
+canvas.addEventListener("mouseleave", hidePartTooltip);
+
+editor.addEventListener("keydown", (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+    event.preventDefault();
+    runProgram();
+  }
+});
+
+document.querySelectorAll(".snippet-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const rawSnippet = btn.getAttribute("data-snippet");
+    const snippet = rawSnippet.replace(/\\n/g, "\n");
+    insertSnippet(snippet);
+  });
+});
+
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// 動きの近い度（類似度）をDTWで計算して最適なログを抽出する関数
+function findBestHintLog(othersClears, myEvents, stageId) {
+  if (!myEvents || myEvents.length === 0) {
+    const randomLog = othersClears[Math.floor(Math.random() * othersClears.length)];
+    randomLog._calculatedDistanceScore = 0;
+    return randomLog;
+  }
+  
+  let wPos = 1.0;
+  let wDir = 0.5;
+  let wArm = 0.2;
+  let wLeg = 0.0;
+  
+  // ステージ4以降は靴があるため、足の重みを追加
+  const stageNum = parseInt(stageId.replace('stage', ''), 10);
+  if (!isNaN(stageNum) && stageNum >= 4) {
+    wLeg = 0.2;
+  }
+  
+  let bestLog = null;
+  let minScore = Infinity;
+  
+  for (const log of othersClears) {
+    const pastEvents = log.events;
+    if (!pastEvents || pastEvents.length === 0) continue;
+    
+    let n = myEvents.length;
+    let m = pastEvents.length;
+    
+    // DTW行列の初期化
+    let dtw = Array(n + 1).fill().map(() => Array(m + 1).fill(Infinity));
+    dtw[0][0] = 0;
+    
+    for (let i = 1; i <= n; i++) {
+      for (let j = 1; j <= m; j++) {
+        let ev1 = myEvents[i-1];
+        let ev2 = pastEvents[j-1];
         
-      let eventsToPlay = currentTargetHintEvents;
-      if (mySnapshot.empty) {
-        let grabIndex = currentTargetHintEvents.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
-        eventsToPlay = grabIndex >= 0 ? currentTargetHintEvents.slice(0, grabIndex + 1) : currentTargetHintEvents;
+        let dx = (ev1.x || 0) - (ev2.x || 0);
+        let dy = (ev1.y || 0) - (ev2.y || 0);
+        let posDist = Math.sqrt(dx*dx + dy*dy);
+        
+        let dDir = Math.abs((ev1.direction || 0) - (ev2.direction || 0)) % 360;
+        if (dDir > 180) dDir = 360 - dDir;
+        
+        let dLeftArm = Math.abs((ev1.leftArm || 0) - (ev2.leftArm || 0));
+        let dRightArm = Math.abs((ev1.rightArm || 0) - (ev2.rightArm || 0));
+        let dLeftElbow = Math.abs((ev1.leftElbow || 0) - (ev2.leftElbow || 0));
+        let dRightElbow = Math.abs((ev1.rightElbow || 0) - (ev2.rightElbow || 0));
+        
+        let dLeftLeg = Math.abs((ev1.leftLeg || 0) - (ev2.leftLeg || 0));
+        let dRightLeg = Math.abs((ev1.rightLeg || 0) - (ev2.rightLeg || 0));
+        let dLeftKnee = Math.abs((ev1.leftKnee || 0) - (ev2.leftKnee || 0));
+        let dRightKnee = Math.abs((ev1.rightKnee || 0) - (ev2.rightKnee || 0));
+        
+        let armCost = (dLeftArm + dRightArm + dLeftElbow + dRightElbow) * wArm;
+        let legCost = (dLeftLeg + dRightLeg + dLeftKnee + dRightKnee) * wLeg;
+        
+        let cost = (posDist * wPos) + (dDir * wDir) + armCost + legCost;
+        
+        dtw[i][j] = cost + Math.min(
+          dtw[i-1][j],    // 挿入
+          dtw[i][j-1],    // 欠損
+          dtw[i-1][j-1]   // マッチ
+        );
+      }
+    }
+    
+    // 学習者の全イベントを、過去ログの任意のプレフィックス（途中まで）にマッチさせた時の最小コスト
+    let logMinScore = Math.min(...dtw[n].slice(1));
+    
+    if (logMinScore < minScore) {
+      minScore = logMinScore;
+      bestLog = log;
+    }
+  }
+  
+  if (bestLog) {
+    bestLog._calculatedDistanceScore = minScore;
+    return bestLog;
+  }
+  
+  const fallbackLog = othersClears[Math.floor(Math.random() * othersClears.length)];
+  fallbackLog._calculatedDistanceScore = 0;
+  return fallbackLog;
+}
+
+function insertSnippet(snippet) {
+  const start = editor.selectionStart;
+  const text = editor.value;
+  
+  // 現在の行の末尾を探す
+  let lineEnd = text.indexOf('\n', start);
+  if (lineEnd === -1) lineEnd = text.length;
+  
+  const before = text.slice(0, lineEnd);
+  const after = text.slice(lineEnd);
+  
+  let prefix = "";
+  if (before.length > 0 && !before.endsWith('\n')) {
+    prefix = "\n";
+  }
+
+  let finalSnippet = prefix + snippet;
+  let cursorTarget = finalSnippet.indexOf('$CURSOR$');
+  
+  if (cursorTarget !== -1) {
+    finalSnippet = finalSnippet.replace('$CURSOR$', '');
+  } else {
+    cursorTarget = finalSnippet.length;
+  }
+  
+  editor.value = before + finalSnippet + after;
+  
+  const newCursorPos = before.length + cursorTarget;
+  editor.selectionStart = editor.selectionEnd = newCursorPos;
+  editor.focus();
+  saveHistory();
+}
+
+async function runProgram() {
+  if (isRunning) return;
+
+  clearOutput();
+  let source = editor.value.trim();
+
+  if (!source) {
+    addLog("実行できる文がありません。", "error");
+    return;
+  }
+
+  isRunning = true;
+  shouldStop = false;
+  runButton.textContent = "実行中";
+  runButton.disabled = true;
+  stopButton.disabled = false;
+  pauseButton.disabled = false;
+  pauseButton.textContent = "一時停止";
+  resetButton.disabled = true;
+
+  currentLogSession = {
+    sourceCode: source,
+    status: "unknown",
+    events: []
+  };
+
+  let finalGoalResult = null;
+  try {
+    let jsCode = transpileToJava(source);
+    const picto = createPictoContext();
+    const fn = new AsyncFunction('picto', jsCode);
+    await fn(picto);
+    if (!shouldStop) {
+      addLog("完了しました。", "success");
+      
+      const goalResult = engine.evaluateGoalStatus();
+      finalGoalResult = goalResult;
+      const resultType = goalResult === "ゴールした" ? "success" : "info";
+      addLog(`【判定結果】 ${goalResult}`, resultType);
+      
+      currentLogSession.status = goalResult === "ゴールした" ? "success" : "failed";
+      currentLogSession.goalResult = goalResult;
+    } else {
+      currentLogSession.status = "stopped";
+      currentLogSession.goalResult = "中断のため判定なし";
+    }
+  } catch (error) {
+    if (error.message !== "STOP") {
+      addLog(`エラー: ${error.message}`, "error");
+      currentLogSession.status = "error";
+      currentLogSession.errorMessage = error.message;
+      currentLogSession.goalResult = "エラー中断のため判定なし";
+    } else {
+      currentLogSession.status = "stopped";
+      currentLogSession.goalResult = "中断のため判定なし";
+    }
+  } finally {
+    isRunning = false;
+    runButton.textContent = "実行";
+    runButton.disabled = false;
+    stopButton.disabled = true;
+    pauseButton.disabled = true;
+    pauseButton.textContent = "一時停止";
+    resetButton.disabled = false;
+
+    if (currentLogSession) {
+      currentLogSession.userId = userId;
+      if (nicknameInput) {
+        currentLogSession.nickname = nicknameInput.value.trim() || "名無し";
+      }
+      currentLogSession.timestamp = new Date().toISOString();
+      currentLogSession.sessionId = sessionId;
+      currentLogSession.stageId = engine.currentStageId;
+      
+      if (lastViewedHint !== "ヒントなし") {
+        runsSinceHint++;
+      }
+      currentLogSession.hintViewed = lastViewedHint;
+      
+      currentLogSession.hintViewCount = currentTargetHintLogId ? 1 : 0;
+      currentLogSession.runsSinceHint = currentTargetHintLogId ? runsSinceHint : 0;
+      currentLogSession.targetHintLogId = currentTargetHintLogId;
+      currentLogSession.codeLength = editor.value.length;
+      currentLogSession.codeLines = editor.value.split('\n').length;
+      
+      if (currentTargetHintEvents && currentLogSession.events.length > 0) {
+        currentLogSession.distanceToTargetHint = calculateDTWScore(currentLogSession.events, currentTargetHintEvents, stageId);
+      } else {
+        currentLogSession.distanceToTargetHint = null;
       }
       
-      isRunning = true;
-      await engine.playGhost(eventsToPlay);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      isRunning = false;
+      currentLogSession.finalState = {
+        x: engine.state.x,
+        y: engine.state.y,
+        direction: engine.state.direction,
+        hasGrabbedItem: engine.state.hasGrabbedItem
+      };
+      
+      logCount++;
+      localStorage.setItem("pictgramming_log_count", logCount);
+      
+      const customDocId = `${userId}_log${logCount}`;
+      
+      db.collection('logs').doc(customDocId).set(currentLogSession)
+        .then(() => console.log(`Log saved to Firebase with ID: ${customDocId}`))
+        .catch(e => console.error("Firebase log upload failed", e));
+        
+      currentLogSession = null;
+      
+      if (finalGoalResult === "ゴールした") {
+        updateStageLocks(true);
+        const clearOverlay = document.getElementById("clear-overlay");
+        if (clearOverlay) {
+          clearOverlay.hidden = false;
+          // 4秒後に自動で消す
+          setTimeout(() => {
+            clearOverlay.hidden = true;
+          }, 4000);
+        }
+      }
     }
-  });
-} catch (e) {
+    
+    // チュートリアルの進行チェック
+    if (tutorialAdvanceCheck) tutorialAdvanceCheck();
+  }
+}
+
+// ログ履歴モーダルの処理
+const btnLogHistory = document.getElementById("btn-log-history");
+const logModal = document.getElementById("log-history-modal");
+const logModalClose = document.getElementById("log-modal-close");
+const logModalContent = document.getElementById("log-modal-content");
+
+async function loadHistoryForStage(stageId) {
+  logModalContent.innerHTML = "<p>読み込み中...</p>";
+  
+  try {
+    const snapshot = await db.collection('logs')
+      .where('userId', '==', userId)
+      .where('stageId', '==', stageId)
+      .get();
+      
+    if (snapshot.empty) {
+      logModalContent.innerHTML = "<p>このステージの履歴がありません。</p>";
+      return;
+    }
+    
+    let logs = [];
+    snapshot.forEach(doc => { if (doc.data().eventType !== 'hint_view') logs.push(doc.data()); });
+    logs.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    
+    let html = "";
+    logs.forEach(log => {
+      const encodedCode = encodeURIComponent(log.sourceCode);
+      const stageNum = log.stageId ? log.stageId.replace('stage', '') : '1';
+      const stageName = `ステージ${stageNum}`;
+      html += `
+        <div class="history-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div class="history-time">${log.timestamp}</div>
+              <div class="history-status" style="font-weight:bold;">${stageName}</div>
+              <div class="history-status">状態: ${log.status}</div>
+              ${log.goalResult ? `<div class="history-goal">判定: ${log.goalResult}</div>` : ''}
+            </div>
+            <button class="btn btn-secondary btn-copy" style="font-size: 11px; padding: 4px 8px;" data-code="${encodedCode}">コピー</button>
+          </div>
+          <pre class="history-code">${log.sourceCode}</pre>
+        </div>
+      `;
+    });
+    logModalContent.innerHTML = html;
+    
+    // コピーボタンのイベントリスナー
+    document.querySelectorAll(".btn-copy").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const code = decodeURIComponent(e.target.getAttribute("data-code"));
+        navigator.clipboard.writeText(code).then(() => {
+          e.target.textContent = "コピー完了!";
+          setTimeout(() => {
+            e.target.textContent = "コピー";
+          }, 2000);
+        });
+      });
+    });
+  } catch (e) {
     console.error(e);
     logModalContent.innerHTML = "<p>履歴の取得に失敗しました。</p>";
   }
@@ -551,6 +874,8 @@ if (stageSelect) {
     clearOutput();
     updateShoeUI();
     if (window.restoreHintState) window.restoreHintState(stageSelect.value);
+    lastViewedHint = "ヒントなし";
+    updateHintBadge();
     hintViewCounts = {
       "初期状態から他人がヒヨコを掴むまでのゴースト": 0,
       "掴んだ状態からのゴースト": 0,
