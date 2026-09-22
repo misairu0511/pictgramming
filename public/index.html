@@ -14,9 +14,13 @@
         <h1>ピクトグラミング</h1>
       </div>
     </div>
-    <div class="header-actions">
-      <div class="user-info">
-        <select id="stage-select" class="stage-select">
+        <div class="header-actions" style="display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 10px;">
+      
+      <!-- Left side: Name, Tutorial, Stage Select -->
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <input type="text" id="user-nickname" class="input-nickname" placeholder="名前 (ログ用)" maxlength="15" style="width: 120px; padding: 6px; border: 1px solid #ccc; border-radius: 4px;">
+        <button id="btn-start-tutorial" class="btn btn-secondary">チュートリアル</button>
+        <select id="stage-select" class="stage-select" style="margin-left: 10px;">
             <option value="stage0" hidden>ステージ0: チュートリアル</option>
             <option value="stage1">ステージ1: 目の前のヒヨコ</option>
             <option value="stage2" disabled>🔒 ステージ2 (ステージ1をクリアで解放)</option>
@@ -25,25 +29,38 @@
             <option value="stage5" disabled>🔒 ステージ5 (ステージ4をクリアで解放)</option>
             <option value="stage6" disabled>🔒 ステージ6 (ステージ5をクリアで解放)</option>
           </select>
-          <div class="hint-btn-group" style="display: inline-flex; gap: 5px; margin-left: 10px;">
-            <button id="btn-show-hint" class="btn btn-primary" title="新しいヒントを探す">
+      </div>
+
+      <!-- Right side: Hint Group & Execution Group -->
+      <div style="display: flex; align-items: center; gap: 16px;">
+        
+        <!-- Hint Group -->
+        <div style="display: flex; align-items: center; gap: 8px; padding: 4px 12px; border: 2px dashed #f59e0b; border-radius: 8px; background-color: #fef3c7;">
+          <span style="font-size: 13px; font-weight: bold; color: #b45309; display: flex; align-items: center; gap: 4px;">
+            💡<span style="letter-spacing: -0.5px;">ヒント</span>
+          </span>
+          <div class="hint-btn-group" style="display: flex; gap: 5px;">
+            <button id="btn-show-hint" class="btn" title="新しいヒントを探す" style="background-color: #f59e0b; color: white; border: none; font-weight: bold; display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
               新しいヒントを探す
             </button>
-            <button id="btn-replay-hint" class="btn btn-secondary" style="display: none;" title="さっきのヒントをもう一度見る">
+            <button id="btn-replay-hint" class="btn btn-secondary" style="display: none; align-items: center; gap: 4px;" title="さっきのヒントをもう一度見る">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
               リプレイ
             </button>
           </div>
-        <button id="btn-start-tutorial" class="btn btn-secondary" style="margin-left: 10px;">
-          チュートリアル
-        </button>
-        <input type="text" id="user-nickname" class="input-nickname" placeholder="ニックネーム (ログ用)" maxlength="15" style="margin-left: auto;">
+        </div>
+
+        <!-- Execution Group -->
+        <div style="display: flex; align-items: center; gap: 8px; padding: 4px 12px; border: 2px solid #cbd5e1; border-radius: 8px; background-color: #f8fafc;">
+          <span style="font-size: 13px; font-weight: bold; color: #475569; letter-spacing: -0.5px;">▶ 実行</span>
+          <button class="btn btn-secondary" id="btn-reset" type="button">リセット</button>
+          <button class="btn btn-secondary" id="btn-pause" type="button" disabled>一時停止</button>
+          <button class="btn btn-secondary" id="btn-stop" type="button" disabled>停止</button>
+          <button class="btn btn-primary" id="btn-run" type="button" style="font-weight: bold; font-size: 15px;">実行</button>
+        </div>
+
       </div>
-      <button class="btn btn-secondary" id="btn-reset" type="button">リセット</button>
-      <button class="btn btn-secondary" id="btn-pause" type="button" disabled>一時停止</button>
-      <button class="btn btn-secondary" id="btn-stop" type="button" disabled>停止</button>
-      <button class="btn btn-primary" id="btn-run" type="button">実行</button>
     </div>
   </header>
 
