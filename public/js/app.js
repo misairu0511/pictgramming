@@ -278,10 +278,14 @@ stopButton.addEventListener("click", () => {
   if (isRunning) {
     shouldStop = true;
     engine.stop();
-    engine.reset();
-    engine.draw();
     pauseButton.disabled = true;
-    addLog("実行を停止しました。", "error");
+    
+    // アニメーションループが stop を検知して終了するのを待ってからリセットする
+    setTimeout(() => {
+      engine.reset();
+      engine.draw();
+      addLog("実行を停止しました。", "error");
+    }, 50);
   }
 });
 pauseButton.addEventListener("click", () => {
