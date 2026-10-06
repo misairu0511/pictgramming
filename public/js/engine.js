@@ -1077,7 +1077,18 @@ class PictoEngine {
     ctx.fillStyle = this.state.color;
   }
 
-  async playGhost(events) {
+  
+  startRenderLoop() {
+    if (this._renderLoopId) return;
+    const loop = () => {
+      if (this.state && (this.state.item.attachedTo || (this.state.particles && this.state.particles.length > 0))) {
+        this.draw();
+      }
+      this._renderLoopId = requestAnimationFrame(loop);
+    };
+    loop();
+  }
+async playGhost(events) {
     this.reset();
     this.isGhostMode = true;
     this.state.color = "#9ca3af"; // ゴースト用のグレー色

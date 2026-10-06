@@ -278,6 +278,8 @@ stopButton.addEventListener("click", () => {
   if (isRunning) {
     shouldStop = true;
     engine.stop();
+    engine.reset();
+    engine.draw();
     pauseButton.disabled = true;
     addLog("実行を停止しました。", "error");
   }
@@ -436,6 +438,7 @@ if (btnShowHint) {
         .get();
 
       if (!myClearSnapshot.empty) {
+        console.log("他人クリア件数: " + othersClears.length);
         const randomLog = othersClears[Math.floor(Math.random() * othersClears.length)];
         addLog(`【別解再生】${randomLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
         currentTargetHintLogId = randomLog.id;
@@ -468,6 +471,7 @@ if (btnShowHint) {
           .where('goalResult', 'in', ['持ったがゴールに入れていない', 'ゴールしているが離していない'])
           .get();
           
+        console.log("未クリア(DTW)モード: 他人クリア件数=" + othersClears.length);
         const bestLog = findBestHintLog(othersClears, myLatestEvents, stageId);
         if (!bestLog.events || bestLog.events.length === 0) return;
         let score = Math.round(bestLog._calculatedDistanceScore || 0);
