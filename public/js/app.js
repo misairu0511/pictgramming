@@ -502,6 +502,7 @@ if (btnShowHint) {
     } catch (e) {
       console.error(e);
     } finally {
+      isRunning = false;
       btnShowHint.disabled = false;
       btnShowHint.innerHTML = originalText;
       if (btnReplayHint && currentTargetHintLogId) btnReplayHint.style.display = 'inline-flex';

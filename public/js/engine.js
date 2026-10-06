@@ -240,21 +240,17 @@ class PictoEngine {
       item.offsetX = item.x - leftHand.x;
       item.offsetY = item.y - leftHand.y;
       this.state.hasGrabbedItem = true;
-      if (!this.isGhostMode) {
-        this.state.particles.push({
-          x: item.x, y: item.y, text: "♪", startTime: Date.now(), duration: 1500, distance: 40, color: "rgba(255, 215, 0, 1)"
-        });
-      }
+      this.state.particles.push({
+        x: item.x + 30, y: item.y - 30, text: "♪", startTime: Date.now(), duration: 1200, distance: 30, color: "rgba(255, 150, 0, 1)", animationType: 'up_down'
+      });
     } else if (distR <= grabRadius) {
       item.attachedTo = "rightArm";
       item.offsetX = item.x - rightHand.x;
       item.offsetY = item.y - rightHand.y;
       this.state.hasGrabbedItem = true;
-      if (!this.isGhostMode) {
-        this.state.particles.push({
-          x: item.x, y: item.y, text: "♪", startTime: Date.now(), duration: 1500, distance: 40, color: "rgba(255, 215, 0, 1)"
-        });
-      }
+      this.state.particles.push({
+        x: item.x + 30, y: item.y - 30, text: "♪", startTime: Date.now(), duration: 1200, distance: 30, color: "rgba(255, 150, 0, 1)", animationType: 'up_down'
+      });
     }
     this.draw();
   }
@@ -270,7 +266,33 @@ class PictoEngine {
   }
 
   releaseItem() {
-    this.state.item.attachedTo = null;
+    if (this.state.item.attachedTo) {
+      const handPos = this.getHandPosition(this.state.item.attachedTo);
+      this.state.item.x = handPos.x + this.state.item.offsetX;
+      this.state.item.y = handPos.y + this.state.item.offsetY;
+      this.state.item.attachedTo = null;
+      
+      const status = this.evaluateGoalStatus();
+      if (status === "ゴールした") {
+        if (!this.state.particles) this.state.particles = [];
+        
+        // 基準座標（右上の少しずれた位置）
+        let px = this.state.item.x + 30;
+        let py = this.state.item.y - 30;
+
+        // 大きいハート
+        this.state.particles.push({
+          x: px, y: py, text: "❤️", startTime: Date.now(), duration: 2500, distance: 40, color: "rgba(255, 50, 50, 1)", animationType: 'up_down', fontSize: 30
+        });
+        // 左側の小さい星
+        this.state.particles.push({
+          x: px - 25, y: py - 10, text: "✨", startTime: Date.now(), duration: 2300, distance: 45, color: "rgba(255, 215, 0, 1)", animationType: 'up_down', fontSize: 20
+        });
+        // 右側の小さい星
+        this.state.particles.push({
+          x: px + 25, y: py - 5, text: "✨", startTime: Date.now(), duration: 2700, distance: 35, color: "rgba(255, 215, 0, 1)", animationType: 'up_down', fontSize: 20
+        });}
+    }
     this.draw();
   }
 
@@ -547,13 +569,28 @@ class PictoEngine {
         continue;
       }
       const progress = elapsed / p.duration;
-      const currentY = p.y - (p.distance * progress);
-      const alpha = 1.0 - progress;
+      
+      let currentY = p.y;
+      let alpha = 1.0;
+      
+      if (p.animationType === 'up_down') {
+        // 少し上に上がり下に下がる（Sin波の半周期＋少し下がる）
+        // progress=0 -> 0, progress=0.5 -> 1, progress=1.0 -> 0
+        currentY = p.y - Math.sin(progress * Math.PI) * p.distance;
+        // 消える直前(progress > 0.8)だけフェードアウト
+        if (progress > 0.8) {
+          alpha = (1.0 - progress) * 5;
+        }
+      } else {
+        // デフォルト（上にずっと移動してフェードアウト）
+        currentY = p.y - (p.distance * progress);
+        alpha = 1.0 - progress;
+      }
       
       this.ctx.save();
       this.ctx.globalAlpha = alpha;
       this.ctx.fillStyle = p.color || "rgba(255, 100, 100, 1)";
-      this.ctx.font = "bold 30px sans-serif";
+      this.ctx.font = `bold ${p.fontSize || 35}px sans-serif`;
       this.ctx.textAlign = "center";
       this.ctx.textBaseline = "middle";
       this.ctx.fillText(p.text, p.x, currentY);
@@ -843,7 +880,13 @@ class PictoEngine {
     // 当たり判定の可視化
     this.ctx.save();
     this.ctx.translate(cx, cy);
-    this.ctx.scale(0.6, 0.6);
+    {
+      let baseScale = 0.6;
+      if (item.attachedTo) {
+        baseScale = 0.6 * (1.0 + 0.25 * Math.sin(Date.now() / 150));
+      }
+      this.ctx.scale(baseScale, baseScale);
+    }
     this.ctx.beginPath();
     this.ctx.arc(0, 0, 35, 0, Math.PI * 2);
     
@@ -864,7 +907,13 @@ class PictoEngine {
 
     this.ctx.save();
     this.ctx.translate(cx, cy);
-    this.ctx.scale(0.6, 0.6);
+    {
+      let baseScale = 0.6;
+      if (item.attachedTo) {
+        baseScale = 0.6 * (1.0 + 0.25 * Math.sin(Date.now() / 150));
+      }
+      this.ctx.scale(baseScale, baseScale);
+    }
 
     if (this.isGhostMode) {
       this.ctx.globalAlpha = 0.5;
@@ -1059,6 +1108,7 @@ class PictoEngine {
     }
     
     this.isGhostMode = false;
+    this.startRenderLoop();
   }
 
   getPartAt(canvasX, canvasY) {
