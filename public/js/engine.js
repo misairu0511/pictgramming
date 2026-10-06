@@ -1,6 +1,6 @@
 const STAGES = {
   stage0: { itemOffset: { x: 108, y: -150 }, goalOffset: { x: 200, y: 8 } },
-  stage1: { itemOffset: { x: 85, y: 15 }, goalOffset: { x: 250, y: -100 } },
+  stage1: { itemOffset: { x: 53, y: 10 }, goalOffset: { x: 250, y: -100 } },
   stage2: { itemOffset: { x: -120, y: 0 }, goalOffset: { x: 250, y: -100 } },
   stage3: { itemOffset: { x: 0, y: -180 }, goalOffset: { x: -200, y: 150 } },
   stage4: { 
@@ -17,12 +17,40 @@ const STAGES = {
     shoes: { right: { x: -80, y: -50 }, left: { x: 80, y: -50 } },
     needleZone: { x: -2000, y: -180, width: 4000, height: 40 }
   },
-  stage6: {
-    itemOffset: { x: 60, y: 0 },
-    goalOffset: { x: 280, y: 0 },
-    needleZones: [
-      { x: 130, y: -2000, width: 110, height: 1930 }, // 天井 (y=-70まで)
-      { x: 130, y: 65, width: 110, height: 2000 }     // 床 (y=65から)
+      stage6: {
+    initialDirection: 90,
+    initialOffset: { x: -280, y: 0 },
+    itemOffset: { x: 280, y: -240 },
+    goalOffset: { x: 280, y: -30 },
+    checkpoints: [
+      { x: 0, y: -160, radius: 22, passed: false, label: "①" },
+      { x: 150, y: 100, radius: 22, passed: false, label: "②" },
+      { x: -150, y: 100, radius: 22, passed: false, label: "③" }
+    ],
+    walls: [
+      { x: 210, y: -310, width: 140, height: 15 },
+      { x: 210, y: -180, width: 140, height: 15 },
+      { x: 210, y: -310, width: 15, height: 145 },
+      { x: 335, y: -310, width: 15, height: 145 }
+    ]
+  },
+  stage7: {
+    initialDirection: 0,
+    initialOffset: { x: -280, y: 0 },
+    itemOffset: { x: 280, y: -240 },
+    goalOffset: { x: 280, y: -30 },
+    checkpoints: [
+      { x: 0, y: -180, radius: 22, passed: false, label: "①" },
+      { x: 171, y: -56, radius: 22, passed: false, label: "②" },
+      { x: 106, y: 146, radius: 22, passed: false, label: "③" },
+      { x: -106, y: 146, radius: 22, passed: false, label: "④" },
+      { x: -171, y: -56, radius: 22, passed: false, label: "⑤" }
+    ],
+    walls: [
+      { x: 210, y: -310, width: 140, height: 15 },
+      { x: 210, y: -180, width: 140, height: 15 },
+      { x: 210, y: -310, width: 15, height: 145 },
+      { x: 335, y: -310, width: 15, height: 145 }
     ]
   }
 };
@@ -140,6 +168,8 @@ class PictoEngine {
         } : { exists: false, isWorn: false }
       },
       needleZones: [],
+      checkpoints: stage.checkpoints ? stage.checkpoints.map(c => ({...c, x: centerX + c.x, y: centerY + c.y})) : [],
+      walls: stage.walls ? stage.walls.map(w => ({...w, x: centerX + w.x, y: centerY + w.y})) : [],
       hasGrabbedItem: false
     };
 
@@ -222,7 +252,7 @@ class PictoEngine {
     const item = this.state.item;
     const leftHand = this.getHandPosition("leftArm");
     const rightHand = this.getHandPosition("rightArm");
-    const grabRadius = 35;
+    const grabRadius = 65;
     const distL = this.distance(leftHand.x, leftHand.y, item.x, item.y);
     const distR = this.distance(rightHand.x, rightHand.y, item.x, item.y);
     return distL <= grabRadius || distR <= grabRadius;
@@ -238,6 +268,7 @@ class PictoEngine {
     const m = new DOMMatrix();
     m.translateSelf(this.state.x, this.state.y);
     m.rotateSelf(this.state.direction);
+    m.scaleSelf(0.6, 0.6);
     m.rotateSelf(parts.body.rotation);
 
     if (arm === "leftArm") {
@@ -261,6 +292,7 @@ class PictoEngine {
     const m = new DOMMatrix();
     m.translateSelf(this.state.x, this.state.y);
     m.rotateSelf(this.state.direction);
+    m.scaleSelf(0.6, 0.6);
     m.rotateSelf(parts.body.rotation);
 
     if (leg === "leftLeg") {
@@ -336,6 +368,7 @@ class PictoEngine {
     let m = new DOMMatrix();
     m.translateSelf(this.state.x, this.state.y);
     m.rotateSelf(this.state.direction);
+    m.scaleSelf(0.6, 0.6);
     m.rotateSelf(this.state.parts.body.rotation);
     m.rotateSelf(this.state.parts.head.rotation);
     m.translateSelf(0, -80); // 頭の先端
@@ -415,13 +448,26 @@ class PictoEngine {
     let moveError = null;
 
     await this.animate(this.animationMs, (progress) => {
+      const prevX = this.state.x;
+      const prevY = this.state.y;
+
       this.state.x = this.lerp(startX, endX, progress);
       this.state.y = this.lerp(startY, endY, progress);
       
+
+
+      if (this.checkWallCollision()) {
+         this.state.x = prevX;
+         this.state.y = prevY;
+         this.draw();
+         return false; // Stop moving
+      }
+
       const err = this.checkNeedleCollision();
       if (err) {
         moveError = err;
         this.isStopped = true;
+        return false;
       }
       this.draw();
     });
@@ -433,12 +479,22 @@ class PictoEngine {
 
   async animateTurn(angle) {
     const start = this.state.direction;
+    let hitWall = false;
     await this.animate(this.animationMs, (progress) => {
+      const prevDir = this.state.direction;
       this.state.direction = start + angle * progress;
+      if (this.checkWallCollision()) {
+         this.state.direction = prevDir;
+         hitWall = true;
+         this.draw();
+         return false;
+      }
       this.draw();
     });
-    this.state.direction = (start + angle + 360) % 360;
-    this.draw();
+    if (!hitWall) {
+      this.state.direction = (start + angle + 360) % 360;
+      this.draw();
+    }
   }
 
   async animatePartRotate(partName, angle) {
@@ -453,16 +509,157 @@ class PictoEngine {
   }
 
   draw() {
+    this.checkCheckpoints(); // 追加: 描画のたびに手足を含む当たり判定を行う
     const { ctx, canvas } = this;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.drawGrid();
     this.drawGoal();
     this.drawNeedles();
+    this.drawCheckpoints();
+    this.drawWalls();
     this.drawTrail();
     this.drawPicto(this.state);
     this.drawShoes();
     this.drawItem();
     this.drawLegend();
+  }
+  
+  drawCheckpoints() {
+    if (!this.state.checkpoints || this.state.checkpoints.length === 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    for (const cp of this.state.checkpoints) {
+      if (!cp.passed) {
+        ctx.fillStyle = "rgba(239, 68, 68, 0.15)";
+        ctx.beginPath();
+        ctx.arc(cp.x, cp.y, cp.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(239, 68, 68, 0.8)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(239, 68, 68, 1)";
+        ctx.font = "bold 16px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(cp.label, cp.x, cp.y);
+      } else {
+        ctx.fillStyle = "rgba(16, 185, 129, 0.15)";
+        ctx.beginPath();
+        ctx.arc(cp.x, cp.y, cp.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(16, 185, 129, 0.5)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        ctx.fillStyle = "rgba(16, 185, 129, 1)";
+        ctx.font = "bold 16px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("✔", cp.x, cp.y);
+      }
+    }
+    ctx.restore();
+  }
+
+  checkCheckpoints() {
+    if (!this.state.checkpoints || this.state.checkpoints.length === 0) return;
+    
+    let m = new DOMMatrix();
+    m.translateSelf(this.state.x, this.state.y);
+    m.rotateSelf(this.state.direction);
+    m.scaleSelf(0.6, 0.6);
+    m.rotateSelf(this.state.parts.body.rotation);
+    m.rotateSelf(this.state.parts.head.rotation);
+    m.translateSelf(0, -80);
+    const headPos = { x: m.e, y: m.f };
+    
+    const points = [
+      { x: this.state.x, y: this.state.y },
+      headPos,
+      this.getHandPosition("rightArm"),
+      this.getHandPosition("leftArm"),
+      this.getLegPosition("rightLeg"),
+      this.getLegPosition("leftLeg")
+    ];
+
+    for (let cp of this.state.checkpoints) {
+      if (!cp.passed) {
+        for (let p of points) {
+          const dist = this.distance(p.x, p.y, cp.x, cp.y);
+          if (dist <= cp.radius + 15) { // 15は手足の太さなどを考慮したマージン
+            cp.passed = true;
+            break; // このチェックポイントは通過済み
+          }
+        }
+      }
+    }
+  }
+
+  drawWalls() {
+    if (!this.state.walls || this.state.walls.length === 0) return;
+    if (this.state.checkpoints && this.state.checkpoints.length > 0 && this.state.checkpoints.every(c => c.passed)) {
+       return; // Walls disappear
+    }
+    const ctx = this.ctx;
+    ctx.save();
+    
+    // 枠組み（壁）
+    ctx.fillStyle = "#475569";
+    for (const wall of this.state.walls) {
+      ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+    }
+    
+    // 鉄格子の描画
+    let minX = Math.min(...this.state.walls.map(w => w.x));
+    let maxX = Math.max(...this.state.walls.map(w => w.x + w.width));
+    let minY = Math.min(...this.state.walls.map(w => w.y));
+    let maxY = Math.max(...this.state.walls.map(w => w.y + w.height));
+    
+    ctx.strokeStyle = "#94a3b8"; // 鉄格子の色
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    for (let x = minX + 25; x < maxX - 10; x += 25) {
+      ctx.moveTo(x, minY + 10);
+      ctx.lineTo(x, maxY - 10);
+    }
+    ctx.stroke();
+    
+    ctx.restore();
+  }
+
+  checkWallCollision() {
+    if (!this.state.walls || this.state.walls.length === 0) return false;
+    if (this.state.checkpoints && this.state.checkpoints.length > 0 && this.state.checkpoints.every(c => c.passed)) {
+       return false;
+    }
+    let m = new DOMMatrix();
+    m.translateSelf(this.state.x, this.state.y);
+    m.rotateSelf(this.state.direction);
+    m.scaleSelf(0.6, 0.6);
+    m.rotateSelf(this.state.parts.body.rotation);
+    m.rotateSelf(this.state.parts.head.rotation);
+    m.translateSelf(0, -80);
+    const headPos = { x: m.e, y: m.f };
+    
+    const points = [
+      { x: this.state.x, y: this.state.y },
+      headPos,
+      this.getHandPosition("rightArm"),
+      this.getHandPosition("leftArm"),
+      this.getLegPosition("rightLeg"),
+      this.getLegPosition("leftLeg")
+    ];
+    
+    for (const p of points) {
+      for (const w of this.state.walls) {
+        if (this.isPointInRect(p.x, p.y, w)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   drawGoal() {
@@ -487,6 +684,7 @@ class PictoEngine {
 
   drawNeedles() {
     if (this.state.needleZones.length === 0) return;
+    if (this.isFullyEquipped()) return; // 全ての靴を履いたら針山(壁)が消滅する
     const ctx = this.ctx;
     ctx.save();
     
@@ -554,6 +752,7 @@ class PictoEngine {
     this.ctx.save();
     this.ctx.translate(cx, cy);
     this.ctx.rotate(rotation * Math.PI / 180);
+    this.ctx.scale(0.6, 0.6);
     
     if (this.isGhostMode) {
       this.ctx.globalAlpha = 0.5;
@@ -606,8 +805,10 @@ class PictoEngine {
 
     // 当たり判定の可視化
     this.ctx.save();
+    this.ctx.translate(cx, cy);
+    this.ctx.scale(0.6, 0.6);
     this.ctx.beginPath();
-    this.ctx.arc(cx, cy, 35, 0, Math.PI * 2);
+    this.ctx.arc(0, 0, 35, 0, Math.PI * 2);
     
     if (this.state.item.attachedTo) {
       // 持っている時は赤色の実線
@@ -624,6 +825,10 @@ class PictoEngine {
     this.ctx.restore();
 
 
+    this.ctx.save();
+    this.ctx.translate(cx, cy);
+    this.ctx.scale(0.6, 0.6);
+
     if (this.isGhostMode) {
       this.ctx.globalAlpha = 0.5;
     }
@@ -631,17 +836,15 @@ class PictoEngine {
     if (this.itemImg.complete && this.itemImg.naturalWidth > 0) {
       const w = 60;
       const h = (w / this.itemImg.naturalWidth) * this.itemImg.naturalHeight;
-      this.ctx.drawImage(this.itemImg, cx - w/2, cy - h/2, w, h);
+      this.ctx.drawImage(this.itemImg, -w/2, -h/2, w, h);
     } else {
       this.ctx.fillStyle = "#f59e0b";
       this.ctx.beginPath();
-      this.ctx.arc(cx, cy, 30, 0, Math.PI*2);
+      this.ctx.arc(0, 0, 30, 0, Math.PI*2);
       this.ctx.fill();
     }
     
-    if (this.isGhostMode) {
-      this.ctx.globalAlpha = 1.0;
-    }
+    this.ctx.restore();
   }
 
   drawGrid() {
@@ -691,6 +894,7 @@ class PictoEngine {
     ctx.save();
     ctx.translate(state.x, state.y);
     ctx.rotate(state.direction * Math.PI / 180);
+    ctx.scale(0.6, 0.6);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.strokeStyle = state.color;
@@ -878,7 +1082,11 @@ class PictoEngine {
 
         const raw = Math.min(1, totalElapsed / duration);
         const eased = raw; // Linear easing for continuous movement
-        update(eased);
+        const res = update(eased);
+        if (res === false) {
+          resolve();
+          return;
+        }
 
         if (raw < 1) {
           requestAnimationFrame(step);

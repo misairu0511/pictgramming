@@ -92,6 +92,7 @@ let runsSinceHint = 0;
     async function saveHintViewLog(actionType, targetId, score) {
   if (!userId) return;
   const stageId = stageSelect ? stageSelect.value : "stage1";
+  if (stageId === "stage0") return; // 不要なログ（チュートリアル）を弾く
   try {
 await db.collection('logs').add({
   eventType: 'hint_view',
@@ -805,9 +806,11 @@ async function runProgram() {
       
       const customDocId = `${userId}_log${logCount}`;
       
-      db.collection('logs').doc(customDocId).set(currentLogSession)
-        .then(() => console.log(`Log saved to Firebase with ID: ${customDocId}`))
-        .catch(e => console.error("Firebase log upload failed", e));
+      if (currentLogSession.stageId !== "stage0") {
+        db.collection('logs').doc(customDocId).set(currentLogSession)
+          .then(() => console.log(`Log saved to Firebase with ID: ${customDocId}`))
+          .catch(e => console.error("Firebase log upload failed", e));
+      }
         
       currentLogSession = null;
       
@@ -1151,6 +1154,8 @@ async function updateStageLocks(skipReload = false) {
     const hasCleared3 = clearedStages.has('stage3');
     const hasCleared4 = clearedStages.has('stage4');
     const hasCleared5 = clearedStages.has('stage5');
+    const hasCleared6 = clearedStages.has('stage6');
+    const hasCleared7 = clearedStages.has('stage7');
     
     // ステージ0は常に解放（ただしドロップダウンからは隠す）
     options[0].disabled = false;
@@ -1215,11 +1220,23 @@ async function updateStageLocks(skipReload = false) {
     if (options.length > 6) {
       if (hasCleared5) {
         options[6].disabled = false;
-        options[6].text = "ステージ6: 狭いトンネル";
+        options[6].text = "ステージ6: 3つのチェックポイント";
       } else {
         options[6].disabled = true;
         options[6].text = "🔒 ステージ6 (ステージ5をクリアで解放)";
         if (stageSelect.value === 'stage6') stageSelect.value = (hasCleared4 ? 'stage5' : (hasCleared3 ? 'stage4' : (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : 'stage1'))));
+      }
+    }
+
+    // ステージ7 (ステージ6クリアで解放)
+    if (options.length > 7) {
+      if (true) {
+        options[7].disabled = false;
+        options[7].text = "ステージ7: 5つのチェックポイント";
+      } else {
+        options[7].disabled = true;
+        options[7].text = "🔒 ステージ7 (ステージ6をクリアで解放)";
+        if (stageSelect.value === 'stage7') stageSelect.value = (hasCleared5 ? 'stage6' : (hasCleared4 ? 'stage5' : (hasCleared3 ? 'stage4' : (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : 'stage1')))));
       }
     }
     
