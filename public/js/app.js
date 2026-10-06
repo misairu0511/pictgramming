@@ -1254,8 +1254,8 @@ async function updateStageLocks(skipReload = false) {
     
     // ステージ4 (ステージ3クリアで解放)
     if (options.length > 4) {
-      if (hasCleared3) {
-        options[4].disabled = false;
+      if (true) {
+      options[4].disabled = false;
         options[4].text = "ステージ4: 片足の靴";
       } else {
         options[4].disabled = true;
