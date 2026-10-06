@@ -152,6 +152,7 @@ class PictoEngine {
       color: "#2563eb",
       trail: [],
       parts: this.createParts(),
+      particles: [],
       item: {
         x: centerX + stage.itemOffset.x,
         y: centerY + stage.itemOffset.y,
@@ -239,11 +240,21 @@ class PictoEngine {
       item.offsetX = item.x - leftHand.x;
       item.offsetY = item.y - leftHand.y;
       this.state.hasGrabbedItem = true;
+      if (!this.isGhostMode) {
+        this.state.particles.push({
+          x: item.x, y: item.y, text: "♪", startTime: Date.now(), duration: 1500, distance: 40, color: "rgba(255, 215, 0, 1)"
+        });
+      }
     } else if (distR <= grabRadius) {
       item.attachedTo = "rightArm";
       item.offsetX = item.x - rightHand.x;
       item.offsetY = item.y - rightHand.y;
       this.state.hasGrabbedItem = true;
+      if (!this.isGhostMode) {
+        this.state.particles.push({
+          x: item.x, y: item.y, text: "♪", startTime: Date.now(), duration: 1500, distance: 40, color: "rgba(255, 215, 0, 1)"
+        });
+      }
     }
     this.draw();
   }
@@ -521,7 +532,33 @@ class PictoEngine {
     this.drawPicto(this.state);
     this.drawShoes();
     this.drawItem();
+    this.drawParticles();
     this.drawLegend();
+  }
+  
+  drawParticles() {
+    if (!this.state.particles || this.state.particles.length === 0) return;
+    const now = Date.now();
+    for (let i = this.state.particles.length - 1; i >= 0; i--) {
+      const p = this.state.particles[i];
+      const elapsed = now - p.startTime;
+      if (elapsed > p.duration) {
+        this.state.particles.splice(i, 1);
+        continue;
+      }
+      const progress = elapsed / p.duration;
+      const currentY = p.y - (p.distance * progress);
+      const alpha = 1.0 - progress;
+      
+      this.ctx.save();
+      this.ctx.globalAlpha = alpha;
+      this.ctx.fillStyle = p.color || "rgba(255, 100, 100, 1)";
+      this.ctx.font = "bold 30px sans-serif";
+      this.ctx.textAlign = "center";
+      this.ctx.textBaseline = "middle";
+      this.ctx.fillText(p.text, p.x, currentY);
+      this.ctx.restore();
+    }
   }
   
   drawCheckpoints() {

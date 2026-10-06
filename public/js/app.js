@@ -40,7 +40,45 @@ if (stageSelect) {
       resetButton.disabled = false;
       
 
+  
+async function checkHintLock() {
   const btnShowHint = document.getElementById("btn-show-hint");
+  if (!btnShowHint) return;
+  const stageId = stageSelect ? stageSelect.value : "stage1";
+  
+  if (stageId === "stage0") {
+    btnShowHint.disabled = true;
+    return;
+  }
+
+  // 判定中はボタンを無効化
+  btnShowHint.disabled = true;
+  btnShowHint.title = "実行履歴を確認中...";
+
+  try {
+    // データベース（ログ）から、このユーザーがこのステージで一度でも実行したか確認する
+    const snapshot = await db.collection('logs')
+      .where('userId', '==', userId)
+      .where('stageId', '==', stageId)
+      .limit(1)
+      .get();
+      
+    if (!snapshot.empty) {
+      btnShowHint.disabled = false;
+      btnShowHint.title = "";
+    } else {
+      btnShowHint.disabled = true;
+      btnShowHint.title = "まずは自分でプログラムを実行してみましょう！";
+    }
+  } catch(e) {
+    console.error("Hint lock check failed:", e);
+    // エラー時は安全のためロック解除
+    btnShowHint.disabled = false;
+    btnShowHint.title = "";
+  }
+}
+
+const btnShowHint = document.getElementById("btn-show-hint");
 const btnReplayHint = document.getElementById("btn-replay-hint");
       if (btnShowHint) {
         btnShowHint.disabled = false;
@@ -50,14 +88,18 @@ const btnReplayHint = document.getElementById("btn-replay-hint");
       // アニメーションループが停止するのを少し待ってからステージを切り替える
       setTimeout(() => {
         engine.loadStage(e.target.value);
+        if (typeof checkHintLock === 'function') checkHintLock();
         clearOutput();
         updateShoeUI();
+if (typeof checkHintLock === 'function') checkHintLock();
         if (stageSelect && window.restoreHintState) window.restoreHintState(stageSelect.value);
       }, 150);
     } else {
       engine.loadStage(e.target.value);
+        if (typeof checkHintLock === 'function') checkHintLock();
       clearOutput();
       updateShoeUI();
+if (typeof checkHintLock === 'function') checkHintLock();
       if (stageSelect && window.restoreHintState) window.restoreHintState(stageSelect.value);
     }
   });
@@ -265,6 +307,7 @@ clearStageButton.addEventListener("click", () => {
 
 // 初期化時にUIを更新
 updateShoeUI();
+if (typeof checkHintLock === 'function') checkHintLock();
 
 const btnUndo = document.getElementById("btn-undo");
 const btnRedo = document.getElementById("btn-redo");
@@ -430,9 +473,10 @@ if (btnShowHint) {
         let score = Math.round(bestLog._calculatedDistanceScore || 0);
         
         if (mySnapshot.empty) {
-          addLog(`【前半ヒント】${bestLog.nickname || '誰か'}さんがヒヨコを掴むまでを再生します`, "info");
-          let grabIndex = bestLog.events.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
-          let partialEvents = grabIndex >= 0 ? bestLog.events.slice(0, grabIndex + 1) : bestLog.events;
+          addLog(`【前半ヒント】${bestLog.nickname || '誰か'}さんのクリアまでの動き（お手本）を再生します`, "info");
+          // let grabIndex = bestLog.events.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
+          // let partialEvents = grabIndex >= 0 ? bestLog.events.slice(0, grabIndex + 1) : bestLog.events;
+          let partialEvents = bestLog.events; // 常にお手本（全ルート）を再生
           currentTargetHintLogId = bestLog.id;
           currentTargetHintEvents = bestLog.events;
           lastViewedHint = "前半ヒント";
@@ -513,10 +557,10 @@ if (btnShowHint) {
         await saveHintViewLog("replay", currentTargetHintLogId, null);
           
         let eventsToPlay = currentTargetHintEvents;
-        if (myClearSnapshot.empty && mySnapshot.empty) {
-          let grabIndex = currentTargetHintEvents.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
-          eventsToPlay = grabIndex >= 0 ? currentTargetHintEvents.slice(0, grabIndex + 1) : currentTargetHintEvents;
-        }
+        // if (myClearSnapshot.empty && mySnapshot.empty) {
+        //   let grabIndex = currentTargetHintEvents.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
+        //   eventsToPlay = grabIndex >= 0 ? currentTargetHintEvents.slice(0, grabIndex + 1) : currentTargetHintEvents;
+        // }
         
         isRunning = true;
         await engine.playGhost(eventsToPlay);
@@ -776,6 +820,7 @@ async function runProgram() {
       currentLogSession.timestamp = new Date().toISOString();
       currentLogSession.sessionId = sessionId;
       currentLogSession.stageId = typeof initialStageId !== 'undefined' ? initialStageId : engine.currentStageId;
+      localStorage.setItem('pictgramming_executed_' + currentLogSession.stageId, 'true');
       
       if (lastViewedHint !== "ヒントなし") {
         runsSinceHint++;
@@ -808,8 +853,13 @@ async function runProgram() {
       
       if (currentLogSession.stageId !== "stage0") {
         db.collection('logs').doc(customDocId).set(currentLogSession)
-          .then(() => console.log(`Log saved to Firebase with ID: ${customDocId}`))
+          .then(() => {
+             console.log(`Log saved to Firebase with ID: ${customDocId}`);
+             if (typeof checkHintLock === 'function') checkHintLock();
+          })
           .catch(e => console.error("Firebase log upload failed", e));
+      } else {
+        if (typeof checkHintLock === 'function') checkHintLock();
       }
         
       currentLogSession = null;
@@ -949,6 +999,7 @@ if (stageSelect) {
     engine.loadStage(stageSelect.value);
     clearOutput();
     updateShoeUI();
+if (typeof checkHintLock === 'function') checkHintLock();
     if (window.restoreHintState) window.restoreHintState(stageSelect.value);
     lastViewedHint = "ヒントなし";
     updateHintBadge();
@@ -1241,6 +1292,7 @@ async function updateStageLocks(skipReload = false) {
     }
     
     updateShoeUI();
+if (typeof checkHintLock === 'function') checkHintLock();
     if (!skipReload && stageSelect && typeof engine !== 'undefined') {
       engine.loadStage(stageSelect.value);
     }
@@ -1371,6 +1423,7 @@ function initTutorial(force = false) {
         stageSelect.value = 'stage1';
         engine.loadStage('stage1');
         updateShoeUI();
+if (typeof checkHintLock === 'function') checkHintLock();
       }
       editor.value = "";
       return;
@@ -1466,6 +1519,7 @@ function initTutorial(force = false) {
     stageSelect.value = 'stage0';
     engine.loadStage('stage0');
     updateShoeUI();
+if (typeof checkHintLock === 'function') checkHintLock();
   }
   
   if (editor) {
@@ -1490,6 +1544,7 @@ function initTutorial(force = false) {
         stageSelect.value = 'stage1';
         engine.loadStage('stage1');
         updateShoeUI();
+if (typeof checkHintLock === 'function') checkHintLock();
       }
       editor.value = "";
     };
