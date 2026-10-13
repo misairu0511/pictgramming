@@ -1,11 +1,11 @@
-// 全ステージ共通の6点マーカー配置（上段 A, B, C / 下段 D, E, F）
+// 全ステージ共通の6点マーカー配置（規則正しい2×3グリッド：上段 A, B, C / 下段 D, E, F）
 const COMMON_POINTS = [
-  { label: "A", x: -140, y: -140 },
-  { label: "B", x:    0, y: -140 },
-  { label: "C", x:  140, y: -140 },
-  { label: "D", x: -140, y:   80 },
-  { label: "E", x:    0, y:   80 },
-  { label: "F", x:  140, y:   80 }
+  { label: "A", x: -220, y: -210 },
+  { label: "B", x:    0, y: -210 },
+  { label: "C", x:  220, y: -210 },
+  { label: "D", x: -220, y:  130 },
+  { label: "E", x:    0, y:  130 },
+  { label: "F", x:  220, y:  130 }
 ];
 
 const STAGES = {
@@ -50,8 +50,8 @@ const STAGES = {
     hasItem: true,
     initialDirection: 0,
     initialOffset: { x: -250, y: -20 },
-    itemOffset: { x: 60, y: -180 },
-    goalOffset: { x: 250, y: 60 },
+    itemOffset: { x: 40, y: -150 },
+    goalOffset: { x: 250, y: 50 },
     points: COMMON_POINTS
   },
   // ステージ5：靴と針山①（上下2つの靴と縦の針山）
@@ -59,40 +59,40 @@ const STAGES = {
     hasItem: true,
     initialDirection: 0,
     initialOffset: { x: -240, y: -20 },
-    itemOffset: { x: 210, y: -60 },
-    goalOffset: { x: 240, y: 80 },
+    itemOffset: { x: 165, y: -210 },
+    goalOffset: { x: 240, y: -40 },
     shoes: [
-      { x: -80, y: -70 },
-      { x: -80, y:  10 }
+      { x: -90, y: -80 },
+      { x: -90, y:  30 }
     ],
-    needleZone: { x: 40, y: -2000, width: 40, height: 4000 },
+    needleZone: { x: 80, y: -2000, width: 40, height: 4000 },
     points: COMMON_POINTS
   },
   // ステージ6：靴と針山②（左右2つの靴と横の針山）
   stage6: {
     hasItem: true,
     initialDirection: 0,
-    initialOffset: { x: 0, y: 90 },
-    itemOffset: { x: 0, y: -195 },
-    goalOffset: { x: 250, y: 90 },
+    initialOffset: { x: 0, y: 30 },
+    itemOffset: { x: 120, y: -185 },
+    goalOffset: { x: 250, y: 70 },
     shoes: [
-      { x: -190, y: 10 },
-      { x:  190, y: 10 }
+      { x: -160, y: 10 },
+      { x:  160, y: 10 }
     ],
-    needleZone: { x: -2000, y: -100, width: 4000, height: 35 },
+    needleZone: { x: -2000, y: -140, width: 4000, height: 35 },
     points: COMMON_POINTS
   },
-  // ステージ7：特定の場所を通る①（3つのチェックポイント A, E, C）
+  // ステージ7：特定の場所を通る①（3つのチェックポイント：正三角形配置）
   stage7: {
     hasItem: true,
     initialDirection: 0,
     initialOffset: { x: -260, y: -20 },
     itemOffset: { x: 260, y: -210 },
-    goalOffset: { x: 250, y: 60 },
+    goalOffset: { x: 250, y: 50 },
     checkpoints: [
-      { x: -140, y: -140, radius: 24, passed: false, label: "A" },
-      { x:    0, y:   80, radius: 24, passed: false, label: "E" },
-      { x:  140, y: -140, radius: 24, passed: false, label: "C" }
+      { x:    5, y: -155, radius: 24, passed: false, label: "①", num: "1" },
+      { x:  150, y:   95, radius: 24, passed: false, label: "②", num: "2" },
+      { x: -140, y:   95, radius: 24, passed: false, label: "③", num: "3" }
     ],
     points: COMMON_POINTS,
     walls: [
@@ -102,19 +102,19 @@ const STAGES = {
       { x: 316, y: -280, width: 14, height: 144 }
     ]
   },
-  // ステージ8：特定の場所を通る②（5つのチェックポイント A, B, C, D, F）
+  // ステージ8：特定の場所を通る②（5つのチェックポイント：正五角形配置）
   stage8: {
     hasItem: true,
     initialDirection: 0,
     initialOffset: { x: -260, y: -20 },
     itemOffset: { x: 260, y: -210 },
-    goalOffset: { x: 250, y: 60 },
+    goalOffset: { x: 250, y: 50 },
     checkpoints: [
-      { x: -140, y: -140, radius: 24, passed: false, label: "A" },
-      { x:    0, y: -140, radius: 24, passed: false, label: "B" },
-      { x:  140, y: -140, radius: 24, passed: false, label: "C" },
-      { x: -140, y:   80, radius: 24, passed: false, label: "D" },
-      { x:  140, y:   80, radius: 24, passed: false, label: "F" }
+      { x:   15, y: -160, radius: 24, passed: false, label: "①", num: "1" },
+      { x:  177, y:  -43, radius: 24, passed: false, label: "②", num: "2" },
+      { x:  115, y:  148, radius: 24, passed: false, label: "③", num: "3" },
+      { x:  -85, y:  148, radius: 24, passed: false, label: "④", num: "4" },
+      { x: -147, y:  -43, radius: 24, passed: false, label: "⑤", num: "5" }
     ],
     points: COMMON_POINTS,
     walls: [
@@ -371,7 +371,7 @@ class PictoEngine {
       }
     }
     if (this.state.checkpoints) {
-      const cp = this.state.checkpoints.find(c => c.label === target);
+      const cp = this.state.checkpoints.find(c => c.label === target || c.num === target);
       if (cp) {
         return this.distance(this.state.x, this.state.y, cp.x, cp.y) <= 24;
       }
@@ -744,7 +744,7 @@ class PictoEngine {
     } else {
       let pt = (this.state.points || []).find(p => p.label === label);
       if (!pt && this.state.checkpoints) {
-        pt = this.state.checkpoints.find(c => c.label === label);
+        pt = this.state.checkpoints.find(c => c.label === label || c.num === label);
       }
       if (!pt) {
         throw new Error(`"${label}" という地点は見つかりません`);
@@ -803,14 +803,6 @@ class PictoEngine {
     const ctx = this.ctx;
     ctx.save();
     for (const pt of this.state.points) {
-      // チェックポイントとして指定されている地点は drawCheckpoints() 側で描画するためスキップ
-      const hasCheckpointHere = this.state.checkpoints && this.state.checkpoints.some(
-        c => c.label === pt.label || this.distance(c.x, c.y, pt.x, pt.y) < 10
-      );
-      if (hasCheckpointHere) {
-        continue;
-      }
-
       ctx.fillStyle = "rgba(59, 130, 246, 0.12)";
       ctx.strokeStyle = "rgba(37, 99, 235, 0.75)";
       ctx.lineWidth = 2;
@@ -876,38 +868,33 @@ class PictoEngine {
     ctx.save();
     for (const cp of this.state.checkpoints) {
       if (!cp.passed) {
-        ctx.fillStyle = "rgba(245, 158, 11, 0.18)";
+        ctx.fillStyle = "rgba(239, 68, 68, 0.15)";
         ctx.beginPath();
         ctx.arc(cp.x, cp.y, cp.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "rgba(234, 88, 12, 0.9)";
-        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = "rgba(239, 68, 68, 0.8)";
+        ctx.lineWidth = 2;
         ctx.stroke();
 
-        ctx.fillStyle = "#c2410c";
+        ctx.fillStyle = "rgba(239, 68, 68, 1)";
         ctx.font = "bold 16px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(cp.label, cp.x, cp.y);
       } else {
-        ctx.fillStyle = "rgba(16, 185, 129, 0.18)";
+        ctx.fillStyle = "rgba(16, 185, 129, 0.15)";
         ctx.beginPath();
         ctx.arc(cp.x, cp.y, cp.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "rgba(16, 185, 129, 0.8)";
-        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = "rgba(16, 185, 129, 0.5)";
+        ctx.lineWidth = 2;
         ctx.stroke();
         
-        ctx.fillStyle = "#047857";
-        ctx.font = "bold 15px sans-serif";
+        ctx.fillStyle = "rgba(16, 185, 129, 1)";
+        ctx.font = "bold 16px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(cp.label, cp.x, cp.y);
-
-        // 右上にチェックマークを添える
-        ctx.fillStyle = "#10b981";
-        ctx.font = "bold 13px sans-serif";
-        ctx.fillText("✔", cp.x + 16, cp.y - 16);
+        ctx.fillText("✔", cp.x, cp.y);
       }
     }
     ctx.restore();
