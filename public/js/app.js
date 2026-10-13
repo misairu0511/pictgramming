@@ -612,7 +612,8 @@ function calculateDTWScore(myEvents, pastEvents, stageId) {
   if (!myEvents || !pastEvents || myEvents.length === 0 || pastEvents.length === 0) return 0;
   let wPos = 1.0, wDir = 0.5, wArm = 0.2, wLeg = 0.0;
   const stageNum = parseInt(stageId.replace('stage', ''), 10);
-  if (!isNaN(stageNum) && stageNum >= 4) { wLeg = 0.2; }
+  if (!isNaN(stageNum) && (stageNum === 1 || stageNum === 2)) { wArm = 0.0; }
+  if (!isNaN(stageNum) && (stageNum === 5 || stageNum === 6)) { wLeg = 0.2; }
   
   let n = myEvents.length;
   let m = pastEvents.length;
@@ -648,9 +649,12 @@ function findBestHintLog(othersClears, myEvents, stageId) {
   let wArm = 0.2;
   let wLeg = 0.0;
   
-  // ステージ4以降は靴があるため、足の重みを追加
+  // ステージ1・2はヒヨコなし、ステージ5・6は靴があるため重みを調整
   const stageNum = parseInt(stageId.replace('stage', ''), 10);
-  if (!isNaN(stageNum) && stageNum >= 4) {
+  if (!isNaN(stageNum) && (stageNum === 1 || stageNum === 2)) {
+    wArm = 0.0;
+  }
+  if (!isNaN(stageNum) && (stageNum === 5 || stageNum === 6)) {
     wLeg = 0.2;
   }
   
@@ -979,7 +983,7 @@ if (btnLogHistory && logModal) {
 
 function updateShoeUI() {
   if (!stageSelect) return;
-  const isShoeStage = stageSelect.value === "stage4" || stageSelect.value === "stage5";
+  const isShoeStage = stageSelect.value === "stage5" || stageSelect.value === "stage6";
   document.querySelectorAll(".shoe-snippet").forEach(el => el.style.display = isShoeStage ? "inline-block" : "none");
   const shoeHelp1 = document.getElementById("shoe-help-1");
   const shoeHelp2 = document.getElementById("shoe-help-2");
@@ -1029,20 +1033,21 @@ function transpileToJava(javaCode) {
 
   // Replace Japanese control structures
   jsCode = jsCode.replace(/繰り返し\s*\(\s*(\d+)\s*回\s*\)\s*\{/g, 'for (let _i = 0; _i < $1; _i++) {');
-  jsCode = jsCode.replace(/もし\s*\((.*?)\)\s*\{/g, 'if ($1) {');
+  jsCode = jsCode.replace(/もし\s*\(([\s\S]*?)\)\s*\{/g, 'if ($1) {');
   jsCode = jsCode.replace(/\}\s*そうでなければ\s*\{/g, '} else {');
   
   // Inject yield into loops to prevent freezing
-  jsCode = jsCode.replace(/\b(for|while)\s*\((.*?)\)\s*\{/g, '$1($2) { await picto.yield(); ');
+  jsCode = jsCode.replace(/\b(for|while)\s*\(([\s\S]*?)\)\s*\{/g, '$1($2) { await picto.yield(); ');
   
   // Replace command keywords to await picto.method
-  jsCode = jsCode.replace(/(移動|回転|部位回転|掴む|離す|右足で履く|左足で履く|右足で脱ぐ|左足で脱ぐ|ヒヨコの近くにいる|ヒヨコを持っている)\s*\(/g, 'await picto.$1(');
+  jsCode = jsCode.replace(/(移動|向く|回転|部位回転|掴む|離す|靴を履く|靴を脱ぐ|履く|脱ぐ|右足で履く|左足で履く|右足で脱ぐ|左足で脱ぐ|近くにいない|近くにいる|地点にいない|地点にいる|ヒヨコの近くにいない|ヒヨコの近くにいる|靴の近くにいない|靴の近くにいる|ヒヨコを持っている)\s*\(/g, 'await picto.$1(');
   
   return jsCode;
 }
 
 function createPictoContext() {
   const checkStop = () => { if (shouldStop) throw new Error("STOP"); };
+  let loopSteps = 0;
 
   return {
     移動: async (val) => {
@@ -1051,10 +1056,29 @@ function createPictoContext() {
       addLog(`移動(${val});`);
       await engine.animateMove(val);
     },
+    向く: async (target) => {
+      checkStop();
+      if (typeof target === "number" && Number.isFinite(target)) {
+        addLog(`向く(${target});`);
+        await engine.animateFace(target);
+      } else if (typeof target === "string") {
+        const label = target.trim();
+        addLog(`向く("${label}");`);
+        await engine.animateFace(label);
+      } else {
+        throw new Error("向くの引数は地点名(\"A\"など)または角度(数字)である必要があります");
+      }
+    },
     回転: async (val) => {
       checkStop();
+      if (typeof val === "string") {
+        const label = val.trim();
+        addLog(`向く("${label}");`);
+        await engine.animateFace(label);
+        return;
+      }
       if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("回転の引数は数字である必要があります");
-      addLog(`回転(${val});`);
+      addLog(`向く(${val});`);
       await engine.animateTurn(val);
     },
     部位回転: async (part, val) => {
@@ -1073,7 +1097,7 @@ function createPictoContext() {
       checkStop();
       addLog("掴む();");
       engine.grabItem();
-      await new Promise(r => setTimeout(r, 100)); // 少し待機
+      await new Promise(r => setTimeout(r, 100));
     },
     "離す": async function() {
       checkStop();
@@ -1081,40 +1105,96 @@ function createPictoContext() {
       engine.releaseItem();
       await new Promise(r => setTimeout(r, 100));
     },
+    "靴を履く": async function() {
+      checkStop();
+      addLog("靴を履く();");
+      engine.equipShoe();
+      await new Promise(r => setTimeout(r, 100));
+    },
+    "履く": async function() {
+      checkStop();
+      addLog("靴を履く();");
+      engine.equipShoe();
+      await new Promise(r => setTimeout(r, 100));
+    },
+    "靴を脱ぐ": async function() {
+      checkStop();
+      addLog("靴を脱ぐ();");
+      engine.unequipShoe();
+      await new Promise(r => setTimeout(r, 100));
+    },
+    "脱ぐ": async function() {
+      checkStop();
+      addLog("靴を脱ぐ();");
+      engine.unequipShoe();
+      await new Promise(r => setTimeout(r, 100));
+    },
     "右足で履く": async function() {
       checkStop();
-      addLog("右足で履く();");
-      engine.equipShoe("right");
+      addLog("靴を履く();");
+      engine.equipShoe();
       await new Promise(r => setTimeout(r, 100));
     },
     "左足で履く": async function() {
       checkStop();
-      addLog("左足で履く();");
-      engine.equipShoe("left");
+      addLog("靴を履く();");
+      engine.equipShoe();
       await new Promise(r => setTimeout(r, 100));
     },
     "右足で脱ぐ": async function() {
       checkStop();
-      addLog("右足で脱ぐ();");
-      engine.unequipShoe("right");
+      addLog("靴を脱ぐ();");
+      engine.unequipShoe();
       await new Promise(r => setTimeout(r, 100));
     },
     "左足で脱ぐ": async function() {
       checkStop();
-      addLog("左足で脱ぐ();");
-      engine.unequipShoe("left");
+      addLog("靴を脱ぐ();");
+      engine.unequipShoe();
       await new Promise(r => setTimeout(r, 100));
     },
+    "近くにいる": async function(label) {
+      checkStop();
+      return engine.isNearTarget(label);
+    },
+    "近くにいない": async function(label) {
+      checkStop();
+      return !engine.isNearTarget(label);
+    },
+    "地点にいる": async function(label) {
+      checkStop();
+      return engine.isNearTarget(label);
+    },
+    "地点にいない": async function(label) {
+      checkStop();
+      return !engine.isNearTarget(label);
+    },
     "ヒヨコの近くにいる": async function() {
-      if (shouldStop) throw new Error("STOP");
+      checkStop();
       return engine.isNearItem();
     },
+    "ヒヨコの近くにいない": async function() {
+      checkStop();
+      return !engine.isNearItem();
+    },
+    "靴の近くにいる": async function() {
+      checkStop();
+      return engine.isNearTarget("靴");
+    },
+    "靴の近くにいない": async function() {
+      checkStop();
+      return !engine.isNearTarget("靴");
+    },
     "ヒヨコを持っている": async function() {
-      if (shouldStop) throw new Error("STOP");
+      checkStop();
       return engine.state.hasGrabbedItem;
     },
     yield: async function() {
       if (shouldStop) throw new Error("STOP");
+      loopSteps++;
+      if (loopSteps > 250) {
+        throw new Error("繰り返しが多すぎるため自動停止しました（条件や向きを確認してください）");
+      }
       while (engine.isPaused && !shouldStop) {
         await new Promise(r => setTimeout(r, 50));
       }
@@ -1195,117 +1275,36 @@ async function updateStageLocks(skipReload = false) {
   if (!stageSelect) return;
   const options = stageSelect.options;
   
-  try {
-    // ユーザーの全ログを取得して、クリアしたステージIDを抽出
-    const snapshot = await db.collection('logs')
-      .where('userId', '==', userId)
-      .get();
-      
-    const clearedStages = new Set();
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.goalResult === 'ゴールした') {
-        clearedStages.add(data.stageId);
-      }
-    });
-    const hasCleared0 = clearedStages.has('stage0');
-    const hasCleared1 = clearedStages.has('stage1');
-    const hasCleared2 = clearedStages.has('stage2');
-    const hasCleared3 = clearedStages.has('stage3');
-    const hasCleared4 = clearedStages.has('stage4');
-    const hasCleared5 = clearedStages.has('stage5');
-    const hasCleared6 = clearedStages.has('stage6');
-    const hasCleared7 = clearedStages.has('stage7');
-    
-    // ステージ0は常に解放（ただしドロップダウンからは隠す）
-    options[0].disabled = false;
-    options[0].text = "ステージ0: チュートリアル";
-    options[0].hidden = true;
-    
-    // ステージ1は最初から解放
-    if (options.length > 1) {
-      options[1].disabled = false;
-      options[1].text = "ステージ1: 目の前のヒヨコ";
-    }
-    
-    // ステージ2 (ステージ1クリアで解放)
-    if (options.length > 2) {
-      if (hasCleared1) {
-        options[2].disabled = false;
-        options[2].text = "ステージ2: 後ろのヒヨコ";
-      } else {
-        options[2].disabled = true;
-        options[2].text = "🔒 ステージ2 (ステージ1をクリアで解放)";
-        if (stageSelect.value === 'stage2') stageSelect.value = 'stage1';
-      }
-    }
-    
-    // ステージ3 (ステージ2クリアで解放)
-    if (options.length > 3) {
-      if (hasCleared2) {
-        options[3].disabled = false;
-        options[3].text = "ステージ3: 遠い道のり";
-      } else {
-        options[3].disabled = true;
-        options[3].text = "🔒 ステージ3 (ステージ2をクリアで解放)";
-        if (stageSelect.value === 'stage3') stageSelect.value = (hasCleared1 ? 'stage2' : 'stage1');
-      }
-    }
-    
-    // ステージ4 (ステージ3クリアで解放)
-    if (options.length > 4) {
-      if (true) {
-      options[4].disabled = false;
-        options[4].text = "ステージ4: 片足の靴";
-      } else {
-        options[4].disabled = true;
-        options[4].text = "🔒 ステージ4 (ステージ3をクリアで解放)";
-        if (stageSelect.value === 'stage4') stageSelect.value = (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : 'stage1'));
-      }
-    }
-    
-    // ステージ5 (ステージ4クリアで解放)
-    if (options.length > 5) {
-      if (hasCleared4) {
-        options[5].disabled = false;
-        options[5].text = "ステージ5: 両足の靴";
-      } else {
-        options[5].disabled = true;
-        options[5].text = "🔒 ステージ5 (ステージ4をクリアで解放)";
-        if (stageSelect.value === 'stage5') stageSelect.value = (hasCleared3 ? 'stage4' : (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : 'stage1')));
-      }
-    }
-    
-    // ステージ6 (ステージ5クリアで解放)
-    if (options.length > 6) {
-      if (hasCleared5) {
-        options[6].disabled = false;
-        options[6].text = "ステージ6: 3つのチェックポイント";
-      } else {
-        options[6].disabled = true;
-        options[6].text = "🔒 ステージ6 (ステージ5をクリアで解放)";
-        if (stageSelect.value === 'stage6') stageSelect.value = (hasCleared4 ? 'stage5' : (hasCleared3 ? 'stage4' : (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : 'stage1'))));
-      }
-    }
+  const stageTitles = {
+    stage0: "ステージ0: チュートリアル",
+    stage1: "ステージ1: 移動と方向転換① (分かれ道)",
+    stage2: "ステージ2: 移動と方向転換② (壁の迂回)",
+    stage3: "ステージ3: ヒヨコを運ぼう① (腕の回転)",
+    stage4: "ステージ4: ヒヨコを運ぼう② (複数ルート)",
+    stage5: "ステージ5: 靴と針山① (縦の針山)",
+    stage6: "ステージ6: 靴と針山② (横の針山)",
+    stage7: "ステージ7: 特定の場所を通る① (3箇所)",
+    stage8: "ステージ8: 特定の場所を通る② (5箇所)"
+  };
 
-    // ステージ7 (ステージ6クリアで解放)
-    if (options.length > 7) {
-      if (true) {
-        options[7].disabled = false;
-        options[7].text = "ステージ7: 5つのチェックポイント";
-      } else {
-        options[7].disabled = true;
-        options[7].text = "🔒 ステージ7 (ステージ6をクリアで解放)";
-        if (stageSelect.value === 'stage7') stageSelect.value = (hasCleared5 ? 'stage6' : (hasCleared4 ? 'stage5' : (hasCleared3 ? 'stage4' : (hasCleared2 ? 'stage3' : (hasCleared1 ? 'stage2' : 'stage1')))));
+  try {
+    // テスト・確認しやすいよう全8ステージを解放状態で表示
+    for (let i = 0; i < options.length; i++) {
+      const val = options[i].value;
+      options[i].disabled = false;
+      if (stageTitles[val]) {
+        options[i].text = stageTitles[val];
+      }
+      if (val === "stage0") {
+        options[i].hidden = true;
       }
     }
     
     updateShoeUI();
-if (typeof checkHintLock === 'function') checkHintLock();
+    if (typeof checkHintLock === 'function') checkHintLock();
     if (!skipReload && stageSelect && typeof engine !== 'undefined') {
       engine.loadStage(stageSelect.value);
     }
-    
   } catch (e) {
     console.error("ステージロック状況の取得に失敗しました", e);
   }
@@ -1364,15 +1363,7 @@ if (btnDeleteAllLogs) {
 function initTutorial(force = false) {
   const isCompleted = localStorage.getItem('tutorialCompleted');
   
-  // 古いチュートリアルコードが残っていたら強制更新
-  if (editor && (editor.value === "移動(85);\n掴む();\n移動(165);\n離す();" || editor.value === "移動(100);\n掴む();\n移動(150);\n離す();")) {
-    editor.value = "部位回転(\"右腕\", -45);\n移動(100);\n掴む();\n回転(90);\n移動(150);\n離す();";
-  }
-
   if (isCompleted && !force) {
-    if (stageSelect && stageSelect.value === 'stage0' && !editor.value.includes('掴む()')) {
-      editor.value = "部位回転(\"右腕\", -45);\n移動(100);\n掴む();\n回転(90);\n移動(150);\n離す();";
-    }
     return;
   }
 
@@ -1385,33 +1376,33 @@ function initTutorial(force = false) {
   if (!overlay || !highlight || !bubble) return;
 
   const steps = [
-    { target: 'java-editor', text: 'チュートリアルへようこそ！まずはプログラムを書いて動かす練習です。', pos: 'left' },
+    { target: 'java-editor', text: 'チュートリアルへようこそ！プログラムを書いてピクトグラムを動かす練習です。', pos: 'left' },
     { 
       target: 'java-editor', 
       onTopElements: ['#btn-run', '.stage-frame'],
-      text: '「部位回転」で右腕を曲げます。エディタにコードを追加しました！上の明るくなっている【実行】ボタンを押してみてください。', 
+      text: 'まずはヒヨコの近くまで歩きます。「向く("ヒヨコ");」と「while」を追加しました！【実行】ボタンを押してみてください。', 
       pos: 'left', 
-      codeToAdd: '部位回転("右腕", -45);',
-      keyword: '部位回転',
+      codeToAdd: '向く("ヒヨコ");\nwhile (近くにいない("ヒヨコ")) {\n  移動(30);\n}',
+      keyword: '向く("ヒヨコ")',
       waitForRun: true,
-      checkCondition: () => editor.value.includes('部位回転')
+      checkCondition: () => editor.value.includes('向く')
     },
     { 
       target: 'java-editor', 
       onTopElements: ['#btn-run', '.stage-frame'],
-      text: '次は「移動」してヒヨコを「掴む」命令を追加しました！もう一度【実行】ボタンを押してください！', 
+      text: '次は「部位回転("右腕", -60);」で右腕を振ってヒヨコをキャッチします！もう一度【実行】ボタンを押してください！', 
       pos: 'left', 
-      codeToAdd: '移動(100);\n掴む();',
-      keyword: '掴む()',
+      codeToAdd: '部位回転("右腕", -60);',
+      keyword: '部位回転',
       waitForRun: true,
       checkCondition: () => engine.state.hasGrabbedItem
     },
     { 
       target: 'java-editor', 
       onTopElements: ['#btn-run', '.stage-frame'],
-      text: '最後に「回転」で向きを変え、移動して「離す」命令でゴールしましょう！【実行】ボタンを押してください！', 
+      text: '最後にゴールまで歩いて「離す();」でゴールしましょう！【実行】ボタンを押してください！', 
       pos: 'left', 
-      codeToAdd: '回転(90);\n移動(150);\n離す();',
+      codeToAdd: '向く(5);\n移動(210);\n離す();',
       keyword: '離す()',
       waitForRun: true,
       checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"

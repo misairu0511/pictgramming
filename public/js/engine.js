@@ -1,56 +1,127 @@
+// 全ステージ共通の6点マーカー配置（上段 A, B, C / 下段 D, E, F）
+const COMMON_POINTS = [
+  { label: "A", x: -140, y: -140 },
+  { label: "B", x:    0, y: -140 },
+  { label: "C", x:  140, y: -140 },
+  { label: "D", x: -140, y:   80 },
+  { label: "E", x:    0, y:   80 },
+  { label: "F", x:  140, y:   80 }
+];
+
 const STAGES = {
-  stage0: { itemOffset: { x: 108, y: -150 }, goalOffset: { x: 200, y: 8 } },
-  stage1: { itemOffset: { x: 53, y: 10 }, goalOffset: { x: 250, y: -100 } },
-  stage2: { itemOffset: { x: -120, y: 0 }, goalOffset: { x: 250, y: -100 } },
-  stage3: { itemOffset: { x: 0, y: -180 }, goalOffset: { x: -200, y: 150 } },
-  stage4: { 
-    itemOffset: { x: 220, y: 0 }, 
-    goalOffset: { x: 300, y: -150 }, 
-    shoes: { right: { x: 50, y: -50 } },
-    needleZone: { x: 120, y: -2000, width: 40, height: 4000 }
+  stage0: {
+    hasItem: true,
+    initialDirection: 0,
+    initialOffset: { x: -180, y: 0 },
+    itemOffset: { x: -5, y: -45 },
+    goalOffset: { x: 180, y: 0 },
+    points: COMMON_POINTS
   },
-  stage5: { 
-    initialDirection: 90,
-    initialOffset: { x: 0, y: 60 },
-    itemOffset: { x: 0, y: -240 }, 
-    goalOffset: { x: 290, y: 200 }, 
-    shoes: { right: { x: -80, y: -50 }, left: { x: 80, y: -50 } },
-    needleZone: { x: -2000, y: -180, width: 4000, height: 40 }
+  // ステージ1：移動・方向転換のみ①（自由なルートでゴールへ）
+  stage1: {
+    hasItem: false,
+    initialDirection: 0,
+    initialOffset: { x: -240, y: -30 },
+    goalOffset: { x: 240, y: -30 },
+    points: COMMON_POINTS
   },
-      stage6: {
-    initialDirection: 90,
-    initialOffset: { x: -280, y: 0 },
-    itemOffset: { x: 280, y: -240 },
-    goalOffset: { x: 280, y: -30 },
-    checkpoints: [
-      { x: 0, y: -160, radius: 22, passed: false, label: "①" },
-      { x: 150, y: 100, radius: 22, passed: false, label: "②" },
-      { x: -150, y: 100, radius: 22, passed: false, label: "③" }
-    ],
+  // ステージ2：移動・方向転換のみ②（中央の薄い壁を迂回しよう）
+  stage2: {
+    hasItem: false,
+    initialDirection: 0,
+    initialOffset: { x: -240, y: -20 },
+    goalOffset: { x: 240, y: -40 },
     walls: [
-      { x: 210, y: -310, width: 140, height: 15 },
-      { x: 210, y: -180, width: 140, height: 15 },
-      { x: 210, y: -310, width: 15, height: 145 },
-      { x: 335, y: -310, width: 15, height: 145 }
+      { x: -7, y: -70, width: 14, height: 80 }
+    ],
+    points: COMMON_POINTS
+  },
+  // ステージ3：掴んで運ぶ①（右腕で取るか、左腕で取るか）
+  stage3: {
+    hasItem: true,
+    initialDirection: 0,
+    initialOffset: { x: -240, y: -20 },
+    itemOffset: { x: 0, y: -40 },
+    goalOffset: { x: 240, y: -20 },
+    points: COMMON_POINTS
+  },
+  // ステージ4：掴んで運ぶ②（複数ルートでの運搬）
+  stage4: {
+    hasItem: true,
+    initialDirection: 0,
+    initialOffset: { x: -250, y: -20 },
+    itemOffset: { x: 60, y: -180 },
+    goalOffset: { x: 250, y: 60 },
+    points: COMMON_POINTS
+  },
+  // ステージ5：靴と針山①（上下2つの靴と縦の針山）
+  stage5: {
+    hasItem: true,
+    initialDirection: 0,
+    initialOffset: { x: -240, y: -20 },
+    itemOffset: { x: 210, y: -60 },
+    goalOffset: { x: 240, y: 80 },
+    shoes: [
+      { x: -80, y: -70 },
+      { x: -80, y:  10 }
+    ],
+    needleZone: { x: 40, y: -2000, width: 40, height: 4000 },
+    points: COMMON_POINTS
+  },
+  // ステージ6：靴と針山②（左右2つの靴と横の針山）
+  stage6: {
+    hasItem: true,
+    initialDirection: 0,
+    initialOffset: { x: 0, y: 90 },
+    itemOffset: { x: 0, y: -195 },
+    goalOffset: { x: 250, y: 90 },
+    shoes: [
+      { x: -190, y: 10 },
+      { x:  190, y: 10 }
+    ],
+    needleZone: { x: -2000, y: -100, width: 4000, height: 35 },
+    points: COMMON_POINTS
+  },
+  // ステージ7：特定の場所を通る①（3つのチェックポイント A, E, C）
+  stage7: {
+    hasItem: true,
+    initialDirection: 0,
+    initialOffset: { x: -260, y: -20 },
+    itemOffset: { x: 260, y: -210 },
+    goalOffset: { x: 250, y: 60 },
+    checkpoints: [
+      { x: -140, y: -140, radius: 24, passed: false, label: "A" },
+      { x:    0, y:   80, radius: 24, passed: false, label: "E" },
+      { x:  140, y: -140, radius: 24, passed: false, label: "C" }
+    ],
+    points: COMMON_POINTS,
+    walls: [
+      { x: 195, y: -280, width: 135, height: 14 },
+      { x: 195, y: -150, width: 135, height: 14 },
+      { x: 195, y: -280, width: 14, height: 144 },
+      { x: 316, y: -280, width: 14, height: 144 }
     ]
   },
-  stage7: {
+  // ステージ8：特定の場所を通る②（5つのチェックポイント A, B, C, D, F）
+  stage8: {
+    hasItem: true,
     initialDirection: 0,
-    initialOffset: { x: -280, y: 0 },
-    itemOffset: { x: 280, y: -240 },
-    goalOffset: { x: 280, y: -30 },
+    initialOffset: { x: -260, y: -20 },
+    itemOffset: { x: 260, y: -210 },
+    goalOffset: { x: 250, y: 60 },
     checkpoints: [
-      { x: 0, y: -180, radius: 22, passed: false, label: "①" },
-      { x: 171, y: -56, radius: 22, passed: false, label: "②" },
-      { x: 106, y: 146, radius: 22, passed: false, label: "③" },
-      { x: -106, y: 146, radius: 22, passed: false, label: "④" },
-      { x: -171, y: -56, radius: 22, passed: false, label: "⑤" }
+      { x: -140, y: -140, radius: 24, passed: false, label: "A" },
+      { x:    0, y: -140, radius: 24, passed: false, label: "B" },
+      { x:  140, y: -140, radius: 24, passed: false, label: "C" },
+      { x: -140, y:   80, radius: 24, passed: false, label: "D" },
+      { x:  140, y:   80, radius: 24, passed: false, label: "F" }
     ],
+    points: COMMON_POINTS,
     walls: [
-      { x: 210, y: -310, width: 140, height: 15 },
-      { x: 210, y: -180, width: 140, height: 15 },
-      { x: 210, y: -310, width: 15, height: 145 },
-      { x: 335, y: -310, width: 15, height: 145 }
+      { x: 195, y: -280, width: 135, height: 14 },
+      { x: 195, y: -150, width: 135, height: 14 },
+      { x: 195, y: -280, width: 14, height: 144 },
+      { x: 316, y: -280, width: 14, height: 144 }
     ]
   }
 };
@@ -144,6 +215,8 @@ class PictoEngine {
     const initialDir = stage.initialDirection !== undefined ? stage.initialDirection : 0;
     const initOffsetX = stage.initialOffset ? stage.initialOffset.x : 0;
     const initOffsetY = stage.initialOffset ? stage.initialOffset.y : 0;
+    const hasItem = stage.hasItem !== undefined ? stage.hasItem : true;
+    const itemOffset = stage.itemOffset || { x: 0, y: 0 };
 
     this.state = {
       x: centerX + initOffsetX,
@@ -153,25 +226,24 @@ class PictoEngine {
       trail: [],
       parts: this.createParts(),
       particles: [],
+      hasItem: hasItem,
       item: {
-        x: centerX + stage.itemOffset.x,
-        y: centerY + stage.itemOffset.y,
+        x: centerX + itemOffset.x,
+        y: centerY + itemOffset.y,
         attachedTo: null,
         offsetX: 0,
         offsetY: 0
       },
-      shoes: {
-        right: stage.shoes && stage.shoes.right ? { 
-          exists: true, x: centerX + stage.shoes.right.x, y: centerY + stage.shoes.right.y, isWorn: false 
-        } : { exists: false, isWorn: false },
-        left: stage.shoes && stage.shoes.left ? { 
-          exists: true, x: centerX + stage.shoes.left.x, y: centerY + stage.shoes.left.y, isWorn: false 
-        } : { exists: false, isWorn: false }
-      },
+      shoes: (stage.shoes ? stage.shoes : []).map(shoeDef => ({
+          exists: true, x: centerX + shoeDef.x, y: centerY + shoeDef.y, isWorn: false
+      })),
       needleZones: [],
+      points: stage.points ? stage.points.map(p => ({ ...p, x: centerX + p.x, y: centerY + p.y })) : [],
       checkpoints: stage.checkpoints ? stage.checkpoints.map(c => ({...c, x: centerX + c.x, y: centerY + c.y})) : [],
       walls: stage.walls ? stage.walls.map(w => ({...w, x: centerX + w.x, y: centerY + w.y})) : [],
-      hasGrabbedItem: false
+      hasGrabbedItem: false,
+      targetPoint: null,
+      goalCelebrated: false
     };
 
     if (stage.needleZone) {
@@ -225,12 +297,17 @@ class PictoEngine {
   }
 
   grabItem() {
+    if (!this.state.hasItem) return;
     const item = this.state.item;
     if (item.attachedTo) return;
+    // すでにゴールに運んで離した後は再キャッチしない
+    if (this.state.hasGrabbedItem && this.distance(item.x, item.y, this.goal.x, this.goal.y) <= this.goal.radius) {
+      return;
+    }
 
     const leftHand = this.getHandPosition("leftArm");
     const rightHand = this.getHandPosition("rightArm");
-    const grabRadius = 35; // 半径を50から35に縮小
+    const grabRadius = 38;
 
     const distL = this.distance(leftHand.x, leftHand.y, item.x, item.y);
     const distR = this.distance(rightHand.x, rightHand.y, item.x, item.y);
@@ -256,13 +333,63 @@ class PictoEngine {
   }
 
   isNearItem() {
+    if (!this.state.hasItem) return false;
     const item = this.state.item;
     const leftHand = this.getHandPosition("leftArm");
     const rightHand = this.getHandPosition("rightArm");
     const grabRadius = 65;
     const distL = this.distance(leftHand.x, leftHand.y, item.x, item.y);
     const distR = this.distance(rightHand.x, rightHand.y, item.x, item.y);
-    return distL <= grabRadius || distR <= grabRadius;
+    const distBody = this.distance(this.state.x, this.state.y, item.x, item.y);
+    return distL <= grabRadius || distR <= grabRadius || distBody <= 65;
+  }
+
+  isNearTarget(label) {
+    if (!label || label === "ヒヨコ") {
+      return this.isNearItem();
+    }
+    const target = String(label).trim();
+    if (target === "靴") {
+      if (!Array.isArray(this.state.shoes) || this.state.shoes.length === 0) return true;
+      const unworn = this.state.shoes.filter(s => s.exists && !s.isWorn);
+      if (unworn.length === 0) return true;
+      const leftFoot = this.getLegPosition("leftLeg");
+      const rightFoot = this.getLegPosition("rightLeg");
+      return unworn.some(shoe =>
+        this.distance(this.state.x, this.state.y, shoe.x, shoe.y) <= 30 ||
+        this.distance(leftFoot.x, leftFoot.y, shoe.x, shoe.y) <= 35 ||
+        this.distance(rightFoot.x, rightFoot.y, shoe.x, shoe.y) <= 35
+      );
+    }
+    if (target === "ゴール" || target.toUpperCase() === "GOAL") {
+      return this.distance(this.state.x, this.state.y, this.goal.x, this.goal.y) <= this.goal.radius;
+    }
+    if (this.state.points) {
+      const pt = this.state.points.find(p => p.label === target);
+      if (pt) {
+        return this.distance(this.state.x, this.state.y, pt.x, pt.y) <= 22;
+      }
+    }
+    if (this.state.checkpoints) {
+      const cp = this.state.checkpoints.find(c => c.label === target);
+      if (cp) {
+        return this.distance(this.state.x, this.state.y, cp.x, cp.y) <= 24;
+      }
+    }
+    return false;
+  }
+
+  spawnGoalParticles(px, py) {
+    if (!this.state.particles) this.state.particles = [];
+    this.state.particles.push({
+      x: px, y: py, text: "❤️", startTime: Date.now(), duration: 2500, distance: 40, color: "rgba(255, 50, 50, 1)", animationType: 'up_down', fontSize: 30
+    });
+    this.state.particles.push({
+      x: px - 25, y: py - 10, text: "✨", startTime: Date.now(), duration: 2300, distance: 45, color: "rgba(255, 215, 0, 1)", animationType: 'up_down', fontSize: 20
+    });
+    this.state.particles.push({
+      x: px + 25, y: py - 5, text: "✨", startTime: Date.now(), duration: 2700, distance: 35, color: "rgba(255, 215, 0, 1)", animationType: 'up_down', fontSize: 20
+    });
   }
 
   releaseItem() {
@@ -274,33 +401,17 @@ class PictoEngine {
       
       const status = this.evaluateGoalStatus();
       if (status === "ゴールした") {
-        if (!this.state.particles) this.state.particles = [];
-        
-        // 基準座標（右上の少しずれた位置）
-        let px = this.state.item.x + 30;
-        let py = this.state.item.y - 30;
-
-        // 大きいハート
-        this.state.particles.push({
-          x: px, y: py, text: "❤️", startTime: Date.now(), duration: 2500, distance: 40, color: "rgba(255, 50, 50, 1)", animationType: 'up_down', fontSize: 30
-        });
-        // 左側の小さい星
-        this.state.particles.push({
-          x: px - 25, y: py - 10, text: "✨", startTime: Date.now(), duration: 2300, distance: 45, color: "rgba(255, 215, 0, 1)", animationType: 'up_down', fontSize: 20
-        });
-        // 右側の小さい星
-        this.state.particles.push({
-          x: px + 25, y: py - 5, text: "✨", startTime: Date.now(), duration: 2700, distance: 35, color: "rgba(255, 215, 0, 1)", animationType: 'up_down', fontSize: 20
-        });}
+        this.spawnGoalParticles(this.state.item.x + 30, this.state.item.y - 30);
+      }
     }
     this.draw();
   }
 
+  // ピクトグラムは常に直立（頭が上）なので、state.direction による回転は行わない
   getHandPosition(arm) {
     const parts = this.state.parts;
     const m = new DOMMatrix();
     m.translateSelf(this.state.x, this.state.y);
-    m.rotateSelf(this.state.direction);
     m.scaleSelf(0.6, 0.6);
     m.rotateSelf(parts.body.rotation);
 
@@ -324,7 +435,6 @@ class PictoEngine {
     const parts = this.state.parts;
     const m = new DOMMatrix();
     m.translateSelf(this.state.x, this.state.y);
-    m.rotateSelf(this.state.direction);
     m.scaleSelf(0.6, 0.6);
     m.rotateSelf(parts.body.rotation);
 
@@ -344,27 +454,60 @@ class PictoEngine {
     return { x: m.e, y: m.f };
   }
 
-  equipShoe(side) {
-    if (!this.state.shoes[side] || !this.state.shoes[side].exists) return;
-    if (this.state.shoes[side].isWorn) return;
+  equipShoe() {
+    if (!Array.isArray(this.state.shoes) || this.state.shoes.length === 0) return;
 
-    const shoe = this.state.shoes[side];
-    const legPart = side === "right" ? "rightLeg" : "leftLeg";
-    const legPos = this.getLegPosition(legPart);
-    
-    const grabRadius = 40;
-    const dist = this.distance(legPos.x, legPos.y, shoe.x, shoe.y);
-    if (dist <= grabRadius) {
-      this.state.shoes[side].isWorn = true;
+    const grabRadius = 55;
+    const legs = ["leftLeg", "rightLeg"];
+
+    for (const legPart of legs) {
+      const alreadyWearing = this.state.shoes.some(s => s.exists && s.isWorn && s.foot === legPart);
+      if (alreadyWearing) continue;
+
+      const legPos = this.getLegPosition(legPart);
+      if (!legPos) continue;
+
+      let closestShoe = null;
+      let minDist = grabRadius;
+      for (const shoe of this.state.shoes) {
+        if (!shoe.exists || shoe.isWorn) continue;
+        const distLeg = this.distance(legPos.x, legPos.y, shoe.x, shoe.y);
+        const distBody = this.distance(this.state.x, this.state.y, shoe.x, shoe.y);
+        const dist = Math.min(distLeg, distBody);
+        if (dist <= minDist) {
+          minDist = dist;
+          closestShoe = shoe;
+        }
+      }
+
+      if (closestShoe) {
+        closestShoe.isWorn = true;
+        closestShoe.foot = legPart;
+      }
+    }
+    this.draw();
+  }
+
+  unequipShoe() {
+    if (!Array.isArray(this.state.shoes) || this.state.shoes.length === 0) return;
+    for (const shoe of this.state.shoes) {
+      if (shoe.exists && shoe.isWorn) {
+        const legPart = shoe.foot || "leftLeg";
+        const legPos = this.getLegPosition(legPart);
+        if (legPos) {
+          shoe.x = legPos.x;
+          shoe.y = legPos.y;
+        }
+        shoe.isWorn = false;
+        shoe.foot = null;
+      }
     }
     this.draw();
   }
 
   isFullyEquipped() {
-    const s = this.state.shoes;
-    if (s.right.exists && !s.right.isWorn) return false;
-    if (s.left.exists && !s.left.isWorn) return false;
-    return true;
+    if (!Array.isArray(this.state.shoes) || this.state.shoes.length === 0) return false;
+    return this.state.shoes.every(s => !s.exists || s.isWorn);
   }
 
   isPointInRect(x, y, rect) {
@@ -373,38 +516,33 @@ class PictoEngine {
   }
 
   getShoeAt(canvasX, canvasY) {
-    const s = this.state.shoes;
+    if (!Array.isArray(this.state.shoes)) return null;
     const hitRadius = 40;
-    const checkShoe = (shoeState, side) => {
+    for (const shoeState of this.state.shoes) {
+      if (!shoeState.exists) continue;
       let cx = shoeState.x, cy = shoeState.y;
       if (shoeState.isWorn) {
-        const legPart = side === "right" ? "rightLeg" : "leftLeg";
+        const legPart = shoeState.foot || "leftLeg";
         const pos = this.getLegPosition(legPart);
         cx = pos.x; cy = pos.y;
       }
-      return this.distance(canvasX, canvasY, cx, cy) <= hitRadius;
-    };
-    if (s.right && s.right.exists && checkShoe(s.right, "right")) return "右靴";
-    if (s.left && s.left.exists && checkShoe(s.left, "left")) return "左靴";
+      if (this.distance(canvasX, canvasY, cx, cy) <= hitRadius) {
+        return "靴";
+      }
+    }
     return null;
   }
 
   checkNeedleCollision() {
     if (this.state.needleZones.length === 0) return null;
-    if (this.isFullyEquipped()) return null; // 靴を完全に履いていれば針山無効 (ステージ4,5用)
+    if (this.isFullyEquipped()) return null;
     
-    // 体の中心、頭、両手、両足をチェック
-    const dirRad = this.state.direction * Math.PI / 180;
-    
-    // 頭の先は首からの距離だけでなく、bodyの回転も考慮する必要がある
-    // 簡易的に、頭の座標を計算する
     let m = new DOMMatrix();
     m.translateSelf(this.state.x, this.state.y);
-    m.rotateSelf(this.state.direction);
     m.scaleSelf(0.6, 0.6);
     m.rotateSelf(this.state.parts.body.rotation);
     m.rotateSelf(this.state.parts.head.rotation);
-    m.translateSelf(0, -80); // 頭の先端
+    m.translateSelf(0, -80);
     const headPos = { x: m.e, y: m.f };
     
     const points = [
@@ -427,6 +565,15 @@ class PictoEngine {
   }
 
   evaluateGoalStatus() {
+    // ヒヨコがいないステージ（ステージ1・2）はピクトグラム自身がGOALに入ればクリア
+    if (!this.state.hasItem) {
+      const dist = this.distance(this.state.x, this.state.y, this.goal.x, this.goal.y);
+      if (dist <= this.goal.radius) {
+        return "ゴールした";
+      }
+      return "ゴールに届いていない";
+    }
+
     const item = this.state.item;
     const dist = this.distance(item.x, item.y, this.goal.x, this.goal.y);
     const inGoal = dist <= this.goal.radius;
@@ -472,22 +619,47 @@ class PictoEngine {
   }
 
   async animateMove(distance) {
-    const radians = (this.state.direction - 90) * Math.PI / 180;
+    // direction = 0 を右向き(+X)とする
+    const radians = this.state.direction * Math.PI / 180;
     const startX = this.state.x;
     const startY = this.state.y;
-    const endX = startX + Math.cos(radians) * distance;
-    const endY = startY + Math.sin(radians) * distance;
+    let endX = startX + Math.cos(radians) * distance;
+    let endY = startY + Math.sin(radians) * distance;
 
+    // 向いている目標地点がある場合、飛び越さないようにぴったり目標地点で止める
+    if (distance > 0 && this.state.targetPoint) {
+      const distToTarget = this.distance(startX, startY, this.state.targetPoint.x, this.state.targetPoint.y);
+      if (distToTarget > 0 && distToTarget <= distance + 6) {
+        endX = this.state.targetPoint.x;
+        endY = this.state.targetPoint.y;
+      }
+    } else if (distance > 0 && this.state.points && this.state.points.length > 0) {
+      // 角度指定などで歩いている場合も、途中に地点の中心があればそこへ吸着して飛び越しを防ぐ
+      for (const pt of this.state.points) {
+        const distStart = this.distance(startX, startY, pt.x, pt.y);
+        if (distStart > 5 && distStart <= distance + 4) {
+          // 進行方向と地点の方向がほぼ一致しているか確認
+          const angleToPt = Math.atan2(pt.y - startY, pt.x - startX);
+          const diff = Math.abs(Math.atan2(Math.sin(radians - angleToPt), Math.cos(radians - angleToPt)));
+          if (diff < 0.25) {
+            endX = pt.x;
+            endY = pt.y;
+            break;
+          }
+        }
+      }
+    }
+
+    const actualDist = this.distance(startX, startY, endX, endY);
+    const moveDuration = Math.min(this.animationMs, Math.max(160, actualDist * 6));
     let moveError = null;
 
-    await this.animate(this.animationMs, (progress) => {
+    await this.animate(moveDuration, (progress) => {
       const prevX = this.state.x;
       const prevY = this.state.y;
 
       this.state.x = this.lerp(startX, endX, progress);
       this.state.y = this.lerp(startY, endY, progress);
-      
-
 
       if (this.checkWallCollision()) {
          this.state.x = prevX;
@@ -507,55 +679,155 @@ class PictoEngine {
 
     if (moveError) throw moveError;
 
-    this.state.trail.push({ x1: startX, y1: startY, x2: endX, y2: endY, color: this.state.color });
-  }
+    this.state.trail.push({ x1: startX, y1: startY, x2: this.state.x, y2: this.state.y, color: this.state.color });
 
-  async animateTurn(angle) {
-    const start = this.state.direction;
-    let hitWall = false;
-    await this.animate(this.animationMs, (progress) => {
-      const prevDir = this.state.direction;
-      this.state.direction = start + angle * progress;
-      if (this.checkWallCollision()) {
-         this.state.direction = prevDir;
-         hitWall = true;
-         this.draw();
-         return false;
-      }
-      this.draw();
-    });
-    if (!hitWall) {
-      this.state.direction = (start + angle + 360) % 360;
+    // ヒヨコなしステージでゴールに入ったときのエフェクト
+    if (!this.state.hasItem && !this.state.goalCelebrated && this.evaluateGoalStatus() === "ゴールした") {
+      this.state.goalCelebrated = true;
+      this.spawnGoalParticles(this.state.x + 30, this.state.y - 50);
       this.draw();
     }
+  }
+
+  async animateTurn(angle, keepTargetPoint = false) {
+    if (!keepTargetPoint) {
+      this.state.targetPoint = null;
+    }
+    const start = this.state.direction;
+    const turnDuration = Math.min(this.animationMs, Math.max(180, Math.abs(angle) * 4));
+    await this.animate(turnDuration, (progress) => {
+      this.state.direction = start + angle * progress;
+      this.draw();
+    });
+    this.state.direction = ((start + angle) % 360 + 360) % 360;
+    this.draw();
+  }
+
+  async animateFace(target) {
+    if (typeof target === "number" && Number.isFinite(target)) {
+      await this.animateTurn(target, false);
+      return;
+    }
+    if (typeof target !== "string") {
+      throw new Error("向くの引数は地点名(\"A\"など)または角度(数字)を指定してください");
+    }
+    const label = target.trim();
+    if (label === "ゴール" || label.toUpperCase() === "GOAL") {
+      throw new Error("ゴールは直接向くことができません。地点(\"A\"など)や角度を指定してください");
+    }
+
+    let tx = null, ty = null;
+    if (label === "ヒヨコ") {
+      if (!this.state.hasItem) {
+        throw new Error("このステージにはヒヨコがいません");
+      }
+      // 近づく方向（左側か右側か）に応じて、右腕または左腕で掴みやすい斜め下の立ち位置を目標にする
+      const sideOffset = this.state.x > this.state.item.x ? 50 : -50;
+      tx = this.state.item.x + sideOffset;
+      ty = this.state.item.y + 35;
+      this.state.targetPoint = { x: tx, y: ty, label: "ヒヨコ" };
+    } else if (label === "靴") {
+      const unworn = (this.state.shoes || []).filter(s => s.exists && !s.isWorn);
+      if (unworn.length === 0) return;
+      let closest = unworn[0];
+      let minD = this.distance(this.state.x, this.state.y, closest.x, closest.y);
+      for (const s of unworn) {
+        const d = this.distance(this.state.x, this.state.y, s.x, s.y);
+        if (d < minD) {
+          minD = d;
+          closest = s;
+        }
+      }
+      tx = closest.x;
+      ty = closest.y;
+      this.state.targetPoint = { x: tx, y: ty, label: "靴" };
+    } else {
+      let pt = (this.state.points || []).find(p => p.label === label);
+      if (!pt && this.state.checkpoints) {
+        pt = this.state.checkpoints.find(c => c.label === label);
+      }
+      if (!pt) {
+        throw new Error(`"${label}" という地点は見つかりません`);
+      }
+      tx = pt.x;
+      ty = pt.y;
+      this.state.targetPoint = { x: tx, y: ty, label: label };
+    }
+
+    const targetDeg = Math.atan2(ty - this.state.y, tx - this.state.x) * 180 / Math.PI;
+    const diff = ((targetDeg - this.state.direction + 540) % 360) - 180;
+    await this.animateTurn(diff, true);
   }
 
   async animatePartRotate(partName, angle) {
     const part = this.state.parts[partName];
     const start = part.rotation;
     const end = Math.max(-140, Math.min(140, start + angle));
+    const isArmPart = ["leftArm", "rightArm", "leftElbow", "rightElbow"].includes(partName);
+    const isLegPart = ["leftLeg", "rightLeg", "leftKnee", "rightKnee"].includes(partName);
 
     await this.animate(this.partAnimationMs, (progress) => {
       part.rotation = this.lerp(start, end, progress);
+      // 腕を動かしている最中にヒヨコに触れたら自動で掴む
+      if (isArmPart && this.state.hasItem && !this.state.item.attachedTo) {
+        this.grabItem();
+      }
+      // 足を動かしている最中に靴に触れたら自動で履く
+      if (isLegPart) {
+        this.equipShoe();
+      }
       this.draw();
     });
   }
 
   draw() {
-    this.checkCheckpoints(); // 追加: 描画のたびに手足を含む当たり判定を行う
+    this.checkCheckpoints();
     const { ctx, canvas } = this;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.drawGrid();
     this.drawGoal();
+    this.drawPoints();
     this.drawNeedles();
     this.drawCheckpoints();
     this.drawWalls();
     this.drawTrail();
-    this.drawPicto(this.state);
     this.drawShoes();
     this.drawItem();
+    this.drawPicto(this.state);
     this.drawParticles();
     this.drawLegend();
+  }
+
+  drawPoints() {
+    if (!this.state.points || this.state.points.length === 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    for (const pt of this.state.points) {
+      // チェックポイントとして指定されている地点は drawCheckpoints() 側で描画するためスキップ
+      const hasCheckpointHere = this.state.checkpoints && this.state.checkpoints.some(
+        c => c.label === pt.label || this.distance(c.x, c.y, pt.x, pt.y) < 10
+      );
+      if (hasCheckpointHere) {
+        continue;
+      }
+
+      ctx.fillStyle = "rgba(59, 130, 246, 0.12)";
+      ctx.strokeStyle = "rgba(37, 99, 235, 0.75)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 20, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#1d4ed8";
+      ctx.font = "bold 15px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(pt.label, pt.x, pt.y);
+    }
+    ctx.restore();
   }
   
   drawParticles() {
@@ -604,33 +876,38 @@ class PictoEngine {
     ctx.save();
     for (const cp of this.state.checkpoints) {
       if (!cp.passed) {
-        ctx.fillStyle = "rgba(239, 68, 68, 0.15)";
+        ctx.fillStyle = "rgba(245, 158, 11, 0.18)";
         ctx.beginPath();
         ctx.arc(cp.x, cp.y, cp.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "rgba(239, 68, 68, 0.8)";
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(234, 88, 12, 0.9)";
+        ctx.lineWidth = 2.5;
         ctx.stroke();
 
-        ctx.fillStyle = "rgba(239, 68, 68, 1)";
+        ctx.fillStyle = "#c2410c";
         ctx.font = "bold 16px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(cp.label, cp.x, cp.y);
       } else {
-        ctx.fillStyle = "rgba(16, 185, 129, 0.15)";
+        ctx.fillStyle = "rgba(16, 185, 129, 0.18)";
         ctx.beginPath();
         ctx.arc(cp.x, cp.y, cp.radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "rgba(16, 185, 129, 0.5)";
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(16, 185, 129, 0.8)";
+        ctx.lineWidth = 2.5;
         ctx.stroke();
         
-        ctx.fillStyle = "rgba(16, 185, 129, 1)";
-        ctx.font = "bold 16px sans-serif";
+        ctx.fillStyle = "#047857";
+        ctx.font = "bold 15px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText("✔", cp.x, cp.y);
+        ctx.fillText(cp.label, cp.x, cp.y);
+
+        // 右上にチェックマークを添える
+        ctx.fillStyle = "#10b981";
+        ctx.font = "bold 13px sans-serif";
+        ctx.fillText("✔", cp.x + 16, cp.y - 16);
       }
     }
     ctx.restore();
@@ -641,7 +918,6 @@ class PictoEngine {
     
     let m = new DOMMatrix();
     m.translateSelf(this.state.x, this.state.y);
-    m.rotateSelf(this.state.direction);
     m.scaleSelf(0.6, 0.6);
     m.rotateSelf(this.state.parts.body.rotation);
     m.rotateSelf(this.state.parts.head.rotation);
@@ -684,21 +960,23 @@ class PictoEngine {
       ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
     }
     
-    // 鉄格子の描画
-    let minX = Math.min(...this.state.walls.map(w => w.x));
-    let maxX = Math.max(...this.state.walls.map(w => w.x + w.width));
-    let minY = Math.min(...this.state.walls.map(w => w.y));
-    let maxY = Math.max(...this.state.walls.map(w => w.y + w.height));
-    
-    ctx.strokeStyle = "#94a3b8"; // 鉄格子の色
-    ctx.lineWidth = 6;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    for (let x = minX + 25; x < maxX - 10; x += 25) {
-      ctx.moveTo(x, minY + 10);
-      ctx.lineTo(x, maxY - 10);
+    // チェックポイントがあるステージ（檻）のみ鉄格子を描画
+    if (this.state.checkpoints && this.state.checkpoints.length > 0) {
+      let minX = Math.min(...this.state.walls.map(w => w.x));
+      let maxX = Math.max(...this.state.walls.map(w => w.x + w.width));
+      let minY = Math.min(...this.state.walls.map(w => w.y));
+      let maxY = Math.max(...this.state.walls.map(w => w.y + w.height));
+      
+      ctx.strokeStyle = "#94a3b8"; // 鉄格子の色
+      ctx.lineWidth = 6;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      for (let x = minX + 25; x < maxX - 10; x += 25) {
+        ctx.moveTo(x, minY + 10);
+        ctx.lineTo(x, maxY - 10);
+      }
+      ctx.stroke();
     }
-    ctx.stroke();
     
     ctx.restore();
   }
@@ -710,7 +988,6 @@ class PictoEngine {
     }
     let m = new DOMMatrix();
     m.translateSelf(this.state.x, this.state.y);
-    m.rotateSelf(this.state.direction);
     m.scaleSelf(0.6, 0.6);
     m.rotateSelf(this.state.parts.body.rotation);
     m.rotateSelf(this.state.parts.head.rotation);
@@ -758,66 +1035,69 @@ class PictoEngine {
 
   drawNeedles() {
     if (this.state.needleZones.length === 0) return;
-    if (this.isFullyEquipped()) return; // 全ての靴を履いたら針山(壁)が消滅する
     const ctx = this.ctx;
     ctx.save();
     
     for (const nz of this.state.needleZones) {
-      ctx.fillStyle = "#cbd5e1";
-      ctx.fillRect(nz.x, nz.y, nz.width, nz.height);
+      const startX = Math.max(0, nz.x);
+      const endX = Math.min(this.canvas.width, nz.x + nz.width);
+      const startY = Math.max(0, nz.y);
+      const endY = Math.min(this.canvas.height, nz.y + nz.height);
+      const visW = endX - startX;
+      const visH = endY - startY;
+      if (visW <= 0 || visH <= 0) continue;
 
-      ctx.fillStyle = "#ef4444";
-      ctx.beginPath();
-      // 縦長の針山か横長の針山かでギザギザの向きを変える
-      if (nz.height > nz.width) {
-        const needleCount = Math.floor(nz.height / 20);
-        for (let i = 0; i < needleCount; i++) {
-          const ny = nz.y + i * 20 + 10;
-          ctx.moveTo(nz.x, ny - 8);
-          ctx.lineTo(nz.x, ny + 8);
-          ctx.lineTo(nz.x - 15, ny);
-          
-          ctx.moveTo(nz.x + nz.width, ny - 8);
-          ctx.lineTo(nz.x + nz.width, ny + 8);
-          ctx.lineTo(nz.x + nz.width + 15, ny);
+      // 地面の危険エリアの帯（薄い赤）
+      ctx.fillStyle = "rgba(239, 68, 68, 0.14)";
+      ctx.fillRect(startX, startY, visW, visH);
+
+      // 地面から上向きに生えている針山を描画
+      const stepX = 20;
+      const stepY = 20;
+      for (let y = startY + 18; y <= endY; y += stepY) {
+        // 針の根元（地面のライン）
+        ctx.strokeStyle = "#94a3b8";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(startX + 2, y);
+        ctx.lineTo(endX - 2, y);
+        ctx.stroke();
+
+        // 上向きの針（▲）
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath();
+        for (let x = startX + 10; x <= endX - 6; x += stepX) {
+          ctx.moveTo(x - 6, y);
+          ctx.lineTo(x + 6, y);
+          ctx.lineTo(x, y - 14);
+          ctx.closePath();
         }
-      } else {
-        const needleCount = Math.floor(nz.width / 20);
-        for (let i = 0; i < needleCount; i++) {
-          const nx = nz.x + i * 20 + 10;
-          ctx.moveTo(nx - 8, nz.y);
-          ctx.lineTo(nx + 8, nz.y);
-          ctx.lineTo(nx, nz.y - 15);
-          
-          ctx.moveTo(nx - 8, nz.y + nz.height);
-          ctx.lineTo(nx + 8, nz.y + nz.height);
-          ctx.lineTo(nx, nz.y + nz.height + 15);
-        }
+        ctx.fill();
       }
-      ctx.fill();
     }
     ctx.restore();
   }
 
   drawShoes() {
-    if (this.state.shoes.right && this.state.shoes.right.exists) {
-      this.drawShoe("right", this.state.shoes.right, this.shoeRightImg);
-    }
-    if (this.state.shoes.left && this.state.shoes.left.exists) {
-      this.drawShoe("left", this.state.shoes.left, this.shoeLeftImg);
+    if (!Array.isArray(this.state.shoes)) return;
+    for (const shoe of this.state.shoes) {
+      if (shoe && shoe.exists) {
+        this.drawShoe("right", shoe, this.shoeRightImg);
+      }
     }
   }
 
   drawShoe(side, shoeState, img) {
     let cx, cy, rotation = 0;
     if (shoeState.isWorn) {
-      const legPart = side === "right" ? "rightLeg" : "leftLeg";
+      const legPart = shoeState.foot || "leftLeg"; // 記録された足を使う
       const pos = this.getLegPosition(legPart);
       cx = pos.x;
       cy = pos.y;
       
       const parts = this.state.parts;
-      rotation = this.state.direction + parts.body.rotation + parts[legPart].rotation + parts[side === "right" ? "rightKnee" : "leftKnee"].rotation;
+      const kneePart = legPart === "rightLeg" ? "rightKnee" : "leftKnee";
+      rotation = parts.body.rotation + parts[legPart].rotation + parts[kneePart].rotation;
     } else {
       cx = shoeState.x;
       cy = shoeState.y;
@@ -865,6 +1145,7 @@ class PictoEngine {
   }
 
   drawItem() {
+    if (!this.state.hasItem) return;
     const item = this.state.item;
     let cx = item.x;
     let cy = item.y;
@@ -977,9 +1258,9 @@ class PictoEngine {
     const ctx = this.ctx;
     const parts = state.parts;
 
+    // ピクトグラム本体は常に直立（頭が上）で描画
     ctx.save();
     ctx.translate(state.x, state.y);
-    ctx.rotate(state.direction * Math.PI / 180);
     ctx.scale(0.6, 0.6);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -997,6 +1278,37 @@ class PictoEngine {
     this.drawConnectedPart(10, 64, parts.rightLeg.rotation, () => this.drawLeg(44, 88, parts.rightKnee.rotation));
     this.drawConnectedPart(0, -82, parts.head.rotation, () => this.drawHead());
 
+    ctx.restore();
+
+    // 進行方向を示す矢印マーカー（▶）をピクトグラムの外周（目に見えない縦長楕円軌道）の最前面に描画
+    ctx.save();
+    if (this.isGhostMode) {
+      ctx.globalAlpha = 0.5;
+    }
+    const rad = state.direction * Math.PI / 180;
+    const rx = 68;  // 横半径（腕の外側）
+    const ry = 104; // 縦半径（頭・足の外側）
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    // 中心から進行方向 rad へ伸ばした直線と楕円の交点距離（進む方向と1度もズレない式）
+    const orbitR = (rx * ry) / Math.hypot(ry * cos, rx * sin);
+    const arrowX = state.x + cos * orbitR;
+    const arrowY = state.y + sin * orbitR;
+
+    ctx.translate(arrowX, arrowY);
+    ctx.rotate(rad);
+    ctx.fillStyle = "#1d4ed8"; // 濃い鮮やかな青
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(12, 0);
+    ctx.lineTo(-8, -10);
+    ctx.lineTo(-4, 0);
+    ctx.lineTo(-8, 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -1102,6 +1414,14 @@ async playGhost(events) {
       if (msg.startsWith("移動")) {
         const match = msg.match(/移動\(([-.\d]+)\)/);
         if (match) await this.animateMove(parseFloat(match[1]));
+      } else if (msg.startsWith("向く")) {
+        const strMatch = msg.match(/向く\("([^"]+)"\)/);
+        const numMatch = msg.match(/向く\(([-.\d]+)\)/);
+        if (strMatch) {
+          await this.animateFace(strMatch[1]);
+        } else if (numMatch) {
+          await this.animateFace(parseFloat(numMatch[1]));
+        }
       } else if (msg.startsWith("回転")) {
         const match = msg.match(/回転\(([-.\d]+)\)/);
         if (match) await this.animateTurn(parseFloat(match[1]));
@@ -1113,6 +1433,12 @@ async playGhost(events) {
         await this.wait(300);
       } else if (msg.startsWith("離す")) {
         this.releaseItem();
+        await this.wait(300);
+      } else if (msg.startsWith("靴を履く") || msg.startsWith("履く") || msg.startsWith("右足で履く") || msg.startsWith("左足で履く")) {
+        this.equipShoe();
+        await this.wait(300);
+      } else if (msg.startsWith("靴を脱ぐ") || msg.startsWith("脱ぐ") || msg.startsWith("右足で脱ぐ") || msg.startsWith("左足で脱ぐ")) {
+        this.unequipShoe();
         await this.wait(300);
       }
       await this.wait(120);
@@ -1127,16 +1453,16 @@ async playGhost(events) {
     if (!point) return null;
 
     const hitAreas = [
-      { part: "head", x: 0, y: -118, radius: 36 },
-      { part: "leftElbow", x: -70, y: 2, radius: 26 },
-      { part: "rightElbow", x: 70, y: 2, radius: 26 },
-      { part: "leftKnee", x: -43, y: 130, radius: 26 },
-      { part: "rightKnee", x: 43, y: 130, radius: 26 },
-      { part: "leftArm", x: -35, y: -27, radius: 28 },
-      { part: "rightArm", x: 35, y: -27, radius: 28 },
-      { part: "leftLeg", x: -21, y: 86, radius: 28 },
-      { part: "rightLeg", x: 21, y: 86, radius: 28 },
-      { part: "body", x: 0, y: 0, radius: 42 },
+      { part: "head", x: 0, y: -70, radius: 28 },
+      { part: "leftElbow", x: -42, y: 0, radius: 22 },
+      { part: "rightElbow", x: 42, y: 0, radius: 22 },
+      { part: "leftKnee", x: -26, y: 78, radius: 22 },
+      { part: "rightKnee", x: 26, y: 78, radius: 22 },
+      { part: "leftArm", x: -24, y: -20, radius: 24 },
+      { part: "rightArm", x: 24, y: -20, radius: 24 },
+      { part: "leftLeg", x: -14, y: 52, radius: 24 },
+      { part: "rightLeg", x: 14, y: 52, radius: 24 },
+      { part: "body", x: 0, y: 0, radius: 32 },
     ];
 
     const hit = hitAreas.find((area) => this.distance(point.x, point.y, area.x, area.y) <= area.radius);
@@ -1144,12 +1470,9 @@ async playGhost(events) {
   }
 
   toLocalPoint(canvasX, canvasY) {
-    const dx = canvasX - this.state.x;
-    const dy = canvasY - this.state.y;
-    const radians = -this.state.direction * Math.PI / 180;
     return {
-      x: dx * Math.cos(radians) - dy * Math.sin(radians),
-      y: dx * Math.sin(radians) + dy * Math.cos(radians),
+      x: canvasX - this.state.x,
+      y: canvasY - this.state.y,
     };
   }
 
@@ -1246,7 +1569,7 @@ async playGhost(events) {
     ctx.fillText("90°", boxX + 130, boxY + 20);
     
     ctx.fillStyle = "#475569";
-    ctx.fillText("回転", boxX + 120, boxY + 45);
+    ctx.fillText("向く", boxX + 120, boxY + 45);
 
     ctx.restore();
   }
