@@ -480,32 +480,16 @@ if (btnShowHint) {
         if (!bestLog.events || bestLog.events.length === 0) return;
         let score = Math.round(bestLog._calculatedDistanceScore || 0);
         
-        if (mySnapshot.empty) {
-          addLog(`【前半ヒント】${bestLog.nickname || '誰か'}さんのクリアまでの動き（お手本）を再生します`, "info");
-          // let grabIndex = bestLog.events.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
-          // let partialEvents = grabIndex >= 0 ? bestLog.events.slice(0, grabIndex + 1) : bestLog.events;
-          let partialEvents = bestLog.events; // 常にお手本（全ルート）を再生
-          currentTargetHintLogId = bestLog.id;
-          currentTargetHintEvents = bestLog.events;
-          lastViewedHint = "前半ヒント";
-          await saveHintViewLog("new_search", currentTargetHintLogId, score);
-          updateHintBadge();
-          runsSinceHint = 0;
-          isRunning = true;
-          await engine.playGhost(partialEvents);
-            isRunning = false;
-        } else {
-          addLog(`【後半ヒント】${bestLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
-          currentTargetHintLogId = bestLog.id;
-          currentTargetHintEvents = bestLog.events;
-          lastViewedHint = "後半ヒント";
-          await saveHintViewLog("new_search", currentTargetHintLogId, score);
-          updateHintBadge();
-          runsSinceHint = 0;
-          isRunning = true;
-          await engine.playGhost(bestLog.events);
-            isRunning = false;
-        }
+        addLog(`【お手本再生】${bestLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
+        currentTargetHintLogId = bestLog.id;
+        currentTargetHintEvents = bestLog.events;
+        lastViewedHint = "お手本再生";
+        await saveHintViewLog("new_search", currentTargetHintLogId, score);
+        updateHintBadge();
+        runsSinceHint = 0;
+        isRunning = true;
+        await engine.playGhost(bestLog.events);
+        isRunning = false;
       }
     } catch (e) {
       console.error(e);
@@ -533,24 +517,7 @@ if (btnShowHint) {
           .limit(1)
           .get();
           
-        const mySnapshot = await db.collection('logs')
-          .where('stageId', '==', stageId)
-          .where('userId', '==', userId)
-          .where('goalResult', 'in', ['持ったがゴールに入れていない', 'ゴールしているが離していない'])
-          .get();
-          
-        let hintTypeStr = "前回のヒント";
-        let actionStr = "動き";
-        if (!myClearSnapshot.empty) {
-          hintTypeStr = "別解再生";
-          actionStr = "クリアの動き";
-        } else if (mySnapshot.empty) {
-          hintTypeStr = "前半ヒント";
-          actionStr = "ヒヨコを掴むまでの動き";
-        } else {
-          hintTypeStr = "後半ヒント";
-          actionStr = "クリアの動き";
-        }
+        const hintTypeStr = !myClearSnapshot.empty ? "別解再生" : "お手本再生";
         
         let hintNickname = "誰か";
         if (currentTargetHintLogId) {
@@ -562,7 +529,7 @@ if (btnShowHint) {
         
         lastViewedHint = hintTypeStr;
         if (typeof updateHintBadge === 'function') updateHintBadge();
-        addLog(`【${hintTypeStr}】さっきの${hintNickname}さんの${actionStr}をもう一度再生します`, "info");
+        addLog(`【${hintTypeStr}】さっきの${hintNickname}さんの動きをもう一度再生します`, "info");
         await saveHintViewLog("replay", currentTargetHintLogId, null);
           
         let eventsToPlay = currentTargetHintEvents;
@@ -811,10 +778,10 @@ async function runProgram() {
       addLog(`エラー: ${error.message}`, "error");
       currentLogSession.status = "error";
       currentLogSession.errorMessage = error.message;
-      currentLogSession.goalResult = "エラー中断のため判定なし";
+      currentLogSession.goalResult = error.message;
     } else {
       currentLogSession.status = "stopped";
-      currentLogSession.goalResult = "中断のため判定なし";
+      currentLogSession.goalResult = "手動中断";
     }
   } finally {
     isRunning = false;
@@ -839,12 +806,8 @@ async function runProgram() {
         runsSinceHint++;
       }
       currentLogSession.hintViewed = lastViewedHint;
-      
-      currentLogSession.hintViewCount = currentTargetHintLogId ? 1 : 0;
       currentLogSession.runsSinceHint = currentTargetHintLogId ? runsSinceHint : 0;
       currentLogSession.targetHintLogId = currentTargetHintLogId;
-      currentLogSession.codeLength = editor.value.length;
-      currentLogSession.codeLines = editor.value.split('\n').length;
       
       if (currentTargetHintEvents && currentLogSession.events.length > 0) {
         currentLogSession.distanceToTargetHint = calculateDTWScore(currentLogSession.events, currentTargetHintEvents, engine.currentStageId);
@@ -853,12 +816,18 @@ async function runProgram() {
       }
       
       currentLogSession.finalState = {
-        x: engine.state.x,
-        y: engine.state.y,
-        direction: engine.state.direction,
+        x: Math.round(engine.state.x),
+        y: Math.round(engine.state.y),
+        direction: Math.round(engine.state.direction),
         hasGrabbedItem: engine.state.hasGrabbedItem
       };
       
+      // 何も動かずに即座に中断された空ログはDB容量と分析ノイズ削減のため保存しない
+      if (currentLogSession.status === "stopped" && currentLogSession.events.length === 0) {
+        currentLogSession = null;
+        return;
+      }
+
       logCount++;
       localStorage.setItem("pictgramming_log_count", logCount);
       
@@ -1219,20 +1188,21 @@ function addLog(message, type = "") {
   log.scrollTop = log.scrollHeight;
 
   if (currentLogSession && isRunning) {
+    const parts = (engine.state && engine.state.parts) ? engine.state.parts : {};
     currentLogSession.events.push({ 
       type, 
       message,
-      x: engine.state.x,
-      y: engine.state.y,
-      direction: engine.state.direction,
-      leftArm: engine.state.leftArm || 0,
-      rightArm: engine.state.rightArm || 0,
-      leftElbow: engine.state.leftElbow || 0,
-      rightElbow: engine.state.rightElbow || 0,
-      leftLeg: engine.state.leftLeg || 0,
-      rightLeg: engine.state.rightLeg || 0,
-      leftKnee: engine.state.leftKnee || 0,
-      rightKnee: engine.state.rightKnee || 0
+      x: Math.round(engine.state.x),
+      y: Math.round(engine.state.y),
+      direction: Math.round(engine.state.direction),
+      leftArm: parts.leftArm ? parts.leftArm.rotation : 0,
+      rightArm: parts.rightArm ? parts.rightArm.rotation : 0,
+      leftElbow: parts.leftElbow ? parts.leftElbow.rotation : 0,
+      rightElbow: parts.rightElbow ? parts.rightElbow.rotation : 0,
+      leftLeg: parts.leftLeg ? parts.leftLeg.rotation : 0,
+      rightLeg: parts.rightLeg ? parts.rightLeg.rotation : 0,
+      leftKnee: parts.leftKnee ? parts.leftKnee.rotation : 0,
+      rightKnee: parts.rightKnee ? parts.rightKnee.rotation : 0
     });
   }
 }
