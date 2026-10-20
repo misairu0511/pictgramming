@@ -803,21 +803,25 @@ class PictoEngine {
     const ctx = this.ctx;
     ctx.save();
     for (const pt of this.state.points) {
-      ctx.fillStyle = "rgba(59, 130, 246, 0.12)";
-      ctx.strokeStyle = "rgba(37, 99, 235, 0.75)";
+      // 座標を示す小さな点（●）
+      ctx.fillStyle = "#1d4ed8";
+      ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 2;
-      ctx.setLineDash([4, 3]);
       ctx.beginPath();
-      ctx.arc(pt.x, pt.y, 20, 0, Math.PI * 2);
+      ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      ctx.setLineDash([]);
-      ctx.fillStyle = "#1d4ed8";
-      ctx.font = "bold 15px sans-serif";
+      // 点のすぐ上にラベル（A〜F）を白縁取り付きで大きく表示
+      ctx.font = "bold 20px sans-serif";
       ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(pt.label, pt.x, pt.y);
+      ctx.textBaseline = "bottom";
+      ctx.lineJoin = "round";
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+      ctx.strokeText(pt.label, pt.x, pt.y - 8);
+      ctx.fillStyle = "#1d4ed8";
+      ctx.fillText(pt.label, pt.x, pt.y - 8);
     }
     ctx.restore();
   }
