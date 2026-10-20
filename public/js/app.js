@@ -124,12 +124,6 @@ let shouldStop = false;
 let currentLogSession = null;
 let currentTargetHintLogId = null;
 let currentTargetHintEvents = null;
-let hintViewCounts = {
-  "別解再生": 0,
-  "初期状態から他人がヒヨコを掴むまでのゴースト": 0,
-  "掴んだ状態からゴールまでのゴースト": 0
-};
-let runsSinceHint = 0;
 
     async function saveHintViewLog(actionType, targetId, score) {
   if (!userId) return;
@@ -450,7 +444,6 @@ if (btnShowHint) {
         lastViewedHint = "別解再生";
         await saveHintViewLog("new_search", currentTargetHintLogId, null);
         updateHintBadge();
-        runsSinceHint = 0;
         
         isRunning = true;
         await engine.playGhost(randomLog.events);
@@ -486,7 +479,6 @@ if (btnShowHint) {
         lastViewedHint = "お手本再生";
         await saveHintViewLog("new_search", currentTargetHintLogId, score);
         updateHintBadge();
-        runsSinceHint = 0;
         isRunning = true;
         await engine.playGhost(bestLog.events);
         isRunning = false;
@@ -749,7 +741,6 @@ async function runProgram() {
 
   currentLogSession = {
     sourceCode: source,
-    status: "unknown",
     events: []
   };
 
@@ -767,20 +758,15 @@ async function runProgram() {
       const resultType = goalResult === "ゴールした" ? "success" : "info";
       addLog(`【判定結果】 ${goalResult}`, resultType);
       
-      currentLogSession.status = goalResult === "ゴールした" ? "success" : "failed";
       currentLogSession.goalResult = goalResult;
     } else {
-      currentLogSession.status = "stopped";
-      currentLogSession.goalResult = "中断のため判定なし";
+      currentLogSession.goalResult = "手動中断";
     }
   } catch (error) {
     if (error.message !== "STOP") {
       addLog(`エラー: ${error.message}`, "error");
-      currentLogSession.status = "error";
-      currentLogSession.errorMessage = error.message;
       currentLogSession.goalResult = error.message;
     } else {
-      currentLogSession.status = "stopped";
       currentLogSession.goalResult = "手動中断";
     }
   } finally {
@@ -800,13 +786,8 @@ async function runProgram() {
       currentLogSession.timestamp = new Date().toISOString();
       currentLogSession.sessionId = sessionId;
       currentLogSession.stageId = typeof initialStageId !== 'undefined' ? initialStageId : engine.currentStageId;
-      localStorage.setItem('pictgramming_executed_' + currentLogSession.stageId, 'true');
       
-      if (lastViewedHint !== "ヒントなし") {
-        runsSinceHint++;
-      }
       currentLogSession.hintViewed = lastViewedHint;
-      currentLogSession.runsSinceHint = currentTargetHintLogId ? runsSinceHint : 0;
       currentLogSession.targetHintLogId = currentTargetHintLogId;
       
       if (currentTargetHintEvents && currentLogSession.events.length > 0) {
@@ -815,15 +796,8 @@ async function runProgram() {
         currentLogSession.distanceToTargetHint = null;
       }
       
-      currentLogSession.finalState = {
-        x: Math.round(engine.state.x),
-        y: Math.round(engine.state.y),
-        direction: Math.round(engine.state.direction),
-        hasGrabbedItem: engine.state.hasGrabbedItem
-      };
-      
       // 何も動かずに即座に中断された空ログはDB容量と分析ノイズ削減のため保存しない
-      if (currentLogSession.status === "stopped" && currentLogSession.events.length === 0) {
+      if (currentLogSession.goalResult === "手動中断" && currentLogSession.events.length === 0) {
         currentLogSession = null;
         return;
       }
@@ -899,8 +873,7 @@ async function loadHistoryForStage(stageId) {
             <div>
               <div class="history-time">${log.timestamp}</div>
               <div class="history-status" style="font-weight:bold;">${stageName}</div>
-              <div class="history-status">状態: ${log.status}</div>
-              ${log.goalResult ? `<div class="history-goal">判定: ${log.goalResult}</div>` : ''}
+              <div class="history-goal" style="font-weight:600; color:${log.goalResult === 'ゴールした' ? '#16a34a' : '#dc2626'};">判定: ${log.goalResult || log.status || '不明'}</div>
             </div>
             <button class="btn btn-secondary btn-copy" style="font-size: 11px; padding: 4px 8px;" data-code="${encodedCode}">コピー</button>
           </div>
@@ -985,12 +958,6 @@ if (typeof checkHintLock === 'function') checkHintLock();
     if (window.restoreHintState) window.restoreHintState(stageSelect.value);
     lastViewedHint = "ヒントなし";
     updateHintBadge();
-    hintViewCounts = {
-      "初期状態から他人がヒヨコを掴むまでのゴースト": 0,
-      "掴んだ状態からのゴースト": 0,
-      "別解再生": 0
-    };
-    runsSinceHint = 0;
   });
 }
 
