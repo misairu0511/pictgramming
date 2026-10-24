@@ -99,6 +99,7 @@ textarea {
   min-width: 88px;
   height: 38px;
   padding: 0 16px;
+  white-space: nowrap;
 }
 
 .btn-primary {

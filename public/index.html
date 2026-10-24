@@ -34,32 +34,32 @@
       </div>
 
       <!-- Right side: Hint Group & Execution Group -->
-      <div style="display: flex; align-items: center; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
         
         <!-- Hint Group -->
-        <div style="display: flex; align-items: center; gap: 8px; padding: 4px 12px; border: 2px dashed #f59e0b; border-radius: 8px; background-color: #fef3c7;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 2px dashed #f59e0b; border-radius: 8px; background-color: #fef3c7; flex-shrink: 0;">
           <span style="font-size: 13px; font-weight: bold; color: #b45309; display: flex; align-items: center; gap: 4px;">
             💡<span style="letter-spacing: -0.5px;">ヒント</span>
           </span>
-          <div class="hint-btn-group" style="display: flex; gap: 5px;">
-            <button id="btn-show-hint" class="btn" title="新しいヒントを探す" style="background-color: #f59e0b; color: white; border: none; font-weight: bold; display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+          <div class="hint-btn-group" style="display: flex; gap: 6px; flex-wrap: nowrap; align-items: center;">
+            <button id="btn-show-hint" class="btn" title="ヒントを見る" style="background-color: #f59e0b; color: white; border: none; font-weight: bold; display: flex; align-items: center; gap: 4px; padding: 6px 10px; height: 34px; border-radius: 4px; cursor: pointer; white-space: nowrap; font-size: 13px;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-              新しいヒントを探す
+              ヒントを見る
             </button>
-            <button id="btn-replay-hint" class="btn btn-secondary" style="display: none; align-items: center; gap: 4px;" title="さっきのヒントをもう一度見る">
+            <button id="btn-replay-hint" class="btn btn-secondary" style="display: none; align-items: center; gap: 4px; padding: 6px 10px; height: 34px; border-radius: 4px; white-space: nowrap; font-size: 13px;" title="同じヒントを見る">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-              前回のヒント
+              同じヒントを見る
             </button>
           </div>
         </div>
 
         <!-- Execution Group -->
-        <div style="display: flex; align-items: center; gap: 8px; padding: 4px 12px; border: 2px solid #cbd5e1; border-radius: 8px; background-color: #f8fafc;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 2px solid #cbd5e1; border-radius: 8px; background-color: #f8fafc; flex-shrink: 0;">
           <span style="font-size: 13px; font-weight: bold; color: #475569; letter-spacing: -0.5px;">▶ 実行</span>
-          <button class="btn btn-secondary" id="btn-reset" type="button">リセット</button>
-          <button class="btn btn-secondary" id="btn-pause" type="button" disabled>一時停止</button>
-          <button class="btn btn-secondary" id="btn-stop" type="button" disabled>停止</button>
-          <button class="btn btn-primary" id="btn-run" type="button" style="font-weight: bold; font-size: 15px;">実行</button>
+          <button class="btn btn-secondary" id="btn-reset" type="button" style="min-width: 64px; height: 34px; padding: 0 8px;">リセット</button>
+          <button class="btn btn-secondary" id="btn-pause" type="button" disabled style="min-width: 68px; height: 34px; padding: 0 8px;">一時停止</button>
+          <button class="btn btn-secondary" id="btn-stop" type="button" disabled style="min-width: 56px; height: 34px; padding: 0 8px;">停止</button>
+          <button class="btn btn-primary" id="btn-run" type="button" style="min-width: 68px; height: 34px; font-weight: bold; font-size: 14px; padding: 0 12px;">実行</button>
         </div>
 
       </div>

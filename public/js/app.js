@@ -26,23 +26,30 @@ const pauseButton = document.getElementById("btn-pause");
 const partTooltip = document.getElementById("part-tooltip");
 const engine = new PictoEngine(canvas);
 const stageSelect = document.getElementById("stage-select");
-if (stageSelect) {
-  stageSelect.addEventListener("change", (e) => {
-    if (isRunning) {
-      shouldStop = true;
-      engine.stop();
-      isRunning = false;
-      runButton.textContent = "実行";
-      runButton.disabled = false;
-      stopButton.disabled = true;
-      pauseButton.disabled = true;
-      pauseButton.textContent = "一時停止";
-      resetButton.disabled = false;
-      
+const btnShowHint = document.getElementById("btn-show-hint");
+const btnReplayHint = document.getElementById("btn-replay-hint");
 
+function updateHintButtonsUI(hasHint) {
+  const iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>`;
+  const replaySvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>`;
   
+  if (btnShowHint) {
+    if (hasHint) {
+      btnShowHint.innerHTML = `${iconSvg} 別のヒントを探す`;
+      btnShowHint.title = "別のヒントを探す";
+    } else {
+      btnShowHint.innerHTML = `${iconSvg} ヒントを見る`;
+      btnShowHint.title = "ヒントを見る";
+    }
+  }
+  if (btnReplayHint) {
+    btnReplayHint.innerHTML = `${replaySvg} 同じヒントを見る`;
+    btnReplayHint.title = "同じヒントを見る";
+    btnReplayHint.style.display = hasHint ? 'inline-flex' : 'none';
+  }
+}
+
 async function checkHintLock() {
-  const btnShowHint = document.getElementById("btn-show-hint");
   if (!btnShowHint) return;
   const stageId = stageSelect ? stageSelect.value : "stage1";
   
@@ -65,7 +72,7 @@ async function checkHintLock() {
       
     if (!snapshot.empty) {
       btnShowHint.disabled = false;
-      btnShowHint.title = "";
+      btnShowHint.title = currentTargetHintLogId ? "別のヒントを探す" : "ヒントを見る";
     } else {
       btnShowHint.disabled = true;
       btnShowHint.title = "まずは自分でプログラムを実行してみましょう！";
@@ -74,33 +81,42 @@ async function checkHintLock() {
     console.error("Hint lock check failed:", e);
     // エラー時は安全のためロック解除
     btnShowHint.disabled = false;
-    btnShowHint.title = "";
+    btnShowHint.title = currentTargetHintLogId ? "別のヒントを探す" : "ヒントを見る";
   }
 }
 
-const btnShowHint = document.getElementById("btn-show-hint");
-const btnReplayHint = document.getElementById("btn-replay-hint");
-      if (btnShowHint) {
-        btnShowHint.disabled = false;
-        btnShowHint.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>\n          ゴースト再生`;
-      }
+if (stageSelect) {
+  stageSelect.addEventListener("change", (e) => {
+    const newStage = e.target.value;
+    if (isRunning) {
+      shouldStop = true;
+      engine.stop();
+      isRunning = false;
+      runButton.textContent = "実行";
+      runButton.disabled = false;
+      stopButton.disabled = true;
+      pauseButton.disabled = true;
+      pauseButton.textContent = "一時停止";
+      resetButton.disabled = false;
       
       // アニメーションループが停止するのを少し待ってからステージを切り替える
       setTimeout(() => {
-        engine.loadStage(e.target.value);
-        if (typeof checkHintLock === 'function') checkHintLock();
+        engine.loadStage(newStage);
+        checkHintLock();
         clearOutput();
         updateShoeUI();
-if (typeof checkHintLock === 'function') checkHintLock();
-        if (stageSelect && window.restoreHintState) window.restoreHintState(stageSelect.value);
+        if (stageSelect && window.restoreHintState) window.restoreHintState(newStage);
+        lastViewedHint = "ヒントなし";
+        updateHintBadge();
       }, 150);
     } else {
-      engine.loadStage(e.target.value);
-        if (typeof checkHintLock === 'function') checkHintLock();
+      engine.loadStage(newStage);
+      checkHintLock();
       clearOutput();
       updateShoeUI();
-if (typeof checkHintLock === 'function') checkHintLock();
-      if (stageSelect && window.restoreHintState) window.restoreHintState(stageSelect.value);
+      if (stageSelect && window.restoreHintState) window.restoreHintState(newStage);
+      lastViewedHint = "ヒントなし";
+      updateHintBadge();
     }
   });
 }
@@ -124,6 +140,7 @@ let shouldStop = false;
 let currentLogSession = null;
 let currentTargetHintLogId = null;
 let currentTargetHintEvents = null;
+let lastViewedHint = "ヒントなし";
 
     async function saveHintViewLog(actionType, targetId, score) {
   if (!userId) return;
@@ -160,10 +177,10 @@ window.restoreHintState = async function(stageId) {
   const btnReplay = document.getElementById("btn-replay-hint");
   if (!btnReplay) return;
   
-  btnReplay.style.display = 'none';
   currentTargetHintLogId = null;
   currentTargetHintEvents = null;
   lastViewedHint = "ヒントなし";
+  if (typeof updateHintButtonsUI === 'function') updateHintButtonsUI(false);
   
   try {
     const allMyLogsSnap = await db.collection('logs')
@@ -189,8 +206,8 @@ window.restoreHintState = async function(stageId) {
         if (targetDoc.exists) {
           currentTargetHintLogId = targetId;
           currentTargetHintEvents = targetDoc.data().events;
-          btnReplay.style.display = 'inline-flex';
           lastViewedHint = "ヒントなし";
+          if (typeof updateHintButtonsUI === 'function') updateHintButtonsUI(true);
           console.log("Replay button restored successfully!");
         }
       }
@@ -308,6 +325,7 @@ clearStageButton.addEventListener("click", () => {
 // 初期化時にUIを更新
 updateShoeUI();
 if (typeof checkHintLock === 'function') checkHintLock();
+if (stageSelect && window.restoreHintState) window.restoreHintState(stageSelect.value);
 
 const btnUndo = document.getElementById("btn-undo");
 const btnRedo = document.getElementById("btn-redo");
@@ -398,8 +416,6 @@ if (btnClearEditor) {
 
 updateToolbarState();
 
-const btnShowHint = document.getElementById("btn-show-hint");
-const btnReplayHint = document.getElementById("btn-replay-hint");
 if (btnShowHint) {
   
 
@@ -488,8 +504,9 @@ if (btnShowHint) {
     } finally {
       isRunning = false;
       btnShowHint.disabled = false;
-      btnShowHint.innerHTML = originalText;
-      if (btnReplayHint && currentTargetHintLogId) btnReplayHint.style.display = 'inline-flex';
+      if (typeof updateHintButtonsUI === 'function') {
+        updateHintButtonsUI(!!currentTargetHintLogId);
+      }
     }
   });
 }
