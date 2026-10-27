@@ -29,6 +29,79 @@ const stageSelect = document.getElementById("stage-select");
 const btnShowHint = document.getElementById("btn-show-hint");
 const btnReplayHint = document.getElementById("btn-replay-hint");
 
+const stage8TestSelector = document.getElementById("stage8-test-selector");
+const btnTestCase1 = document.getElementById("btn-test-case-1");
+const btnTestCase2 = document.getElementById("btn-test-case-2");
+let stage8ClearedCases = new Set();
+
+function updateStage8TestUI(stageId) {
+  if (!stage8TestSelector) return;
+  if (stageId === "stage8") {
+    stage8TestSelector.style.display = "inline-flex";
+    updateStage8ButtonsUI();
+  } else {
+    stage8TestSelector.style.display = "none";
+  }
+}
+
+function updateStage8ButtonsUI() {
+  if (!btnTestCase1 || !btnTestCase2) return;
+  const cur = engine.currentTestCase || 0;
+  const is1Cleared = stage8ClearedCases.has(0);
+  const is2Cleared = stage8ClearedCases.has(1);
+
+  btnTestCase1.textContent = is1Cleared ? "① A地点 ✓" : "① A地点";
+  btnTestCase2.textContent = is2Cleared ? "② D地点 ✓" : "② D地点";
+
+  if (cur === 0) {
+    btnTestCase1.style.background = is1Cleared ? "#059669" : "#0284c7";
+    btnTestCase1.style.color = "white";
+    btnTestCase1.style.border = "none";
+    btnTestCase1.style.fontWeight = "bold";
+
+    btnTestCase2.style.background = "white";
+    btnTestCase2.style.color = is2Cleared ? "#059669" : "#0284c7";
+    btnTestCase2.style.border = `1px solid ${is2Cleared ? "#059669" : "#0284c7"}`;
+    btnTestCase2.style.fontWeight = "normal";
+  } else {
+    btnTestCase2.style.background = is2Cleared ? "#059669" : "#0284c7";
+    btnTestCase2.style.color = "white";
+    btnTestCase2.style.border = "none";
+    btnTestCase2.style.fontWeight = "bold";
+
+    btnTestCase1.style.background = "white";
+    btnTestCase1.style.color = is1Cleared ? "#059669" : "#0284c7";
+    btnTestCase1.style.border = `1px solid ${is1Cleared ? "#059669" : "#0284c7"}`;
+    btnTestCase1.style.fontWeight = "normal";
+  }
+}
+
+function resetStage8Clears() {
+  if (stage8ClearedCases.size > 0) {
+    stage8ClearedCases.clear();
+    updateStage8ButtonsUI();
+  }
+}
+
+if (btnTestCase1) {
+  btnTestCase1.addEventListener("click", () => {
+    if (isRunning) return;
+    engine.setTestCase(0);
+    updateStage8ButtonsUI();
+    clearOutput();
+  });
+}
+
+if (btnTestCase2) {
+  btnTestCase2.addEventListener("click", () => {
+    if (isRunning) return;
+    engine.setTestCase(1);
+    updateStage8ButtonsUI();
+    clearOutput();
+  });
+}
+
+
 function updateHintButtonsUI(hasHint) {
   const iconSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>`;
   const replaySvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>`;
@@ -101,19 +174,23 @@ if (stageSelect) {
       
       // アニメーションループが停止するのを少し待ってからステージを切り替える
       setTimeout(() => {
+        stage8ClearedCases.clear();
         engine.loadStage(newStage);
         checkHintLock();
         clearOutput();
         updateShoeUI();
+        updateStage8TestUI(newStage);
         if (stageSelect && window.restoreHintState) window.restoreHintState(newStage);
         lastViewedHint = "ヒントなし";
         updateHintBadge();
       }, 150);
     } else {
+      stage8ClearedCases.clear();
       engine.loadStage(newStage);
       checkHintLock();
       clearOutput();
       updateShoeUI();
+      updateStage8TestUI(newStage);
       if (stageSelect && window.restoreHintState) window.restoreHintState(newStage);
       lastViewedHint = "ヒントなし";
       updateHintBadge();
@@ -358,6 +435,7 @@ function saveHistory() {
   const currentVal = editor.value;
   if (historyIndex >= 0 && historyStack[historyIndex].val === currentVal) return;
   
+  resetStage8Clears();
   historyStack.length = historyIndex + 1;
   historyStack.push({
     val: currentVal,
@@ -385,6 +463,7 @@ if (btnUndo) {
       editor.selectionEnd = state.end;
       editor.focus();
       updateToolbarState();
+      resetStage8Clears();
       isUndoRedoAction = false;
     }
   });
@@ -400,6 +479,7 @@ if (btnRedo) {
       editor.selectionEnd = state.end;
       editor.focus();
       updateToolbarState();
+      resetStage8Clears();
       isUndoRedoAction = false;
     }
   });
@@ -409,6 +489,7 @@ if (btnClearEditor) {
     if (editor.value.trim() !== "" && confirm("入力したプログラムをすべて消去しますか？")) {
       editor.value = "";
       editor.focus();
+      resetStage8Clears();
       saveHistory();
     }
   });
@@ -432,12 +513,18 @@ if (btnShowHint) {
         .where('goalResult', '==', 'ゴールした')
         .get();
         
-      const othersClears = [];
+      let othersClears = [];
       clearSnapshot.forEach(doc => {
         if (doc.data().userId !== userId && doc.data().eventType !== 'hint_view') {
           othersClears.push({ id: doc.id, ...doc.data() });
         }
       });
+      if (stageId === "stage8") {
+        const testFiltered = othersClears.filter(d => d.testCase === engine.currentTestCase);
+        if (testFiltered.length > 0) {
+          othersClears = testFiltered;
+        }
+      }
         
       if (othersClears.length === 0) {
         addLog("まだあなた以外にクリアした人がいないため、ヒントを表示できません。", "info");
@@ -803,6 +890,9 @@ async function runProgram() {
       currentLogSession.timestamp = new Date().toISOString();
       currentLogSession.sessionId = sessionId;
       currentLogSession.stageId = typeof initialStageId !== 'undefined' ? initialStageId : engine.currentStageId;
+      if (currentLogSession.stageId === "stage8") {
+        currentLogSession.testCase = engine.currentTestCase;
+      }
       
       currentLogSession.hintViewed = lastViewedHint;
       currentLogSession.targetHintLogId = currentTargetHintLogId;
@@ -840,12 +930,40 @@ async function runProgram() {
       if (finalGoalResult === "ゴールした") {
         updateStageLocks(true);
         const clearOverlay = document.getElementById("clear-overlay");
-        if (clearOverlay) {
-          clearOverlay.hidden = false;
-          // 4秒後に自動で消す
-          setTimeout(() => {
-            clearOverlay.hidden = true;
-          }, 4000);
+        const isStage8 = stageSelect && stageSelect.value === "stage8";
+        
+        if (isStage8) {
+          stage8ClearedCases.add(engine.currentTestCase);
+          updateStage8ButtonsUI();
+
+          if (stage8ClearedCases.size < 2) {
+            const currentName = engine.currentTestCase === 0 ? "① A地点" : "② D地点";
+            const nextCase = engine.currentTestCase === 0 ? 1 : 0;
+            const nextName = nextCase === 0 ? "① A地点" : "② D地点";
+            addLog(`【判定】テスト${engine.currentTestCase + 1} (${currentName}) クリア！`, "success");
+            addLog(`上部の「${nextName}」ボタンに切り替えて、同じプログラムでもう一方のケースもクリアできるか確認しよう！`, "info");
+          } else {
+            addLog(`【判定】お見事！テスト1 (A地点) とテスト2 (D地点) の両方をクリアしました！条件分岐が完璧に書けています！`, "success");
+            if (clearOverlay) {
+              const btnNext = document.getElementById("btn-next-stage");
+              if (btnNext) {
+                btnNext.textContent = "🎉 全ステージクリア！";
+                btnNext.disabled = true;
+                btnNext.style.background = "#10b981";
+              }
+              clearOverlay.hidden = false;
+            }
+          }
+        } else {
+          if (clearOverlay) {
+            const btnNext = document.getElementById("btn-next-stage");
+            if (btnNext) {
+              btnNext.textContent = "次のステージへ進む ▶";
+              btnNext.disabled = false;
+              btnNext.style.background = "#2563eb";
+            }
+            clearOverlay.hidden = false;
+          }
         }
       }
     }
@@ -853,6 +971,28 @@ async function runProgram() {
     // チュートリアルの進行チェック
     if (tutorialAdvanceCheck) tutorialAdvanceCheck();
   }
+}
+
+// クリアオーバーレイのボタン処理
+const btnNextStage = document.getElementById("btn-next-stage");
+const btnCloseClear = document.getElementById("btn-close-clear");
+if (btnNextStage) {
+  btnNextStage.addEventListener("click", () => {
+    const clearOverlay = document.getElementById("clear-overlay");
+    if (clearOverlay) clearOverlay.hidden = true;
+    if (!stageSelect) return;
+    const curIdx = stageSelect.selectedIndex;
+    if (curIdx < stageSelect.options.length - 1) {
+      stageSelect.selectedIndex = curIdx + 1;
+      stageSelect.dispatchEvent(new Event("change"));
+    }
+  });
+}
+if (btnCloseClear) {
+  btnCloseClear.addEventListener("click", () => {
+    const clearOverlay = document.getElementById("clear-overlay");
+    if (clearOverlay) clearOverlay.hidden = true;
+  });
 }
 
 // ログ履歴モーダルの処理
@@ -1140,7 +1280,8 @@ function createPictoContext() {
     },
     "ヒヨコを持っている": async function() {
       checkStop();
-      return engine.state.hasGrabbedItem;
+      const items = engine.state.items || (engine.state.item ? [engine.state.item] : []);
+      return items.some(it => it && it.attachedTo !== null);
     },
     yield: async function() {
       if (shouldStop) throw new Error("STOP");
@@ -1237,8 +1378,8 @@ async function updateStageLocks(skipReload = false) {
     stage4: "ステージ4: ヒヨコを運ぼう② (複数ルート)",
     stage5: "ステージ5: 靴と針山① (縦の針山)",
     stage6: "ステージ6: 靴と針山② (横の針山)",
-    stage7: "ステージ7: 特定の場所を通る① (3箇所)",
-    stage8: "ステージ8: 特定の場所を通る② (5箇所)"
+    stage7: "ステージ7: 3羽のヒヨコを運ぼう (繰り返し)",
+    stage8: "ステージ8: ヒヨコを探そう (条件分岐)"
   };
 
   try {
@@ -1255,6 +1396,7 @@ async function updateStageLocks(skipReload = false) {
     }
     
     updateShoeUI();
+    updateStage8TestUI(stageSelect ? stageSelect.value : "stage1");
     if (typeof checkHintLock === 'function') checkHintLock();
     if (!skipReload && stageSelect && typeof engine !== 'undefined') {
       engine.loadStage(stageSelect.value);

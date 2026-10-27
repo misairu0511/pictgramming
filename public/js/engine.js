@@ -50,7 +50,10 @@ const STAGES = {
     hasItem: true,
     initialDirection: 0,
     initialOffset: { x: -250, y: -20 },
-    itemOffset: { x: 40, y: -150 },
+    items: [
+      { x: 50, y: -185 },
+      { x: 50, y:  130 }
+    ],
     goalOffset: { x: 250, y: 50 },
     points: COMMON_POINTS
   },
@@ -73,7 +76,10 @@ const STAGES = {
     hasItem: true,
     initialDirection: 0,
     initialOffset: { x: 0, y: 30 },
-    itemOffset: { x: 120, y: -185 },
+    items: [
+      { x: -120, y: -185 },
+      { x:  120, y: -185 }
+    ],
     goalOffset: { x: 250, y: 70 },
     shoes: [
       { x: -160, y: 10 },
@@ -82,47 +88,31 @@ const STAGES = {
     needleZone: { x: -2000, y: -140, width: 4000, height: 35 },
     points: COMMON_POINTS
   },
-  // ステージ7：特定の場所を通る①（3つのチェックポイント：正三角形配置）
+  // ステージ7：3羽のヒヨコを運ぼう（繰り返しの活用）
   stage7: {
     hasItem: true,
+    requiredGoalCount: 3,
     initialDirection: 0,
-    initialOffset: { x: -260, y: -20 },
-    itemOffset: { x: 260, y: -210 },
-    goalOffset: { x: 250, y: 50 },
-    checkpoints: [
-      { x:    5, y: -155, radius: 24, passed: false, label: "①", num: "1" },
-      { x:  150, y:   95, radius: 24, passed: false, label: "②", num: "2" },
-      { x: -140, y:   95, radius: 24, passed: false, label: "③", num: "3" }
+    initialOffset: { x: -240, y: -40 },
+    goalOffset: { x: 240, y: -40 },
+    // 2か所の巣に各3羽（計6羽配置、3羽運べばクリア）
+    nests: [
+      { x: -160, y: -250, count: 3, label: "A側" },
+      { x: -160, y:   90, count: 3, label: "D側" }
     ],
-    points: COMMON_POINTS,
-    walls: [
-      { x: 195, y: -280, width: 135, height: 14 },
-      { x: 195, y: -150, width: 135, height: 14 },
-      { x: 195, y: -280, width: 14, height: 144 },
-      { x: 316, y: -280, width: 14, height: 144 }
-    ]
+    points: COMMON_POINTS
   },
-  // ステージ8：特定の場所を通る②（5つのチェックポイント：正五角形配置）
+  // ステージ8：ヒヨコを探そう（条件分岐 if...else）
   stage8: {
     hasItem: true,
     initialDirection: 0,
-    initialOffset: { x: -260, y: -20 },
-    itemOffset: { x: 260, y: -210 },
-    goalOffset: { x: 250, y: 50 },
-    checkpoints: [
-      { x:   15, y: -160, radius: 24, passed: false, label: "①", num: "1" },
-      { x:  177, y:  -43, radius: 24, passed: false, label: "②", num: "2" },
-      { x:  115, y:  148, radius: 24, passed: false, label: "③", num: "3" },
-      { x:  -85, y:  148, radius: 24, passed: false, label: "④", num: "4" },
-      { x: -147, y:  -43, radius: 24, passed: false, label: "⑤", num: "5" }
+    initialOffset: { x: -40, y: -40 },
+    goalOffset: { x: 240, y: -40 },
+    testCases: [
+      { x: -160, y: -250, label: "A" }, // テスト1: A地点
+      { x: -160, y:   90, label: "D" }  // テスト2: D地点
     ],
-    points: COMMON_POINTS,
-    walls: [
-      { x: 195, y: -280, width: 135, height: 14 },
-      { x: 195, y: -150, width: 135, height: 14 },
-      { x: 195, y: -280, width: 14, height: 144 },
-      { x: 316, y: -280, width: 14, height: 144 }
-    ]
+    points: COMMON_POINTS
   }
 };
 
@@ -133,6 +123,7 @@ class PictoEngine {
     this.animationMs = 900;
     this.partAnimationMs = 650;
     this.currentStageId = "stage0";
+    this.currentTestCase = 0;
     this.partLabels = {
       head: { ja: "頭", code: "head" },
       body: { ja: "胴体", code: "body" },
@@ -195,6 +186,12 @@ class PictoEngine {
 
   loadStage(stageId) {
     this.currentStageId = stageId;
+    this.currentTestCase = 0;
+    this.reset();
+  }
+
+  setTestCase(caseIndex) {
+    this.currentTestCase = caseIndex;
     this.reset();
   }
 
@@ -209,14 +206,59 @@ class PictoEngine {
     this.goal = {
       x: centerX + stage.goalOffset.x,
       y: centerY + stage.goalOffset.y,
-      radius: 70
+      radius: stage.goalRadius || 80
     };
 
     const initialDir = stage.initialDirection !== undefined ? stage.initialDirection : 0;
     const initOffsetX = stage.initialOffset ? stage.initialOffset.x : 0;
     const initOffsetY = stage.initialOffset ? stage.initialOffset.y : 0;
     const hasItem = stage.hasItem !== undefined ? stage.hasItem : true;
-    const itemOffset = stage.itemOffset || { x: 0, y: 0 };
+    let items = [];
+    if (stage.nests && stage.nests.length > 0) {
+      for (let nIdx = 0; nIdx < stage.nests.length; nIdx++) {
+        const nest = stage.nests[nIdx];
+        const count = nest.count || 3;
+        for (let k = 0; k < count; k++) {
+          items.push({
+            x: centerX + nest.x,
+            y: centerY + nest.y,
+            nestId: nIdx,
+            nestX: centerX + nest.x,
+            nestY: centerY + nest.y,
+            attachedTo: null,
+            offsetX: 0,
+            offsetY: 0
+          });
+        }
+      }
+    } else if (stage.testCases && stage.testCases.length > 0) {
+      const activeIdx = this.currentTestCase !== undefined ? this.currentTestCase : 0;
+      const tc = stage.testCases[activeIdx] || stage.testCases[0];
+      items = [{
+        x: centerX + tc.x,
+        y: centerY + tc.y,
+        attachedTo: null,
+        offsetX: 0,
+        offsetY: 0
+      }];
+    } else if (stage.items && stage.items.length > 0) {
+      items = stage.items.map(offset => ({
+        x: centerX + offset.x,
+        y: centerY + offset.y,
+        attachedTo: null,
+        offsetX: 0,
+        offsetY: 0
+      }));
+    } else if (hasItem) {
+      const itemOffset = stage.itemOffset || { x: 0, y: 0 };
+      items = [{
+        x: centerX + itemOffset.x,
+        y: centerY + itemOffset.y,
+        attachedTo: null,
+        offsetX: 0,
+        offsetY: 0
+      }];
+    }
 
     this.state = {
       x: centerX + initOffsetX,
@@ -227,13 +269,8 @@ class PictoEngine {
       parts: this.createParts(),
       particles: [],
       hasItem: hasItem,
-      item: {
-        x: centerX + itemOffset.x,
-        y: centerY + itemOffset.y,
-        attachedTo: null,
-        offsetX: 0,
-        offsetY: 0
-      },
+      items: items,
+      item: items[0] || { x: 0, y: 0, attachedTo: null, offsetX: 0, offsetY: 0 },
       shoes: (stage.shoes ? stage.shoes : []).map(shoeDef => ({
           exists: true, x: centerX + shoeDef.x, y: centerY + shoeDef.y, isWorn: false
       })),
@@ -298,50 +335,67 @@ class PictoEngine {
 
   grabItem() {
     if (!this.state.hasItem) return;
-    const item = this.state.item;
-    if (item.attachedTo) return;
-    // すでにゴールに運んで離した後は再キャッチしない
-    if (this.state.hasGrabbedItem && this.distance(item.x, item.y, this.goal.x, this.goal.y) <= this.goal.radius) {
-      return;
-    }
+    const items = this.state.items || (this.state.item ? [this.state.item] : []);
+    // すでにいずれかのヒヨコを掴んでいる場合は絶対に新しいヒヨコを掴まない（全ステージ共通：1匹制限）
+    const alreadyHolding = items.some(it => it && it.attachedTo !== null);
+    if (alreadyHolding) return;
 
     const leftHand = this.getHandPosition("leftArm");
     const rightHand = this.getHandPosition("rightArm");
     const grabRadius = 38;
 
-    const distL = this.distance(leftHand.x, leftHand.y, item.x, item.y);
-    const distR = this.distance(rightHand.x, rightHand.y, item.x, item.y);
+    for (const item of this.state.items) {
+      if (item.attachedTo) continue;
+      // すでにゴールに運んで離した後は再キャッチしない
+      if (this.state.hasGrabbedItem && this.distance(item.x, item.y, this.goal.x, this.goal.y) <= this.goal.radius) {
+        continue;
+      }
 
-    if (distL <= grabRadius) {
-      item.attachedTo = "leftArm";
-      item.offsetX = item.x - leftHand.x;
-      item.offsetY = item.y - leftHand.y;
-      this.state.hasGrabbedItem = true;
-      this.state.particles.push({
-        x: item.x + 30, y: item.y - 30, text: "♪", startTime: Date.now(), duration: 1200, distance: 30, color: "rgba(255, 150, 0, 1)", animationType: 'up_down'
-      });
-    } else if (distR <= grabRadius) {
-      item.attachedTo = "rightArm";
-      item.offsetX = item.x - rightHand.x;
-      item.offsetY = item.y - rightHand.y;
-      this.state.hasGrabbedItem = true;
-      this.state.particles.push({
-        x: item.x + 30, y: item.y - 30, text: "♪", startTime: Date.now(), duration: 1200, distance: 30, color: "rgba(255, 150, 0, 1)", animationType: 'up_down'
-      });
+      const distL = this.distance(leftHand.x, leftHand.y, item.x, item.y);
+      const distR = this.distance(rightHand.x, rightHand.y, item.x, item.y);
+
+      if (distL <= grabRadius) {
+        item.attachedTo = "leftArm";
+        item.offsetX = item.x - leftHand.x;
+        item.offsetY = item.y - leftHand.y;
+        this.state.hasGrabbedItem = true;
+        this.state.item = item;
+        this.state.particles.push({
+          x: item.x + 30, y: item.y - 30, text: "♪", startTime: Date.now(), duration: 1200, distance: 30, color: "rgba(255, 150, 0, 1)", animationType: 'up_down'
+        });
+        break;
+      } else if (distR <= grabRadius) {
+        item.attachedTo = "rightArm";
+        item.offsetX = item.x - rightHand.x;
+        item.offsetY = item.y - rightHand.y;
+        this.state.hasGrabbedItem = true;
+        this.state.item = item;
+        this.state.particles.push({
+          x: item.x + 30, y: item.y - 30, text: "♪", startTime: Date.now(), duration: 1200, distance: 30, color: "rgba(255, 150, 0, 1)", animationType: 'up_down'
+        });
+        break;
+      }
     }
     this.draw();
   }
 
   isNearItem() {
-    if (!this.state.hasItem) return false;
-    const item = this.state.item;
+    if (!this.state.hasItem || !this.state.items) return false;
     const leftHand = this.getHandPosition("leftArm");
     const rightHand = this.getHandPosition("rightArm");
     const grabRadius = 65;
-    const distL = this.distance(leftHand.x, leftHand.y, item.x, item.y);
-    const distR = this.distance(rightHand.x, rightHand.y, item.x, item.y);
-    const distBody = this.distance(this.state.x, this.state.y, item.x, item.y);
-    return distL <= grabRadius || distR <= grabRadius || distBody <= 65;
+
+    // ゴールに運ばれてすでに離されたヒヨコはアクティブ判定から除外
+    const activeItems = this.state.items.filter(item =>
+      item.attachedTo || (this.distance(item.x, item.y, this.goal.x, this.goal.y) > this.goal.radius)
+    );
+
+    return activeItems.some(item => {
+      const distL = this.distance(leftHand.x, leftHand.y, item.x, item.y);
+      const distR = this.distance(rightHand.x, rightHand.y, item.x, item.y);
+      const distBody = this.distance(this.state.x, this.state.y, item.x, item.y);
+      return distL <= grabRadius || distR <= grabRadius || distBody <= 65;
+    });
   }
 
   isNearTarget(label) {
@@ -362,7 +416,7 @@ class PictoEngine {
       );
     }
     if (target === "ゴール" || target.toUpperCase() === "GOAL") {
-      return this.distance(this.state.x, this.state.y, this.goal.x, this.goal.y) <= this.goal.radius;
+      return this.distance(this.state.x, this.state.y, this.goal.x, this.goal.y) <= 45;
     }
     if (this.state.points) {
       const pt = this.state.points.find(p => p.label === target);
@@ -393,16 +447,22 @@ class PictoEngine {
   }
 
   releaseItem() {
-    if (this.state.item.attachedTo) {
-      const handPos = this.getHandPosition(this.state.item.attachedTo);
-      this.state.item.x = handPos.x + this.state.item.offsetX;
-      this.state.item.y = handPos.y + this.state.item.offsetY;
-      this.state.item.attachedTo = null;
-      
-      const status = this.evaluateGoalStatus();
-      if (status === "ゴールした") {
-        this.spawnGoalParticles(this.state.item.x + 30, this.state.item.y - 30);
+    const items = this.state.items || (this.state.item ? [this.state.item] : []);
+    for (const it of items) {
+      if (it.attachedTo) {
+        const handPos = this.getHandPosition(it.attachedTo);
+        it.x = handPos.x + it.offsetX;
+        it.y = handPos.y + it.offsetY;
+        it.attachedTo = null;
+        
+        const status = this.evaluateGoalStatus();
+        if (status === "ゴールした") {
+          this.spawnGoalParticles(it.x + 30, it.y - 30);
+        }
       }
+    }
+    if (this.state.item) {
+      this.state.item.attachedTo = null;
     }
     this.draw();
   }
@@ -574,18 +634,33 @@ class PictoEngine {
       return "ゴールに届いていない";
     }
 
-    const item = this.state.item;
-    const dist = this.distance(item.x, item.y, this.goal.x, this.goal.y);
-    const inGoal = dist <= this.goal.radius;
+    const items = this.state.items || (this.state.item ? [this.state.item] : []);
     const hasGrabbed = this.state.hasGrabbedItem;
-    const isAttached = item.attachedTo !== null;
-
     if (!hasGrabbed) return "物を持っていない";
-    if (hasGrabbed && !inGoal) return "持ったがゴールに入れていない";
-    if (inGoal && isAttached) return "ゴールしていたが離していない";
-    if (inGoal && !isAttached) return "ゴールした";
 
-    return "不明なステータス";
+    let inGoalCount = 0;
+    let anyInGoalAndAttached = false;
+
+    for (const item of items) {
+      const dist = this.distance(item.x, item.y, this.goal.x, this.goal.y);
+      if (dist <= this.goal.radius) {
+        if (item.attachedTo === null) {
+          inGoalCount++;
+        } else {
+          anyInGoalAndAttached = true;
+        }
+      }
+    }
+
+    const stageDef = STAGES[this.currentStageId];
+    const requiredCount = stageDef && stageDef.requiredGoalCount ? stageDef.requiredGoalCount : (stageDef && stageDef.requireAllItems ? items.length : 1);
+
+    if (inGoalCount >= requiredCount) {
+      return "ゴールした";
+    }
+    if (anyInGoalAndAttached) return "ゴールしていたが離していない";
+    if (inGoalCount > 0) return `まだヒヨコが残っている（${inGoalCount}/${requiredCount}羽）`;
+    return "持ったがゴールに入れていない";
   }
 
   async run(commands, onLog) {
@@ -721,10 +796,25 @@ class PictoEngine {
       if (!this.state.hasItem) {
         throw new Error("このステージにはヒヨコがいません");
       }
+      const availableItems = (this.state.items || [this.state.item]).filter(it =>
+        it && !it.attachedTo && (this.distance(it.x, it.y, this.goal.x, this.goal.y) > this.goal.radius)
+      );
+      let targetChick = this.state.item;
+      if (availableItems.length > 0) {
+        let minD = Infinity;
+        for (const it of availableItems) {
+          const d = this.distance(this.state.x, this.state.y, it.x, it.y);
+          if (d < minD) {
+            minD = d;
+            targetChick = it;
+          }
+        }
+      }
+      this.state.item = targetChick;
       // 近づく方向（左側か右側か）に応じて、右腕または左腕で掴みやすい斜め下の立ち位置を目標にする
-      const sideOffset = this.state.x > this.state.item.x ? 50 : -50;
-      tx = this.state.item.x + sideOffset;
-      ty = this.state.item.y + 35;
+      const sideOffset = this.state.x > targetChick.x ? 50 : -50;
+      tx = targetChick.x + sideOffset;
+      ty = targetChick.y + 35;
       this.state.targetPoint = { x: tx, y: ty, label: "ヒヨコ" };
     } else if (label === "靴") {
       const unworn = (this.state.shoes || []).filter(s => s.exists && !s.isWorn);
@@ -769,7 +859,8 @@ class PictoEngine {
     await this.animate(this.partAnimationMs, (progress) => {
       part.rotation = this.lerp(start, end, progress);
       // 腕を動かしている最中にヒヨコに触れたら自動で掴む
-      if (isArmPart && this.state.hasItem && !this.state.item.attachedTo) {
+      const alreadyHolding = (this.state.items || [this.state.item]).some(it => it && it.attachedTo !== null);
+      if (isArmPart && this.state.hasItem && !alreadyHolding) {
         this.grabItem();
       }
       // 足を動かしている最中に靴に触れたら自動で履く
@@ -1137,72 +1228,156 @@ class PictoEngine {
 
   drawItem() {
     if (!this.state.hasItem) return;
-    const item = this.state.item;
-    let cx = item.x;
-    let cy = item.y;
+    const stage = STAGES[this.currentStageId];
+    const items = this.state.items || (this.state.item ? [this.state.item] : []);
+    const centerX = this.canvas.width / 2;
+    const centerY = this.canvas.height / 2 + 40;
 
-    if (item.attachedTo) {
-      const handPos = this.getHandPosition(item.attachedTo);
-      cx = handPos.x + item.offsetX;
-      cy = handPos.y + item.offsetY;
-      item.x = cx;
-      item.y = cy;
-    }
+    // ステージ7：2か所の巣とヒヨコ羽数バッジ（③、②、①）を描画
+    if (stage && stage.nests && stage.nests.length > 0) {
+      for (let nIdx = 0; nIdx < stage.nests.length; nIdx++) {
+        const nest = stage.nests[nIdx];
+        const nx = centerX + nest.x;
+        const ny = centerY + nest.y;
 
-    // 当たり判定の可視化
-    this.ctx.save();
-    this.ctx.translate(cx, cy);
-    {
-      let baseScale = 0.6;
-      if (item.attachedTo) {
-        baseScale = 0.6 * (1.0 + 0.25 * Math.sin(Date.now() / 150));
+        // 巣の台座
+        this.ctx.save();
+        this.ctx.translate(nx, ny);
+        this.ctx.fillStyle = "#fef3c7";
+        this.ctx.strokeStyle = "#f59e0b";
+        this.ctx.lineWidth = 2.5;
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, 18, 28, 12, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        this.ctx.strokeStyle = "#d97706";
+        this.ctx.lineWidth = 1.5;
+        for (let ox = -16; ox <= 16; ox += 8) {
+          this.ctx.beginPath();
+          this.ctx.moveTo(ox - 3, 12);
+          this.ctx.lineTo(ox + 3, 24);
+          this.ctx.stroke();
+        }
+        this.ctx.restore();
+
+        // この巣に残っているヒヨコ数をカウント
+        const remaining = items.filter(it => it.nestId === nIdx && !it.attachedTo && (this.distance(it.x, it.y, this.goal.x, this.goal.y) > this.goal.radius)).length;
+        
+        if (remaining > 0) {
+          // 残り羽数のバッジ（丸バッジ：オレンジ地に白文字）
+          this.ctx.save();
+          this.ctx.fillStyle = "#ea580c";
+          this.ctx.strokeStyle = "#ffffff";
+          this.ctx.lineWidth = 2;
+          this.ctx.beginPath();
+          this.ctx.arc(nx + 20, ny - 16, 12, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.stroke();
+
+          this.ctx.fillStyle = "#ffffff";
+          this.ctx.font = "bold 13px sans-serif";
+          this.ctx.textAlign = "center";
+          this.ctx.textBaseline = "middle";
+          this.ctx.fillText(remaining, nx + 20, ny - 16);
+          this.ctx.restore();
+        }
       }
-      this.ctx.scale(baseScale, baseScale);
     }
-    this.ctx.beginPath();
-    this.ctx.arc(0, 0, 35, 0, Math.PI * 2);
-    
-    if (this.state.item.attachedTo) {
-      // 持っている時は赤色の実線
-      this.ctx.strokeStyle = "rgba(239, 68, 68, 0.9)";
-      this.ctx.lineWidth = 3;
-    } else {
-      // 持っていない時は点線
-      this.ctx.strokeStyle = "rgba(107, 114, 128, 0.6)";
-      this.ctx.lineWidth = 2;
-      this.ctx.setLineDash([6, 4]);
-    }
-    
-    this.ctx.stroke();
-    this.ctx.restore();
 
+    // ステージ8：テストケース用の巣を描画
+    if (stage && stage.testCases && stage.testCases.length > 0) {
+      for (let tIdx = 0; tIdx < stage.testCases.length; tIdx++) {
+        const tc = stage.testCases[tIdx];
+        const tx = centerX + tc.x;
+        const ty = centerY + tc.y;
 
-    this.ctx.save();
-    this.ctx.translate(cx, cy);
-    {
-      let baseScale = 0.6;
-      if (item.attachedTo) {
-        baseScale = 0.6 * (1.0 + 0.25 * Math.sin(Date.now() / 150));
+        this.ctx.save();
+        this.ctx.translate(tx, ty);
+        this.ctx.fillStyle = "#fef3c7";
+        this.ctx.strokeStyle = tIdx === (this.currentTestCase || 0) ? "#f59e0b" : "#cbd5e1";
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.ellipse(0, 18, 26, 10, 0, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.stroke();
+        this.ctx.restore();
       }
-      this.ctx.scale(baseScale, baseScale);
     }
 
-    if (this.isGhostMode) {
-      this.ctx.globalAlpha = 0.5;
-    }
+    const drawnNestIds = new Set();
+    for (const item of items) {
+      if (item.nestId !== undefined && !item.attachedTo && (this.distance(item.x, item.y, this.goal.x, this.goal.y) > this.goal.radius)) {
+        if (drawnNestIds.has(item.nestId)) {
+          continue;
+        }
+        drawnNestIds.add(item.nestId);
+      }
+      let cx = item.x;
+      let cy = item.y;
 
-    if (this.itemImg.complete && this.itemImg.naturalWidth > 0) {
-      const w = 60;
-      const h = (w / this.itemImg.naturalWidth) * this.itemImg.naturalHeight;
-      this.ctx.drawImage(this.itemImg, -w/2, -h/2, w, h);
-    } else {
-      this.ctx.fillStyle = "#f59e0b";
+      if (item.attachedTo) {
+        const handPos = this.getHandPosition(item.attachedTo);
+        cx = handPos.x + item.offsetX;
+        cy = handPos.y + item.offsetY;
+        item.x = cx;
+        item.y = cy;
+      }
+
+      // 当たり判定の可視化
+      this.ctx.save();
+      this.ctx.translate(cx, cy);
+      {
+        let baseScale = 0.6;
+        if (item.attachedTo) {
+          baseScale = 0.6 * (1.0 + 0.25 * Math.sin(Date.now() / 150));
+        }
+        this.ctx.scale(baseScale, baseScale);
+      }
       this.ctx.beginPath();
-      this.ctx.arc(0, 0, 30, 0, Math.PI*2);
-      this.ctx.fill();
+      this.ctx.arc(0, 0, 35, 0, Math.PI * 2);
+      
+      if (item.attachedTo) {
+        // 持っている時は赤色の実線
+        this.ctx.strokeStyle = "rgba(239, 68, 68, 0.9)";
+        this.ctx.lineWidth = 3;
+      } else {
+        // 持っていない時は点線
+        this.ctx.strokeStyle = "rgba(107, 114, 128, 0.6)";
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([6, 4]);
+      }
+      
+      this.ctx.stroke();
+      this.ctx.restore();
+
+      this.ctx.save();
+      this.ctx.translate(cx, cy);
+      {
+        let baseScale = 0.6;
+        if (item.attachedTo) {
+          baseScale = 0.6 * (1.0 + 0.25 * Math.sin(Date.now() / 150));
+        }
+        this.ctx.scale(baseScale, baseScale);
+      }
+
+      if (this.isGhostMode) {
+        this.ctx.globalAlpha = 0.5;
+      }
+
+      if (this.itemImg.complete && this.itemImg.naturalWidth > 0) {
+        const w = 60;
+        const h = (w / this.itemImg.naturalWidth) * this.itemImg.naturalHeight;
+        this.ctx.drawImage(this.itemImg, -w/2, -h/2, w, h);
+      } else {
+        this.ctx.fillStyle = "#f59e0b";
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, 30, 0, Math.PI*2);
+        this.ctx.fill();
+      }
+      
+      this.ctx.restore();
     }
-    
-    this.ctx.restore();
   }
 
   drawGrid() {
@@ -1384,7 +1559,8 @@ class PictoEngine {
   startRenderLoop() {
     if (this._renderLoopId) return;
     const loop = () => {
-      if (this.state && (this.state.item.attachedTo || (this.state.particles && this.state.particles.length > 0))) {
+      const anyItemAttached = (this.state && this.state.items) ? this.state.items.some(it => it && it.attachedTo !== null) : (this.state && this.state.item && this.state.item.attachedTo);
+      if (this.state && (anyItemAttached || (this.state.particles && this.state.particles.length > 0))) {
         this.draw();
       }
       this._renderLoopId = requestAnimationFrame(loop);
