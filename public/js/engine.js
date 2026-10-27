@@ -82,8 +82,8 @@ const STAGES = {
     itemOffset: { x: 165, y: -210 },
     goalOffset: { x: 240, y: -40 },
     shoes: [
-      { x: -90, y: -80 },
-      { x: -90, y:  30 }
+      { x: -95, y: -10 },
+      { x: -95, y: 100 }
     ],
     needleZone: { x: 80, y: -2000, width: 40, height: 4000 },
     points: COMMON_POINTS
@@ -99,8 +99,8 @@ const STAGES = {
     ],
     goalOffset: { x: 250, y: 70 },
     shoes: [
-      { x: -160, y: 10 },
-      { x:  160, y: 10 }
+      { x: -160, y: 110 },
+      { x:  160, y: 110 }
     ],
     needleZone: { x: -2000, y: -140, width: 4000, height: 35 },
     points: COMMON_POINTS
@@ -517,8 +517,11 @@ class PictoEngine {
       const unworn = this.state.shoes.filter(s => s.exists && !s.isWorn);
       if (unworn.length === 0) return true;
       const nearRadius = 70;
+      const leftFoot = this.getLegPosition("leftLeg");
+      const rightFoot = this.getLegPosition("rightLeg");
       return unworn.some(shoe =>
-        pts.some(p => this.distance(p.x, p.y, shoe.x, shoe.y) <= nearRadius)
+        this.distance(leftFoot.x, leftFoot.y, shoe.x, shoe.y) <= nearRadius ||
+        this.distance(rightFoot.x, rightFoot.y, shoe.x, shoe.y) <= nearRadius
       );
     }
     if (target === "ゴール" || target.toUpperCase() === "GOAL") {
@@ -975,145 +978,8 @@ class PictoEngine {
     this.drawPicto(this.state);
     this.drawShoes(true);
     this.drawItem(true);
-    if (this.showDebugRanges !== false) {
-      this.drawDebugRanges();
-    }
     this.drawParticles();
     this.drawLegend();
-  }
-
-  drawDebugRanges() {
-    const ctx = this.ctx;
-    ctx.save();
-    ctx.font = "bold 11px sans-serif";
-    ctx.textAlign = "center";
-
-    const drawLabel = (text, x, y, color) => {
-      ctx.save();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.92)";
-      ctx.strokeText(text, x, y);
-      ctx.fillStyle = color;
-      ctx.fillText(text, x, y);
-      ctx.restore();
-    };
-
-    // 1. 地点 A〜F の「近くにいる」範囲 (r = 28)
-    if (this.state.points) {
-      for (const pt of this.state.points) {
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 28, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(14, 165, 233, 0.08)";
-        ctx.fill();
-        ctx.strokeStyle = "rgba(14, 165, 233, 0.75)";
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([4, 3]);
-        ctx.stroke();
-        drawLabel("地点判定(28)", pt.x, pt.y + 40, "#0284c7");
-      }
-    }
-
-    // 2. ゴールの「近くにいる」範囲 (r = 125: ゴール円80より大幅に大きい)
-    if (this.goal) {
-      const goalNearR = 125;
-      ctx.beginPath();
-      ctx.arc(this.goal.x, this.goal.y, goalNearR, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(245, 158, 11, 0.08)";
-      ctx.fill();
-      ctx.strokeStyle = "rgba(217, 119, 6, 0.9)";
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 4]);
-      ctx.stroke();
-      drawLabel(`近くにいる("ゴール") (${goalNearR})`, this.goal.x, this.goal.y + goalNearR + 14, "#b45309");
-    }
-
-    // 3. ヒヨコ・爆弾の「近くにいる(70)」と「掴む・爆発(36)」範囲
-    const targets = [];
-    if (this.state.hasItem && this.state.items) {
-      const seenNests = new Set();
-      for (const it of this.state.items) {
-        if (it.attachedTo) continue;
-        if (it.nestId !== undefined) {
-          if (seenNests.has(it.nestId)) continue;
-          seenNests.add(it.nestId);
-        }
-        targets.push({ x: it.x, y: it.y, name: "ヒヨコ" });
-      }
-    }
-    if (this.state.bombs) {
-      for (const b of this.state.bombs) {
-        targets.push({ x: b.x, y: b.y, name: "爆弾" });
-      }
-    }
-    for (const t of targets) {
-      // 外側：近くにいる範囲 (r = 70)
-      ctx.beginPath();
-      ctx.arc(t.x, t.y, 70, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(37, 99, 235, 0.08)";
-      ctx.fill();
-      ctx.strokeStyle = "rgba(37, 99, 235, 0.85)";
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 4]);
-      ctx.stroke();
-      drawLabel(`近くにいる("${t.name}") (70)`, t.x, t.y + 84, "#1d4ed8");
-
-      // 内側：部位回転で掴む・爆発する範囲 (r = 36) ＆ 掴む()直接の範囲 (グレー点線 r = 21)
-      ctx.beginPath();
-      ctx.arc(t.x, t.y, 36, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(239, 68, 68, 0.12)";
-      ctx.fill();
-      ctx.strokeStyle = "rgba(220, 38, 38, 0.9)";
-      ctx.lineWidth = 2;
-      ctx.setLineDash([]);
-      ctx.stroke();
-      drawLabel(t.name === "爆弾" ? "部位回転:爆発(36) / 掴む():点線(21)" : "部位回転:掴む(36) / 掴む():点線(21)", t.x, t.y - 42, "#dc2626");
-    }
-
-    // 4. 靴の「近くにいる(70)」と「部位回転で履く(36)」範囲
-    if (this.state.shoes) {
-      for (const shoe of this.state.shoes) {
-        if (!shoe.exists || shoe.isWorn) continue;
-        // 外側：近くにいる("靴") (r = 70)
-        ctx.beginPath();
-        ctx.arc(shoe.x, shoe.y, 70, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(147, 51, 234, 0.08)";
-        ctx.fill();
-        ctx.strokeStyle = "rgba(147, 51, 234, 0.85)";
-        ctx.lineWidth = 2;
-        ctx.setLineDash([6, 4]);
-        ctx.stroke();
-        drawLabel("近くにいる(\"靴\") (70)", shoe.x, shoe.y + 84, "#7e22ce");
-
-        // 内側：部位回転で履く判定 (r = 36) ＆ 靴を履く()直接の範囲 (グレー点線 r = 24)
-        ctx.beginPath();
-        ctx.arc(shoe.x, shoe.y, 36, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(239, 68, 68, 0.12)";
-        ctx.fill();
-        ctx.strokeStyle = "rgba(220, 38, 38, 0.9)";
-        ctx.lineWidth = 2;
-        ctx.setLineDash([]);
-        ctx.stroke();
-        drawLabel("部位回転:履く(36) / 履く():点線(24)", shoe.x, shoe.y - 42, "#dc2626");
-      }
-    }
-
-    // 5. ピクトグラム全身の判定基準点（12点：頭・胴体・肩・肘・手・膝・足）を可視化
-    const allPts = this.getPictoPoints();
-    ctx.setLineDash([]);
-    for (const cp of allPts) {
-      const isHand = cp.label === "左手" || cp.label === "右手";
-      const isFoot = cp.label === "左足" || cp.label === "右足";
-      const isCenter = cp.label === "体中心";
-      ctx.beginPath();
-      ctx.arc(cp.x, cp.y, isHand || isFoot || isCenter ? 5.5 : 4, 0, Math.PI * 2);
-      ctx.fillStyle = isHand ? "#ef4444" : (isFoot ? "#9333ea" : (isCenter ? "#10b981" : "#3b82f6"));
-      ctx.fill();
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = "#ffffff";
-      ctx.stroke();
-    }
-
-    ctx.restore();
   }
 
   drawPoints() {

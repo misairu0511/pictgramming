@@ -7,7 +7,7 @@ const STAGE_STARTER_CODES = {
   stage4: `// ヒヨコを掴む\n向く(90);\n移動(180);\n部位回転("右腕", -60);\n`,
   stage5: `// B地点の近くまで進む\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\n`,
   stage6: ``,
-  stage7: `// 1足目の靴を履く\n移動(60);\n向く(90);\nwhile (近くにいない("靴")) {\n  移動(30);\n}\n靴を履く();\n`,
+  stage7: `// 1足目の靴を履く\n移動(60);\n向く(90);\nwhile (近くにいない("靴")) {\n  移動(30);\n}\n部位回転("右足", -60);\n`,
   stage8: ``,
   stage9: `// 繰り返しを使って3羽のヒヨコを運ぼう\n繰り返し(3回) {\n  \n}\n`,
   stage10: `向く("A");\nwhile (近くにいない("A")) {\n  移動(30);\n}\nもし (近くにいる("ヒヨコ")) {\n  \n}\n`
@@ -54,9 +54,65 @@ const btnReplayHint = document.getElementById("btn-replay-hint");
 const stage8TestSelector = document.getElementById("stage8-test-selector");
 const btnTestCase1 = document.getElementById("btn-test-case-1");
 const btnTestCase2 = document.getElementById("btn-test-case-2");
+const stageTitleEl = document.getElementById("stage-title");
+const stageGoalBannerEl = document.getElementById("stage-goal-banner");
 let stage8ClearedCases = new Set();
 
+const STAGE_INFO = {
+  stage0: {
+    title: "チュートリアル",
+    goal: "🎯 目標：画面の案内にそって基本の動かし方を練習しよう"
+  },
+  stage1: {
+    title: "ステージ1：移動と方向転換①",
+    goal: "🎯 目標：ピクトグラムを GOAL まで移動させよう"
+  },
+  stage2: {
+    title: "ステージ2：移動と方向転換②",
+    goal: "🎯 目標：途中で向きを変えて、GOAL まで移動させよう"
+  },
+  stage3: {
+    title: "ステージ3：移動と方向転換③",
+    goal: "🎯 目標：真ん中の壁を避けて GOAL まで移動させよう"
+  },
+  stage4: {
+    title: "ステージ4：ヒヨコを運ぼう①",
+    goal: "🎯 目標：ヒヨコを掴んで GOAL の中まで運び、そこで離そう"
+  },
+  stage5: {
+    title: "ステージ5：ヒヨコを運ぼう②",
+    goal: "🎯 目標：右上にあるヒヨコを掴んで GOAL まで運ぼう"
+  },
+  stage6: {
+    title: "ステージ6：ヒヨコを運ぼう③",
+    goal: "🎯 目標：2羽のうち、どちらか1羽のヒヨコを GOAL まで運ぼう"
+  },
+  stage7: {
+    title: "ステージ7：靴と針山①",
+    goal: "🎯 目標：2足の靴を両方履いて針山を通り抜け、ヒヨコを GOAL まで運ぼう"
+  },
+  stage8: {
+    title: "ステージ8：靴と針山②",
+    goal: "🎯 目標：2足の靴を両方履いて針山を越え、どちらか1羽のヒヨコを GOAL まで運ぼう"
+  },
+  stage9: {
+    title: "ステージ9：3羽のヒヨコを運ぼう",
+    goal: "🎯 目標：ヒヨコを1羽ずつ運び、合計3羽を GOAL まで運ぼう"
+  },
+  stage10: {
+    title: "ステージ10：ヒヨコを探そう",
+    goal: "🎯 目標：爆弾に触れないようヒヨコを GOAL まで運ぼう（パターン1・2の両方でクリアしよう）"
+  }
+};
+
+function updateStageMissionUI(stageId) {
+  const info = STAGE_INFO[stageId] || STAGE_INFO.stage1;
+  if (stageTitleEl) stageTitleEl.textContent = info.title;
+  if (stageGoalBannerEl) stageGoalBannerEl.textContent = info.goal;
+}
+
 function updateStage8TestUI(stageId) {
+  updateStageMissionUI(stageId);
   if (!stage8TestSelector) return;
   if (stageId === "stage10") {
     stage8TestSelector.style.display = "inline-flex";
@@ -226,6 +282,7 @@ let tutorialAdvanceCheck = null;
 
 function updateShoeUI() {
   if (!stageSelect) return;
+  updateStage8TestUI(stageSelect.value);
   const isShoeStage = stageSelect.value === "stage7" || stageSelect.value === "stage8";
   document.querySelectorAll(".shoe-snippet").forEach(el => el.style.display = isShoeStage ? "inline-block" : "none");
   const shoeHelp1 = document.getElementById("shoe-help-1");
@@ -1106,6 +1163,7 @@ if (btnLogHistory && logModal) {
 
 function updateShoeUI() {
   if (!stageSelect) return;
+  updateStage8TestUI(stageSelect.value);
   const isShoeStage = stageSelect.value === "stage7" || stageSelect.value === "stage8";
   document.querySelectorAll(".shoe-snippet").forEach(el => el.style.display = isShoeStage ? "inline-block" : "none");
   const shoeHelp1 = document.getElementById("shoe-help-1");

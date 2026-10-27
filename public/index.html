@@ -70,18 +70,20 @@
 
   <main class="workspace">
     <section class="stage-pane" aria-labelledby="stage-title">
-      <div class="pane-header">
-        <div>
-          <h2 id="stage-title">表示エリア</h2>
-          <p>体の部位にカーソルを合わせると、Java で使う名前が表示されます。</p>
-        </div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div id="stage8-test-selector" style="display: none; align-items: center; gap: 6px; padding: 4px 10px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 6px;">
-            <span style="font-size: 12px; font-weight: bold; color: #0369a1;">テスト:</span>
-            <button id="btn-test-case-1" type="button" class="btn" style="min-width: auto; height: 28px; padding: 0 10px; font-size: 12px; border-radius: 4px; background: #0284c7; color: white; border: none; font-weight: bold; cursor: pointer;">パターン1</button>
-            <button id="btn-test-case-2" type="button" class="btn" style="min-width: auto; height: 28px; padding: 0 10px; font-size: 12px; border-radius: 4px; background: white; color: #0284c7; border: 1px solid #0284c7; font-weight: normal; cursor: pointer;">パターン2</button>
+      <div class="pane-header" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+          <h2 id="stage-title" style="font-size: 1.08rem; color: #0f172a;">ステージ1：移動と方向転換①</h2>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div id="stage8-test-selector" style="display: none; align-items: center; gap: 6px; padding: 3px 10px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 6px;">
+              <span style="font-size: 12px; font-weight: bold; color: #0369a1;">テスト:</span>
+              <button id="btn-test-case-1" type="button" class="btn" style="min-width: auto; height: 26px; padding: 0 10px; font-size: 12px; border-radius: 4px; background: #0284c7; color: white; border: none; font-weight: bold; cursor: pointer;">パターン1</button>
+              <button id="btn-test-case-2" type="button" class="btn" style="min-width: auto; height: 26px; padding: 0 10px; font-size: 12px; border-radius: 4px; background: white; color: #0284c7; border: 1px solid #0284c7; font-weight: normal; cursor: pointer;">パターン2</button>
+            </div>
+            <button class="icon-btn" id="btn-clear-stage" type="button" title="表示だけを初期化" style="width: 32px; height: 32px;">↺</button>
           </div>
-          <button class="icon-btn" id="btn-clear-stage" type="button" title="表示だけを初期化">↺</button>
+        </div>
+        <div id="stage-goal-banner" style="padding: 7px 12px; background: linear-gradient(90deg, #eff6ff 0%, #f0f9ff 100%); border: 1px solid #93c5fd; border-left: 5px solid #2563eb; border-radius: 6px; font-size: 0.92rem; font-weight: 700; color: #1e3a8a; line-height: 1.4;">
+          🎯 目標：ピクトグラムを GOAL まで移動させよう
         </div>
       </div>
 
@@ -163,7 +165,7 @@
               対象には地点（<code>"A"</code>〜<code>"F"</code>）のほか、<code>"ゴール"</code>, <code>"ヒヨコ"</code>, <code>"爆弾"</code>, <code>"靴"</code> を指定できます</li>
           </ul>
           <div class="part-name-list">
-            <div>体の部位名</div>
+            <div>体の部位名（画面のピクトグラムにカーソルを合わせても確認できます）</div>
             <code>"頭"</code>
             <code>"体"</code>
             <code>"左腕"</code>
