@@ -123,11 +123,11 @@ const STAGES = {
   stage10: {
     hasItem: true,
     initialDirection: -90,
-    initialOffset: { x: -40, y: -40 },
-    goalOffset: { x: 240, y: -40 },
+    initialOffset: { x: -220, y: 130 },
+    goalOffset: { x: 0, y: -40 },
     testCases: [
-      { x: -160, y: -250, label: "A" }, // テスト1: A地点
-      { x: -160, y:   90, label: "D" }  // テスト2: D地点
+      { x: -160, y: -250, label: "パターン1" }, // パターン1: 左上(A地点)にヒヨコ、右下(F地点)に爆弾
+      { x:  280, y:   90, label: "パターン2" }  // パターン2: 右下(F地点)にヒヨコ、左上(A地点)に爆弾
     ],
     points: COMMON_POINTS
   }
@@ -157,6 +157,10 @@ class PictoEngine {
     this.itemImg = new Image();
     this.itemImg.src = "img/item1.png";
     this.itemImg.onload = () => { if (!this.isStopped) this.draw(); };
+
+    this.bombImg = new Image();
+    this.bombImg.src = "img/bomb.png";
+    this.bombImg.onload = () => { if (!this.isStopped) this.draw(); };
 
     this.shoeRightImg = new Image();
     this.shoeRightImg.src = "img/shoe_right.jpg";
@@ -231,6 +235,7 @@ class PictoEngine {
     const initOffsetY = stage.initialOffset ? stage.initialOffset.y : 0;
     const hasItem = stage.hasItem !== undefined ? stage.hasItem : true;
     let items = [];
+    let bombs = [];
     if (stage.nests && stage.nests.length > 0) {
       for (let nIdx = 0; nIdx < stage.nests.length; nIdx++) {
         const nest = stage.nests[nIdx];
@@ -258,6 +263,16 @@ class PictoEngine {
         offsetX: 0,
         offsetY: 0
       }];
+      for (let i = 0; i < stage.testCases.length; i++) {
+        if (i !== activeIdx) {
+          const bTc = stage.testCases[i];
+          bombs.push({
+            x: centerX + bTc.x,
+            y: centerY + bTc.y,
+            exploded: false
+          });
+        }
+      }
     } else if (stage.items && stage.items.length > 0) {
       items = stage.items.map(offset => ({
         x: centerX + offset.x,
@@ -287,6 +302,7 @@ class PictoEngine {
       particles: [],
       hasItem: hasItem,
       items: items,
+      bombs: bombs,
       item: items[0] || { x: 0, y: 0, attachedTo: null, offsetX: 0, offsetY: 0 },
       shoes: (stage.shoes ? stage.shoes : []).map(shoeDef => ({
           exists: true, x: centerX + shoeDef.x, y: centerY + shoeDef.y, isWorn: false
@@ -361,6 +377,21 @@ class PictoEngine {
     const rightHand = this.getHandPosition("rightArm");
     const grabRadius = 38;
 
+    if (!this.isGhostMode && this.state.bombs && this.state.bombs.length > 0) {
+      for (const bomb of this.state.bombs) {
+        const distL = this.distance(leftHand.x, leftHand.y, bomb.x, bomb.y);
+        const distR = this.distance(rightHand.x, rightHand.y, bomb.x, bomb.y);
+        if (distL <= grabRadius || distR <= grabRadius) {
+          bomb.exploded = true;
+          this.state.particles.push({
+            x: bomb.x, y: bomb.y - 10, text: "💥", startTime: Date.now(), duration: 1500, distance: 35, color: "rgba(239, 68, 68, 1)", animationType: 'up_down', fontSize: 36
+          });
+          this.draw();
+          throw new Error("爆弾を掴んでしまった！（ゲームオーバー）");
+        }
+      }
+    }
+
     for (const item of this.state.items) {
       if (item.attachedTo) continue;
       // すでにゴールに運んで離した後は再キャッチしない
@@ -420,6 +451,18 @@ class PictoEngine {
       return this.isNearItem();
     }
     const target = String(label).trim();
+    if (target === "爆弾") {
+      if (!this.state.bombs || this.state.bombs.length === 0) return false;
+      const leftHand = this.getHandPosition("leftArm");
+      const rightHand = this.getHandPosition("rightArm");
+      const grabRadius = 65;
+      return this.state.bombs.some(bomb => {
+        const distL = this.distance(leftHand.x, leftHand.y, bomb.x, bomb.y);
+        const distR = this.distance(rightHand.x, rightHand.y, bomb.x, bomb.y);
+        const distBody = this.distance(this.state.x, this.state.y, bomb.x, bomb.y);
+        return distL <= grabRadius || distR <= grabRadius || distBody <= 65;
+      });
+    }
     if (target === "靴") {
       if (!Array.isArray(this.state.shoes) || this.state.shoes.length === 0) return true;
       const unworn = this.state.shoes.filter(s => s.exists && !s.isWorn);
@@ -470,6 +513,15 @@ class PictoEngine {
         const handPos = this.getHandPosition(it.attachedTo);
         it.x = handPos.x + it.offsetX;
         it.y = handPos.y + it.offsetY;
+        // ピクトグラム本体がゴール円内に入っている状態で離した場合は、腕の向きに関わらずゴール内に着地させる
+        const bodyDistToGoal = this.distance(this.state.x, this.state.y, this.goal.x, this.goal.y);
+        const itemDistToGoal = this.distance(it.x, it.y, this.goal.x, this.goal.y);
+        if (bodyDistToGoal <= this.goal.radius && itemDistToGoal > this.goal.radius - 10) {
+          const angle = Math.atan2(it.y - this.goal.y, it.x - this.goal.x);
+          const targetR = this.goal.radius - 15;
+          it.x = this.goal.x + Math.cos(angle) * targetR;
+          it.y = this.goal.y + Math.sin(angle) * targetR;
+        }
         it.attachedTo = null;
         
         const status = this.evaluateGoalStatus();
@@ -607,6 +659,13 @@ class PictoEngine {
         return "靴";
       }
     }
+    if (Array.isArray(this.state.bombs)) {
+      for (const bomb of this.state.bombs) {
+        if (this.distance(canvasX, canvasY, bomb.x, bomb.y) <= 35) {
+          return "爆弾";
+        }
+      }
+    }
     return null;
   }
 
@@ -721,7 +780,7 @@ class PictoEngine {
     // 向いている目標地点がある場合、飛び越さないようにぴったり目標地点で止める
     if (distance > 0 && this.state.targetPoint) {
       const distToTarget = this.distance(startX, startY, this.state.targetPoint.x, this.state.targetPoint.y);
-      if (distToTarget > 0 && distToTarget <= distance + 6) {
+      if (distToTarget > 0 && distToTarget <= distance + 22) {
         endX = this.state.targetPoint.x;
         endY = this.state.targetPoint.y;
       }
@@ -729,7 +788,7 @@ class PictoEngine {
       // 角度指定などで歩いている場合も、途中に地点の中心があればそこへ吸着して飛び越しを防ぐ
       for (const pt of this.state.points) {
         const distStart = this.distance(startX, startY, pt.x, pt.y);
-        if (distStart > 5 && distStart <= distance + 4) {
+        if (distStart > 5 && distStart <= distance + 22) {
           // 進行方向と地点の方向がほぼ一致しているか確認
           const angleToPt = Math.atan2(pt.y - startY, pt.x - startX);
           const diff = Math.abs(Math.atan2(Math.sin(radians - angleToPt), Math.cos(radians - angleToPt)));
@@ -804,7 +863,7 @@ class PictoEngine {
       throw new Error("向くの引数は地点名(\"A\"など)または角度(数字)を指定してください");
     }
     const label = target.trim();
-    if (label === "ゴール" || label.toUpperCase() === "GOAL" || label === "ヒヨコ" || label === "靴") {
+    if (label === "ゴール" || label.toUpperCase() === "GOAL" || label === "ヒヨコ" || label === "靴" || label === "爆弾") {
       throw new Error(`"${label}" には直接向くことができません。地点("A"など)や角度(数字)を指定してください`);
     }
 
@@ -831,12 +890,19 @@ class PictoEngine {
     const isArmPart = ["leftArm", "rightArm", "leftElbow", "rightElbow"].includes(partName);
     const isLegPart = ["leftLeg", "rightLeg", "leftKnee", "rightKnee"].includes(partName);
 
+    let partError = null;
     await this.animate(this.partAnimationMs, (progress) => {
       part.rotation = this.lerp(start, end, progress);
-      // 腕を動かしている最中にヒヨコに触れたら自動で掴む
+      // 腕を動かしている最中にヒヨコに触れたら自動で掴む（爆弾に触れたらエラー停止）
       const alreadyHolding = (this.state.items || [this.state.item]).some(it => it && it.attachedTo !== null);
       if (isArmPart && this.state.hasItem && !alreadyHolding) {
-        this.grabItem();
+        try {
+          this.grabItem();
+        } catch (err) {
+          partError = err;
+          this.isStopped = true;
+          return false;
+        }
       }
       // 足を動かしている最中に靴に触れたら自動で履く
       if (isLegPart) {
@@ -844,6 +910,8 @@ class PictoEngine {
       }
       this.draw();
     });
+
+    if (partError) throw partError;
   }
 
   draw() {
@@ -857,9 +925,11 @@ class PictoEngine {
     this.drawCheckpoints();
     this.drawWalls();
     this.drawTrail();
-    this.drawShoes();
-    this.drawItem();
+    this.drawShoes(false);
+    this.drawItem(false);
     this.drawPicto(this.state);
+    this.drawShoes(true);
+    this.drawItem(true);
     this.drawParticles();
     this.drawLegend();
   }
@@ -1135,10 +1205,10 @@ class PictoEngine {
     ctx.restore();
   }
 
-  drawShoes() {
+  drawShoes(wornOnly = false) {
     if (!Array.isArray(this.state.shoes)) return;
     for (const shoe of this.state.shoes) {
-      if (shoe && shoe.exists) {
+      if (shoe && shoe.exists && Boolean(shoe.isWorn) === wornOnly) {
         this.drawShoe("right", shoe, this.shoeRightImg);
       }
     }
@@ -1201,15 +1271,15 @@ class PictoEngine {
     this.ctx.restore();
   }
 
-  drawItem() {
+  drawItem(attachedOnly = false) {
     if (!this.state.hasItem) return;
     const stage = STAGES[this.currentStageId];
     const items = this.state.items || (this.state.item ? [this.state.item] : []);
     const centerX = this.canvas.width / 2;
     const centerY = this.canvas.height / 2 + 40;
 
-    // ステージ7：2か所の巣とヒヨコ羽数バッジ（③、②、①）を描画
-    if (stage && stage.nests && stage.nests.length > 0) {
+    // ステージ9：2か所の巣とヒヨコ羽数バッジ（③、②、①）を描画（背面レイヤーのみ）
+    if (!attachedOnly && stage && stage.nests && stage.nests.length > 0) {
       for (let nIdx = 0; nIdx < stage.nests.length; nIdx++) {
         const nest = stage.nests[nIdx];
         const nx = centerX + nest.x;
@@ -1260,8 +1330,8 @@ class PictoEngine {
       }
     }
 
-    // ステージ8：テストケース用の巣を描画
-    if (stage && stage.testCases && stage.testCases.length > 0) {
+    // ステージ10：テストケース用の巣を描画（背面レイヤーのみ）
+    if (!attachedOnly && stage && stage.testCases && stage.testCases.length > 0) {
       for (let tIdx = 0; tIdx < stage.testCases.length; tIdx++) {
         const tc = stage.testCases[tIdx];
         const tx = centerX + tc.x;
@@ -1280,8 +1350,48 @@ class PictoEngine {
       }
     }
 
+    // 爆弾（危険物）の描画（背面レイヤーのみ）
+    if (!attachedOnly && this.state.bombs && this.state.bombs.length > 0) {
+      for (const bomb of this.state.bombs) {
+        this.ctx.save();
+        this.ctx.translate(bomb.x, bomb.y);
+        this.ctx.scale(0.6, 0.6);
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, 35, 0, Math.PI * 2);
+        if (bomb.exploded) {
+          this.ctx.fillStyle = "rgba(239, 68, 68, 0.25)";
+          this.ctx.fill();
+          this.ctx.strokeStyle = "rgba(239, 68, 68, 0.95)";
+          this.ctx.lineWidth = 3;
+        } else {
+          this.ctx.strokeStyle = "rgba(107, 114, 128, 0.6)";
+          this.ctx.lineWidth = 2;
+          this.ctx.setLineDash([6, 4]);
+        }
+        this.ctx.stroke();
+
+        if (this.isGhostMode) {
+          this.ctx.globalAlpha = 0.5;
+        }
+        if (this.bombImg && this.bombImg.complete && this.bombImg.naturalWidth > 0) {
+          const w = 95;
+          const h = (w / this.bombImg.naturalWidth) * this.bombImg.naturalHeight;
+          this.ctx.drawImage(this.bombImg, -w / 2, -h / 2, w, h);
+        } else {
+          this.ctx.fillStyle = "#1e293b";
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, 24, 0, Math.PI * 2);
+          this.ctx.fill();
+        }
+        this.ctx.restore();
+      }
+    }
+
     const drawnNestIds = new Set();
     for (const item of items) {
+      if (Boolean(item.attachedTo) !== attachedOnly) {
+        continue;
+      }
       if (item.nestId !== undefined && !item.attachedTo && (this.distance(item.x, item.y, this.goal.x, this.goal.y) > this.goal.radius)) {
         if (drawnNestIds.has(item.nestId)) {
           continue;

@@ -33,11 +33,6 @@
             <option value="stage9">ステージ9: 3羽のヒヨコを運ぼう (繰り返し)</option>
             <option value="stage10">ステージ10: ヒヨコを探そう (条件分岐)</option>
           </select>
-        <div id="stage8-test-selector" style="display: none; align-items: center; gap: 4px; margin-left: 6px; padding: 2px 6px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 6px;">
-          <span style="font-size: 11px; font-weight: bold; color: #0369a1;">テスト:</span>
-          <button id="btn-test-case-1" type="button" class="btn" style="padding: 2px 8px; font-size: 11px; border-radius: 4px; background: #0284c7; color: white; border: none; font-weight: bold; cursor: pointer;">① A地点</button>
-          <button id="btn-test-case-2" type="button" class="btn" style="padding: 2px 8px; font-size: 11px; border-radius: 4px; background: white; color: #0284c7; border: 1px solid #0284c7; font-weight: normal; cursor: pointer;">② D地点</button>
-        </div>
       </div>
 
       <!-- Right side: Hint Group & Execution Group -->
@@ -80,7 +75,14 @@
           <h2 id="stage-title">表示エリア</h2>
           <p>体の部位にカーソルを合わせると、Java で使う名前が表示されます。</p>
         </div>
-        <button class="icon-btn" id="btn-clear-stage" type="button" title="表示だけを初期化">↺</button>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div id="stage8-test-selector" style="display: none; align-items: center; gap: 6px; padding: 4px 10px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 6px;">
+            <span style="font-size: 12px; font-weight: bold; color: #0369a1;">テスト:</span>
+            <button id="btn-test-case-1" type="button" class="btn" style="min-width: auto; height: 28px; padding: 0 10px; font-size: 12px; border-radius: 4px; background: #0284c7; color: white; border: none; font-weight: bold; cursor: pointer;">パターン1</button>
+            <button id="btn-test-case-2" type="button" class="btn" style="min-width: auto; height: 28px; padding: 0 10px; font-size: 12px; border-radius: 4px; background: white; color: #0284c7; border: 1px solid #0284c7; font-weight: normal; cursor: pointer;">パターン2</button>
+          </div>
+          <button class="icon-btn" id="btn-clear-stage" type="button" title="表示だけを初期化">↺</button>
+        </div>
       </div>
 
       <div class="stage-frame">
@@ -148,13 +150,17 @@
         <div class="help-title">使える文</div>
         <div class="help-scroll">
           <ul>
-            <li><code>移動(数字);</code> 矢印の方向へ進む（マイナスで後ろ）</li>
-            <li><code>向く("A");</code> 指定した地点（<code>"A"</code>, <code>"B"</code>…）の方向へ矢印を向ける</li>
-            <li><code>向く(数字);</code> 矢印の向きを指定した角度だけ回す（プラスで右回り、マイナスで左回り）</li>
-            <li><code>部位回転("体の部位", 数字);</code> 手足を回す（腕を動かしてヒヨコに触れると自動で掴みます！）</li>
-            <li><code>掴む();</code> 近くのヒヨコを掴む ／ <code>離す();</code> 掴んでいるヒヨコを離す</li>
-            <li id="shoe-help-1" style="display:none;"><code>靴を履く();</code> 近くの靴を空いている足に履く（足を動かして靴に触れても履けます）</li>
-            <li><code>近くにいない("A")</code> / <code>近くにいる("A")</code> 地点や <code>"ヒヨコ"</code>, <code>"靴"</code> の近くか判定（<code>while</code> や <code>もし</code> で使用）</li>
+            <li><code>移動(数字);</code> 矢印の方向へ進む（1マス＝<code>40</code>、マイナスで後ろへ下がる）</li>
+            <li><code>向く("A");</code> 地点（<code>"A"</code>〜<code>"F"</code>）の方向へ矢印を向ける（※ヒヨコ・爆弾・靴・ゴールには直接向けません）</li>
+            <li><code>向く(数字);</code> 今の向きから指定した角度だけ回す（<code>90</code> で右へ90度、<code>-90</code> で左へ90度）</li>
+            <li><code>部位回転("部位名", 数字);</code> 手足を回す（腕を回してヒヨコに触れると自動で掴みます ※爆弾に触れるとゲームオーバー）</li>
+            <li><code>掴む();</code> 近くのヒヨコを掴む ／ <code>離す();</code> 持っているヒヨコをその場に離す</li>
+            <li id="shoe-help-1" style="display:none;"><code>靴を履く();</code> 近くの靴を履く（すべての靴を履くと針山を通れます）</li>
+            <li><code>while (条件) { ... }</code> 条件を満たしている間、<code>{ }</code> の中を繰り返す（例：<code>while (近くにいない("A")) { 移動(30); }</code>）</li>
+            <li><code>繰り返し(数字回) { ... }</code> 指定した回数だけ <code>{ }</code> の中を繰り返す</li>
+            <li><code>もし (条件) { ... } そうでなければ { ... }</code> 条件に合うかどうかで動きを分ける</li>
+            <li><strong>【条件】</strong> <code>近くにいる("対象")</code> ／ <code>近くにいない("対象")</code><br>
+              対象には地点（<code>"A"</code>〜<code>"F"</code>）のほか、<code>"ゴール"</code>, <code>"ヒヨコ"</code>, <code>"爆弾"</code>, <code>"靴"</code> を指定できます</li>
           </ul>
           <div class="part-name-list">
             <div>体の部位名</div>

@@ -72,8 +72,8 @@ function updateStage8ButtonsUI() {
   const is1Cleared = stage8ClearedCases.has(0);
   const is2Cleared = stage8ClearedCases.has(1);
 
-  btnTestCase1.textContent = is1Cleared ? "① A地点 ✓" : "① A地点";
-  btnTestCase2.textContent = is2Cleared ? "② D地点 ✓" : "② D地点";
+  btnTestCase1.textContent = is1Cleared ? "パターン1 ✓" : "パターン1";
+  btnTestCase2.textContent = is2Cleared ? "パターン2 ✓" : "パターン2";
 
   if (cur === 0) {
     btnTestCase1.style.background = is1Cleared ? "#059669" : "#0284c7";
@@ -961,13 +961,13 @@ async function runProgram() {
           updateStage8ButtonsUI();
 
           if (stage8ClearedCases.size < 2) {
-            const currentName = engine.currentTestCase === 0 ? "① A地点" : "② D地点";
+            const currentName = engine.currentTestCase === 0 ? "パターン1" : "パターン2";
             const nextCase = engine.currentTestCase === 0 ? 1 : 0;
-            const nextName = nextCase === 0 ? "① A地点" : "② D地点";
-            addLog(`【判定】テスト${engine.currentTestCase + 1} (${currentName}) クリア！`, "success");
-            addLog(`上部の「${nextName}」ボタンに切り替えて、同じプログラムでもう一方のケースもクリアできるか確認しよう！`, "info");
+            const nextName = nextCase === 0 ? "パターン1" : "パターン2";
+            addLog(`【判定】${currentName} クリア！`, "success");
+            addLog(`表示エリア右上の「${nextName}」ボタンに切り替えて、同じプログラムでもう一方のパターンもクリアできるか確認しよう！`, "info");
           } else {
-            addLog(`【判定】お見事！テスト1 (A地点) とテスト2 (D地点) の両方をクリアしました！条件分岐が完璧に書けています！`, "success");
+            addLog(`【判定】お見事！パターン1とパターン2の両方をクリアしました！条件分岐が完璧に書けています！`, "success");
             if (clearOverlay) {
               const btnNext = document.getElementById("btn-next-stage");
               if (btnNext) {
@@ -1156,8 +1156,11 @@ function transpileToJava(javaCode) {
   // Inject yield into loops to prevent freezing
   jsCode = jsCode.replace(/\b(for|while)\s*\(([\s\S]*?)\)\s*\{/g, '$1($2) { await picto.yield(); ');
   
+  // Support unquoted target names inside 近くにいる / 近くにいない / 向く (e.g. 近くにいる(爆弾) -> 近くにいる("爆弾"))
+  jsCode = jsCode.replace(/(近くにいる|近くにいない|向く|回転)\s*\(\s*(ヒヨコ|爆弾|靴|ゴール)\s*\)/g, '$1("$2")');
+
   // Replace command keywords to await picto.method
-  jsCode = jsCode.replace(/(移動|向く|回転|部位回転|掴む|離す|靴を履く|靴を脱ぐ|履く|脱ぐ|右足で履く|左足で履く|右足で脱ぐ|左足で脱ぐ|近くにいない|近くにいる|地点にいない|地点にいる|ヒヨコの近くにいない|ヒヨコの近くにいる|靴の近くにいない|靴の近くにいる|ヒヨコを持っている)\s*\(/g, 'await picto.$1(');
+  jsCode = jsCode.replace(/(移動|向く|回転|部位回転|掴む|離す|靴を履く|靴を脱ぐ|履く|脱ぐ|右足で履く|左足で履く|右足で脱ぐ|左足で脱ぐ|近くにいない|近くにいる|地点にいない|地点にいる|ヒヨコの近くにいない|ヒヨコの近くにいる|爆弾の近くにいない|爆弾の近くにいる|靴の近くにいない|靴の近くにいる|ヒヨコを持っている)\s*\(/g, 'await picto.$1(');
   
   return jsCode;
 }
@@ -1293,6 +1296,14 @@ function createPictoContext() {
     "ヒヨコの近くにいない": async function() {
       checkStop();
       return !engine.isNearItem();
+    },
+    "爆弾の近くにいる": async function() {
+      checkStop();
+      return engine.isNearTarget("爆弾");
+    },
+    "爆弾の近くにいない": async function() {
+      checkStop();
+      return !engine.isNearTarget("爆弾");
     },
     "靴の近くにいる": async function() {
       checkStop();
