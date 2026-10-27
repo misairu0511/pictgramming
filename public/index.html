@@ -136,16 +136,16 @@
 
       <div class="snippet-toolbar">
         <button id="btn-snippet-move" class="snippet-btn" data-snippet="移動(30);" type="button">移動(30);</button>
-        <button id="btn-snippet-face-point" class="snippet-btn" data-snippet="向く(&quot;A&quot;);" type="button">向く("A");</button>
         <button id="btn-snippet-rotate" class="snippet-btn" data-snippet="向く(90);" type="button">向く(90);</button>
-        <button id="btn-snippet-part-rotate" class="snippet-btn" data-snippet="部位回転(&quot;右腕&quot;, -60);" type="button">部位回転(...);</button>
-        <button class="snippet-btn" data-snippet="掴む();" type="button">掴む();</button>
-        <button class="snippet-btn" data-snippet="離す();" type="button">離す();</button>
+        <button id="btn-snippet-face-point" class="snippet-btn" data-snippet="向く(&quot;A&quot;);" type="button">向く("A");</button>
+        <button id="btn-snippet-part-rotate" class="snippet-btn unlock-stage4" data-snippet="部位回転(&quot;右腕&quot;, -60);" type="button" style="display:none;">部位回転(...);</button>
+        <button class="snippet-btn unlock-stage4" data-snippet="掴む();" type="button" style="display:none;">掴む();</button>
+        <button class="snippet-btn unlock-stage4" data-snippet="離す();" type="button" style="display:none;">離す();</button>
         <button class="snippet-btn shoe-snippet" data-snippet="靴を履く();" type="button" style="display:none;">靴を履く();</button>
-        <button class="snippet-btn" data-snippet="while (近くにいない(&quot;A&quot;)) {\n  移動(30);\n}" type="button">while</button>
-        <button class="snippet-btn" data-snippet="繰り返し(3回) {\n  $CURSOR$\n}" type="button">繰り返し</button>
-        <button class="snippet-btn" data-snippet="もし(近くにいる(&quot;A&quot;)) {\n  $CURSOR$\n}" type="button">もし</button>
-        <button class="snippet-btn" data-snippet="もし(近くにいる(&quot;A&quot;)) {\n  $CURSOR$\n} そうでなければ {\n  \n}" type="button">もし...else</button>
+        <button class="snippet-btn unlock-stage4" data-snippet="while (近くにいない(&quot;A&quot;)) {\n  移動(30);\n}" type="button" style="display:none;">while</button>
+        <button class="snippet-btn unlock-stage9" data-snippet="繰り返し(3回) {\n  $CURSOR$\n}" type="button" style="display:none;">繰り返し</button>
+        <button class="snippet-btn unlock-stage10" data-snippet="もし (近くにいる(&quot;ヒヨコ&quot;)) {\n  $CURSOR$\n}" type="button" style="display:none;">もし</button>
+        <button class="snippet-btn unlock-stage10" data-snippet="もし (近くにいる(&quot;ヒヨコ&quot;)) {\n  $CURSOR$\n} そうでなければ {\n  \n}" type="button" style="display:none;">もし...else</button>
       </div>
 
       <div class="command-help">
@@ -153,18 +153,18 @@
         <div class="help-scroll">
           <ul>
             <li><code>移動(数字);</code> 矢印の方向へ進む（1マス＝<code>40</code>、マイナスで後ろへ下がる）</li>
-            <li><code>向く("A");</code> 地点（<code>"A"</code>〜<code>"F"</code>）の方向へ矢印を向ける（※ヒヨコ・爆弾・靴・ゴールには直接向けません）</li>
             <li><code>向く(数字);</code> 今の向きから指定した角度だけ回す（<code>90</code> で右へ90度、<code>-90</code> で左へ90度）</li>
-            <li><code>部位回転("部位名", 数字);</code> 手足を回す（腕を回してヒヨコに触れると自動で掴みます ※爆弾に触れるとゲームオーバー）</li>
-            <li><code>掴む();</code> 近くのヒヨコを掴む ／ <code>離す();</code> 持っているヒヨコをその場に離す</li>
-            <li id="shoe-help-1" style="display:none;"><code>靴を履く();</code> 近くの靴を履く（すべての靴を履くと針山を通れます）</li>
-            <li><code>while (条件) { ... }</code> 条件を満たしている間、<code>{ }</code> の中を繰り返す（例：<code>while (近くにいない("A")) { 移動(30); }</code>）</li>
-            <li><code>繰り返し(数字回) { ... }</code> 指定した回数だけ <code>{ }</code> の中を繰り返す</li>
-            <li><code>もし (条件) { ... } そうでなければ { ... }</code> 条件に合うかどうかで動きを分ける</li>
-            <li><strong>【条件】</strong> <code>近くにいる("対象")</code> ／ <code>近くにいない("対象")</code><br>
-              対象には地点（<code>"A"</code>〜<code>"F"</code>）のほか、<code>"ゴール"</code>, <code>"ヒヨコ"</code>, <code>"爆弾"</code>, <code>"靴"</code> を指定できます</li>
+            <li id="help-face-point"><code>向く("A");</code> 地点（<code>"A"</code>〜<code>"F"</code>）の方向へ矢印を向ける（※ゴールには直接向けません）</li>
+            <li id="help-part-rotate" class="unlock-stage4" style="display:none;"><code>部位回転("部位名", 数字);</code> 手足を回す（腕を回してヒヨコに触れると自動で掴みます）</li>
+            <li class="unlock-stage4" style="display:none;"><code>掴む();</code> 近くのヒヨコを掴む ／ <code>離す();</code> 持っているヒヨコをその場に離す</li>
+            <li id="shoe-help-1" style="display:none;"><code>靴を履く();</code> 近くの靴を履く（足を部位回転させて靴に触れても履けます。すべての靴を履くと針山を通れます）</li>
+            <li class="unlock-stage4" style="display:none;"><code>while (条件) { ... }</code> 条件を満たしている間、<code>{ }</code> の中を繰り返す（例：<code>while (近くにいない("A")) { 移動(30); }</code>）</li>
+            <li class="unlock-stage9" style="display:none;"><code>繰り返し(数字回) { ... }</code> 指定した回数だけ <code>{ }</code> の中を繰り返す</li>
+            <li class="unlock-stage10" style="display:none;"><code>もし (条件) { ... } そうでなければ { ... }</code> 条件に合うかどうかで動きを分ける</li>
+            <li id="help-condition-targets" class="unlock-stage4" style="display:none;"><strong>【条件】</strong> <code>近くにいる("対象")</code> ／ <code>近くにいない("対象")</code><br>
+              対象には地点（<code>"A"</code>〜<code>"F"</code>）のほか、<code>"ゴール"</code>, <code>"ヒヨコ"</code> を指定できます</li>
           </ul>
-          <div class="part-name-list">
+          <div class="part-name-list unlock-stage4" style="display:none;">
             <div>体の部位名（画面のピクトグラムにカーソルを合わせても確認できます）</div>
             <code>"頭"</code>
             <code>"体"</code>

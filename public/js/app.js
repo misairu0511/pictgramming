@@ -102,19 +102,45 @@ const STAGE_INFO = {
   stage10: {
     title: "ステージ10：ヒヨコを探そう",
     goal: "🎯 目標：爆弾に触れないようヒヨコを GOAL まで運ぼう（パターン1・2の両方でクリアしよう）"
+  },
+  tut1: {
+    title: "📘 チュートリアル①：移動と方向転換（ステージ1〜3）",
+    goal: "🎯 練習：矢印の向きへ進み、途中で向きを変えて左上の GOAL へ進もう"
+  },
+  tut4: {
+    title: "📘 チュートリアル②：ヒヨコを掴んで運ぶ（ステージ4〜6）",
+    goal: "🎯 練習：B地点のヒヨコを右腕で掴み、D地点の GOAL の中で離そう"
+  },
+  tut7: {
+    title: "📘 チュートリアル③：靴と針山（ステージ7〜8）",
+    goal: "🎯 練習：右足を回して靴を履き、赤い針山を越えて GOAL へ進もう"
+  },
+  tut9: {
+    title: "📘 チュートリアル④：複数のヒヨコと「繰り返し」（ステージ9）",
+    goal: "🎯 練習：「繰り返し」を使って、B地点の巣からヒヨコを1羽ずつ GOAL へ運ぼう"
+  },
+  tut10: {
+    title: "📘 チュートリアル⑤：爆弾と「もし〜そうでなければ」（ステージ10）",
+    goal: "🎯 練習：爆弾を掴まないよう「もし」でヒヨコを確かめて GOAL へ運ぼう"
   }
 };
 
 function updateStageMissionUI(stageId) {
-  const info = STAGE_INFO[stageId] || STAGE_INFO.stage1;
+  const activeId = (typeof engine !== "undefined" && engine.currentStageId && engine.currentStageId.startsWith("tut"))
+    ? engine.currentStageId
+    : stageId;
+  const info = STAGE_INFO[activeId] || STAGE_INFO[stageId] || STAGE_INFO.stage1;
   if (stageTitleEl) stageTitleEl.textContent = info.title;
   if (stageGoalBannerEl) stageGoalBannerEl.textContent = info.goal;
 }
 
 function updateStage8TestUI(stageId) {
-  updateStageMissionUI(stageId);
+  const activeId = (typeof engine !== "undefined" && engine.currentStageId && engine.currentStageId.startsWith("tut"))
+    ? engine.currentStageId
+    : stageId;
+  updateStageMissionUI(activeId);
   if (!stage8TestSelector) return;
-  if (stageId === "stage10") {
+  if (activeId === "stage10" || activeId === "tut10") {
     stage8TestSelector.style.display = "inline-flex";
     updateStage8ButtonsUI();
   } else {
@@ -203,8 +229,9 @@ function updateHintButtonsUI(hasHint) {
 async function checkHintLock() {
   if (!btnShowHint) return;
   const stageId = stageSelect ? stageSelect.value : "stage1";
+  const activeId = (typeof engine !== "undefined" && engine.currentStageId) ? engine.currentStageId : stageId;
   
-  if (stageId === "stage0") {
+  if (stageId === "stage0" || activeId.startsWith("tut")) {
     btnShowHint.disabled = true;
     return;
   }
@@ -239,6 +266,25 @@ async function checkHintLock() {
 if (stageSelect) {
   stageSelect.addEventListener("change", (e) => {
     const newStage = e.target.value;
+    if (typeof closeTutorialOverlayOnly === "function") {
+      closeTutorialOverlayOnly();
+    }
+    const applyStageSwitch = () => {
+      stage8ClearedCases.clear();
+      engine.loadStage(newStage);
+      setStarterCodeForStage(newStage);
+      checkHintLock();
+      clearOutput();
+      updateShoeUI();
+      updateStage8TestUI(newStage);
+      if (stageSelect && window.restoreHintState) window.restoreHintState(newStage);
+      lastViewedHint = "ヒントなし";
+      updateHintBadge();
+      if (typeof maybeStartAutoTutorial === "function") {
+        setTimeout(() => maybeStartAutoTutorial(newStage), 120);
+      }
+    };
+
     if (isRunning) {
       shouldStop = true;
       engine.stop();
@@ -251,44 +297,88 @@ if (stageSelect) {
       resetButton.disabled = false;
       
       // アニメーションループが停止するのを少し待ってからステージを切り替える
-      setTimeout(() => {
-        stage8ClearedCases.clear();
-        engine.loadStage(newStage);
-        setStarterCodeForStage(newStage);
-        checkHintLock();
-        clearOutput();
-        updateShoeUI();
-        updateStage8TestUI(newStage);
-        if (stageSelect && window.restoreHintState) window.restoreHintState(newStage);
-        lastViewedHint = "ヒントなし";
-        updateHintBadge();
-      }, 150);
+      setTimeout(applyStageSwitch, 150);
     } else {
-      stage8ClearedCases.clear();
-      engine.loadStage(newStage);
-        setStarterCodeForStage(newStage);
-        checkHintLock();
-      clearOutput();
-      updateShoeUI();
-      updateStage8TestUI(newStage);
-      if (stageSelect && window.restoreHintState) window.restoreHintState(newStage);
-      lastViewedHint = "ヒントなし";
-      updateHintBadge();
+      applyStageSwitch();
     }
   });
 }
 
 let tutorialAdvanceCheck = null;
 
+function getStageNumber(id) {
+  if (!id) return 1;
+  if (id.startsWith("tut")) return parseInt(id.replace("tut", ""), 10) || 1;
+  if (id.startsWith("stage")) return parseInt(id.replace("stage", ""), 10) || 1;
+  return 1;
+}
+
 function updateShoeUI() {
   if (!stageSelect) return;
-  updateStage8TestUI(stageSelect.value);
-  const isShoeStage = stageSelect.value === "stage7" || stageSelect.value === "stage8";
-  document.querySelectorAll(".shoe-snippet").forEach(el => el.style.display = isShoeStage ? "inline-block" : "none");
+  const activeId = (typeof engine !== "undefined" && engine.currentStageId && engine.currentStageId.startsWith("tut"))
+    ? engine.currentStageId
+    : stageSelect.value;
+  updateStage8TestUI(activeId);
+
+  const stageNum = getStageNumber(activeId);
+  const isStage4Plus = stageNum >= 4;
+  const isShoeStage = activeId === "stage7" || activeId === "stage8" || activeId === "tut7";
+  const isStage9Plus = stageNum >= 9;
+  const isStage10 = stageNum >= 10;
+
+  // 段階的表示：ステージ4以降（部位回転・掴む・離す・while・条件・部位名一覧）
+  document.querySelectorAll(".unlock-stage4").forEach(el => {
+    if (el.tagName === "LI") {
+      el.style.display = isStage4Plus ? "list-item" : "none";
+    } else if (el.classList.contains("part-name-list")) {
+      el.style.display = isStage4Plus ? "block" : "none";
+    } else {
+      el.style.display = isStage4Plus ? "inline-block" : "none";
+    }
+  });
+
+  // 段階的表示：ステージ7〜8のみ（靴を履く）
+  document.querySelectorAll(".shoe-snippet").forEach(el => {
+    el.style.display = isShoeStage ? "inline-block" : "none";
+  });
   const shoeHelp1 = document.getElementById("shoe-help-1");
   const shoeHelp2 = document.getElementById("shoe-help-2");
   if (shoeHelp1) shoeHelp1.style.display = isShoeStage ? "list-item" : "none";
   if (shoeHelp2) shoeHelp2.style.display = isShoeStage ? "list-item" : "none";
+
+  // 段階的表示：ステージ9以降（繰り返し）
+  document.querySelectorAll(".unlock-stage9").forEach(el => {
+    el.style.display = isStage9Plus ? (el.tagName === "LI" ? "list-item" : "inline-block") : "none";
+  });
+
+  // 段階的表示：ステージ10（もし / もし...else）
+  document.querySelectorAll(".unlock-stage10").forEach(el => {
+    el.style.display = isStage10 ? (el.tagName === "LI" ? "list-item" : "inline-block") : "none";
+  });
+
+  // ステージの進行に合わせて説明文の補足対象も段階的に変化させる
+  const helpFacePoint = document.getElementById("help-face-point");
+  if (helpFacePoint) {
+    let invalidTargets = "ゴール";
+    if (isStage4Plus) invalidTargets = "ヒヨコ・ゴール";
+    if (isShoeStage) invalidTargets = "ヒヨコ・靴・ゴール";
+    if (isStage10) invalidTargets = "ヒヨコ・爆弾・ゴール";
+    helpFacePoint.innerHTML = `<code>向く("A");</code> 地点（<code>"A"</code>〜<code>"F"</code>）の方向へ矢印を向ける（※${invalidTargets}には直接向けません）`;
+  }
+
+  const helpPartRotate = document.getElementById("help-part-rotate");
+  if (helpPartRotate) {
+    const bombNote = isStage10 ? " ※爆弾に触れるとゲームオーバー" : "";
+    helpPartRotate.innerHTML = `<code>部位回転("部位名", 数字);</code> 手足を回す（腕を回してヒヨコに触れると自動で掴みます${bombNote}）`;
+  }
+
+  const helpCondTargets = document.getElementById("help-condition-targets");
+  if (helpCondTargets) {
+    let extraTargets = `<code>"ゴール"</code>, <code>"ヒヨコ"</code>`;
+    if (isShoeStage) extraTargets += `, <code>"靴"</code>`;
+    if (isStage10) extraTargets += `, <code>"爆弾"</code>`;
+    helpCondTargets.innerHTML = `<strong>【条件】</strong> <code>近くにいる("対象")</code> ／ <code>近くにいない("対象")</code><br>対象には地点（<code>"A"</code>〜<code>"F"</code>）のほか、${extraTargets} を指定できます`;
+  }
 }
 
 const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
@@ -303,7 +393,8 @@ let lastViewedHint = "ヒントなし";
     async function saveHintViewLog(actionType, targetId, score) {
   if (!userId) return;
   const stageId = stageSelect ? stageSelect.value : "stage1";
-  if (stageId === "stage0") return; // 不要なログ（チュートリアル）を弾く
+  const activeId = (typeof engine !== "undefined" && engine.currentStageId) ? engine.currentStageId : stageId;
+  if (stageId === "stage0" || activeId.startsWith("tut")) return; // 不要なログ（チュートリアル）を弾く
   try {
 await db.collection('logs').add({
   eventType: 'hint_view',
@@ -990,12 +1081,11 @@ async function runProgram() {
         return;
       }
 
-      logCount++;
-      localStorage.setItem("pictgramming_log_count", logCount);
-      
-      const customDocId = `${userId}_log${logCount}`;
-      
-      if (currentLogSession.stageId !== "stage0") {
+      const isTutorialRun = currentLogSession.stageId === "stage0" || (currentLogSession.stageId && currentLogSession.stageId.startsWith("tut"));
+      if (!isTutorialRun) {
+        logCount++;
+        localStorage.setItem("pictgramming_log_count", logCount);
+        const customDocId = `${userId}_log${logCount}`;
         db.collection('logs').doc(customDocId).set(currentLogSession)
           .then(() => {
              console.log(`Log saved to Firebase with ID: ${customDocId}`);
@@ -1008,7 +1098,7 @@ async function runProgram() {
         
       currentLogSession = null;
       
-      if (finalGoalResult === "ゴールした") {
+      if (finalGoalResult === "ゴールした" && !isTutorialRun) {
         updateStageLocks(true);
         const clearOverlay = document.getElementById("clear-overlay");
         const isStage8 = stageSelect && stageSelect.value === "stage10";
@@ -1158,45 +1248,6 @@ if (btnLogHistory && logModal) {
 
   logModalClose.addEventListener("click", () => {
     logModal.close();
-  });
-}
-
-function updateShoeUI() {
-  if (!stageSelect) return;
-  updateStage8TestUI(stageSelect.value);
-  const isShoeStage = stageSelect.value === "stage7" || stageSelect.value === "stage8";
-  document.querySelectorAll(".shoe-snippet").forEach(el => el.style.display = isShoeStage ? "inline-block" : "none");
-  const shoeHelp1 = document.getElementById("shoe-help-1");
-  const shoeHelp2 = document.getElementById("shoe-help-2");
-  if (shoeHelp1) shoeHelp1.style.display = isShoeStage ? "list-item" : "none";
-  if (shoeHelp2) shoeHelp2.style.display = isShoeStage ? "list-item" : "none";
-
-  // 靴のチュートリアル表示
-  if (isShoeStage && !localStorage.getItem('shoeTutorialCompleted')) {
-    const modal = document.getElementById('shoe-tutorial-modal');
-    if (modal) {
-      modal.showModal();
-      localStorage.setItem('shoeTutorialCompleted', 'true');
-      
-      const closeBtn = document.getElementById('shoe-modal-close');
-      const okBtn = document.getElementById('btn-shoe-modal-ok');
-      
-      const closeModal = () => modal.close();
-      if (closeBtn) closeBtn.onclick = closeModal;
-      if (okBtn) okBtn.onclick = closeModal;
-    }
-  }
-}
-
-if (stageSelect) {
-  stageSelect.addEventListener("change", () => {
-    engine.loadStage(stageSelect.value);
-    clearOutput();
-    updateShoeUI();
-if (typeof checkHintLock === 'function') checkHintLock();
-    if (window.restoreHintState) window.restoreHintState(stageSelect.value);
-    lastViewedHint = "ヒントなし";
-    updateHintBadge();
   });
 }
 
@@ -1501,17 +1552,16 @@ async function updateStageLocks(skipReload = false) {
   }
 }
 
-// ページロード時の初期設定：チュートリアル完了済みでstage0が選択されている場合、stage1をデフォルトにする
-const isTutorialCompleted = localStorage.getItem('tutorialCompleted');
-if (isTutorialCompleted && stageSelect && stageSelect.value === 'stage0') {
+// ページロード時の初期設定：デフォルトでステージ1を選択
+if (stageSelect && stageSelect.value === 'stage0') {
   stageSelect.value = 'stage1';
 }
 
 // ページ読み込み時にロック状況を更新
 updateStageLocks();
 setStarterCodeForStage(stageSelect ? stageSelect.value : "stage1");
-  if (stageSelect && window.restoreHintState) window.restoreHintState(stageSelect.value);
-  const clearOverlay = document.getElementById("clear-overlay");
+if (stageSelect && window.restoreHintState) window.restoreHintState(stageSelect.value);
+const clearOverlay = document.getElementById("clear-overlay");
 if (clearOverlay) {
   clearOverlay.addEventListener("click", () => {
     clearOverlay.hidden = true;
@@ -1552,11 +1602,204 @@ if (btnDeleteAllLogs) {
   });
 }
 
-// --- チュートリアル・ステージ0制御 ---
-function initTutorial(force = false) {
-  const isCompleted = localStorage.getItem('tutorialCompleted');
-  
-  if (isCompleted && !force) {
+// --- 5段階インタラクティブ・チュートリアル制御（tut1, tut4, tut7, tut9, tut10） ---
+const TUTORIAL_BOUNDARY_STAGES = new Set(["stage1", "stage4", "stage7", "stage9", "stage10"]);
+let tutorialReturnStageId = "stage1";
+let tutorialSavedCode = null;
+
+function getTutorialKeyForStage(stageId) {
+  if (stageId === "stage1" || stageId === "stage2" || stageId === "stage3" || stageId === "tut1") return "tut1";
+  if (stageId === "stage4" || stageId === "stage5" || stageId === "stage6" || stageId === "tut4") return "tut4";
+  if (stageId === "stage7" || stageId === "stage8" || stageId === "tut7") return "tut7";
+  if (stageId === "stage9" || stageId === "tut9") return "tut9";
+  if (stageId === "stage10" || stageId === "tut10") return "tut10";
+  return "tut1";
+}
+
+function closeTutorialOverlayOnly() {
+  const overlay = document.getElementById('tutorial-wrapper');
+  if (window.tutorialOnTopElements) {
+    window.tutorialOnTopElements.forEach(el => el.classList.remove('tutorial-on-top'));
+    window.tutorialOnTopElements = null;
+  }
+  if (overlay) overlay.hidden = true;
+  tutorialAdvanceCheck = null;
+}
+
+function buildTutorialSteps(tutKey) {
+  if (tutKey === "tut1") {
+    return [
+      {
+        target: 'java-editor',
+        pos: 'left',
+        text: 'ピクトグラミングへようこそ！\nここでは簡単な文を書いて、画面のピクトグラムを GOAL まで動かす練習をします。（※本番のステージとは配置が違う練習用ステージです）'
+      },
+      {
+        target: 'java-editor',
+        onTopElements: ['#btn-run', '.stage-frame'],
+        pos: 'left',
+        text: 'ピクトグラムは「矢印の向き」へ進みます。\nまずは「移動(270);」で上へ進んでみましょう！右上の【実行】ボタンを押してみてください。',
+        codeToAdd: '移動(270);',
+        replaceCode: true,
+        waitForRun: true,
+        checkCondition: () => engine.state.y < (engine.canvas.height / 2)
+      },
+      {
+        target: 'java-editor',
+        onTopElements: ['#btn-run', '.stage-frame'],
+        pos: 'left',
+        text: '上に進みましたね！次は左にある GOAL に向かうため、「向く(-90);」で左へ90度向きを変え、「移動(200);」で進みます。\nもう一度【実行】ボタンを押してください！',
+        codeToAdd: '向く(-90);\n移動(200);',
+        keyword: '向く(-90)',
+        waitForRun: true,
+        checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
+      },
+      {
+        target: 'stage-goal-banner',
+        pos: 'bottom',
+        text: 'お見事、練習ステージの GOAL に到着しました！\n各ステージのクリア条件は、いつもここの「🎯 目標」に書かれています。'
+      },
+      {
+        target: 'btn-show-hint',
+        pos: 'bottom',
+        text: 'もし途中で解き方に迷ったら、自分で1回以上【実行】したあとに「💡 ヒントを見る」を押すと、他の人の動きをヒントとして見ることができます。\nそれでは本番のステージへ進みましょう！'
+      }
+    ];
+  }
+
+  if (tutKey === "tut4") {
+    return [
+      {
+        target: 'java-editor',
+        pos: 'left',
+        text: 'ステージ4〜6からは「ヒヨコ」が登場します！\nヒヨコを掴んで GOAL の中まで運び、そこで離すとクリアになります。（※練習用の配置で試してみましょう）'
+      },
+      {
+        target: 'java-editor',
+        onTopElements: ['#btn-run', '.stage-frame'],
+        pos: 'left',
+        text: '「向く("B");」と「while (近くにいない("B")) { 移動(30); }」でB地点まで歩き、「部位回転("右腕", -60);」で右腕を振ってヒヨコを掴みます！\n【実行】ボタンを押して動きを見てみましょう！',
+        codeToAdd: '// B地点まで歩いて右腕でヒヨコを掴む\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\n部位回転("右腕", -60);',
+        replaceCode: true,
+        waitForRun: true,
+        checkCondition: () => engine.state.hasGrabbedItem
+      },
+      {
+        target: 'java-editor',
+        onTopElements: ['#btn-run', '.stage-frame'],
+        pos: 'left',
+        text: '右腕がヒヨコに触れてキャッチできました！\n続けてD地点にある GOAL まで歩き、「離す();」でヒヨコを GOAL の中に置きましょう。【実行】ボタンを押してください！',
+        codeToAdd: '// ゴールまで運んで離す\n向く("D");\nwhile (近くにいない("ゴール")) {\n  移動(30);\n}\n離す();',
+        keyword: '離す()',
+        waitForRun: true,
+        checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
+      },
+      {
+        target: 'java-editor',
+        pos: 'left',
+        text: 'バッチリです！\n「向く("地点名")」「while (近くにいない(...))」「部位回転」「離す()」を組み合わせて、本番のステージでもヒヨコを GOAL まで運んでみましょう！'
+      }
+    ];
+  }
+
+  if (tutKey === "tut7") {
+    return [
+      {
+        target: 'java-editor',
+        onTopElements: ['#btn-run', '.stage-frame'],
+        pos: 'left',
+        text: 'ステージ7・8では、赤い「針山」と「靴」が登場します！\nまずは靴を履かずに針山へ進むとどうなるか、【実行】ボタンを押して確かめてみましょう。',
+        codeToAdd: '// 靴を履かずにそのまま進むと…？\n移動(240);',
+        replaceCode: true,
+        waitForRun: true,
+        checkCondition: () => log.textContent.includes('針山に触れてしまった')
+      },
+      {
+        target: 'java-editor',
+        onTopElements: ['#btn-run', '.stage-frame'],
+        pos: 'left',
+        text: '靴を履いていないと「針山に触れてしまった！」とエラーになってしまいます。\n今度は靴の近くまで歩いて「部位回転("右足", -60);」で足を回し、靴を履いてから針山を越えてみましょう！【実行】ボタンを押してください。',
+        codeToAdd: '// 靴の近くで右足を回して履き、針山を越えてゴールへ！\n移動(120);\n部位回転("右足", -60);\n移動(220);',
+        replaceCode: true,
+        waitForRun: true,
+        checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
+      },
+      {
+        target: 'java-editor',
+        pos: 'left',
+        text: '靴を履いたことで、赤い針山の上を安全に通り抜けられました！\n本番のステージには靴が2足あります。「2足すべての靴」を履いてから針山を渡りましょう！'
+      }
+    ];
+  }
+
+  if (tutKey === "tut9") {
+    return [
+      {
+        target: 'java-editor',
+        onTopElements: ['#btn-run', '.stage-frame'],
+        pos: 'left',
+        text: 'ステージ9では、複数のヒヨコを GOAL へ運びます。\nピクトグラムが一度に持てるヒヨコは「1羽だけ」です。まずは1往復するプログラムを【実行】して結果を見てみましょう！',
+        codeToAdd: '// まずは1羽だけ運んでみる\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\n部位回転("右腕", -60);\n向く("E");\nwhile (近くにいない("ゴール")) {\n  移動(30);\n}\n離す();',
+        replaceCode: true,
+        waitForRun: true,
+        checkCondition: () => log.textContent.includes('足りません')
+      },
+      {
+        target: 'java-editor',
+        onTopElements: ['#btn-run', '.stage-frame'],
+        pos: 'left',
+        text: '1羽運べましたが、まだ巣にヒヨコが残っていますね。\n同じ往復の動きを何度も書く代わりに「繰り返し(2回) { ... }」で囲み、最後に上げた右腕を元に戻す「部位回転("右腕", 60);」を入れて【実行】してみましょう！',
+        codeToAdd: '// 「繰り返し」で往復してすべてのヒヨコを運ぶ\n繰り返し(2回) {\n  向く("B");\n  while (近くにいない("B")) {\n    移動(30);\n  }\n  部位回転("右腕", -60);\n  向く("E");\n  while (近くにいない("ゴール")) {\n    移動(30);\n  }\n  離す();\n  部位回転("右腕", 60);\n}',
+        replaceCode: true,
+        waitForRun: true,
+        checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
+      },
+      {
+        target: 'java-editor',
+        pos: 'left',
+        text: '「繰り返し」を使うことで、短いプログラムで何往復もヒヨコを運ぶことができました！\n本番のステージ9では「繰り返し(3回) { ... }」を使って3羽のヒヨコを GOAL まで運びましょう！'
+      }
+    ];
+  }
+
+  // tut10: ステージ10用（爆弾と条件分岐）
+  return [
+    {
+      target: 'java-editor',
+      onTopElements: ['#btn-run', '.stage-frame'],
+      pos: 'left',
+      text: 'ステージ10では「爆弾」が登場します！\n近くを歩くだけなら大丈夫ですが、爆弾の上で腕を回して「爆弾を掴む」と爆発してゲームオーバーになります。まずは【実行】ボタンを押して確かめてみましょう！',
+      codeToAdd: '// 確かめずにB地点で右腕を回すと…？\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\n部位回転("右腕", -60);',
+      replaceCode: true,
+      waitForRun: true,
+      checkCondition: () => log.textContent.includes('爆弾を掴んでしまった')
+    },
+    {
+      target: 'java-editor',
+      onTopElements: ['#btn-run', '.stage-frame'],
+      pos: 'left',
+      text: '💥 爆弾を掴んでしまいゲームオーバーになりました！\nそこで「もし (近くにいる("ヒヨコ")) { ... } そうでなければ { ... }」を使います。B地点にヒヨコがいなければ腕を回さずE地点へ向かうプログラムを【実行】してみましょう！',
+      codeToAdd: '// 「もし」でヒヨコがいるか確かめてから腕を回す\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\nもし (近くにいる("ヒヨコ")) {\n  部位回転("右腕", -60);\n} そうでなければ {\n  向く("E");\n  while (近くにいない("E")) {\n    移動(30);\n  }\n  部位回転("右腕", -60);\n}\n向く("D");\nwhile (近くにいない("ゴール")) {\n  移動(30);\n}\n離す();',
+      replaceCode: true,
+      waitForRun: true,
+      checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
+    },
+    {
+      target: 'stage8-test-selector',
+      pos: 'bottom',
+      text: 'お見事！爆弾を避けてヒヨコだけを GOAL に運べました！\n本番のステージ10では、右上の「パターン1」「パターン2」を切り替えて、ヒヨコと爆弾の位置が入れ替わっても同じプログラムで両方クリアできるか挑戦しましょう！'
+    }
+  ];
+}
+
+function startTutorialForStage(targetStageId, force = false) {
+  const mainStageId = (targetStageId && !targetStageId.startsWith("tut") && targetStageId !== "stage0")
+    ? targetStageId
+    : (stageSelect && !stageSelect.value.startsWith("tut") && stageSelect.value !== "stage0" ? stageSelect.value : "stage1");
+  const tutKey = getTutorialKeyForStage(mainStageId);
+  const storageKey = 'pict_tut_done_' + tutKey;
+
+  if (!force && localStorage.getItem(storageKey)) {
     return;
   }
 
@@ -1565,192 +1808,201 @@ function initTutorial(force = false) {
   const bubble = document.getElementById('tutorial-bubble');
   const text = document.getElementById('tutorial-text');
   const nextBtn = document.getElementById('btn-tutorial-next');
-  
-  if (!overlay || !highlight || !bubble) return;
+  if (!overlay || !highlight || !bubble || !text || !nextBtn) return;
 
-  const steps = [
-    { target: 'java-editor', text: 'チュートリアルへようこそ！プログラムを書いてピクトグラムを動かす練習です。', pos: 'left' },
-    { 
-      target: 'java-editor', 
-      onTopElements: ['#btn-run', '.stage-frame'],
-      text: 'まずはヒヨコの近くまで歩きます。「向く(90);」と「while」を追加しました！【実行】ボタンを押してみてください。', 
-      pos: 'left', 
-      codeToAdd: '向く(90);\nwhile (近くにいない("ヒヨコ")) {\n  移動(30);\n}',
-      keyword: '向く(90)',
-      waitForRun: true,
-      checkCondition: () => editor.value.includes('向く')
-    },
-    { 
-      target: 'java-editor', 
-      onTopElements: ['#btn-run', '.stage-frame'],
-      text: '次は「部位回転("右腕", -60);」で右腕を振ってヒヨコをキャッチします！もう一度【実行】ボタンを押してください！', 
-      pos: 'left', 
-      codeToAdd: '部位回転("右腕", -60);',
-      keyword: '部位回転',
-      waitForRun: true,
-      checkCondition: () => engine.state.hasGrabbedItem
-    },
-    { 
-      target: 'java-editor', 
-      onTopElements: ['#btn-run', '.stage-frame'],
-      text: '最後にゴールまで歩いて「離す();」でゴールしましょう！【実行】ボタンを押してください！', 
-      pos: 'left', 
-      codeToAdd: '移動(240);\n離す();',
-      keyword: '離す()',
-      waitForRun: true,
-      checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
-    }
-  ];
+  // 現在実行中なら停止
+  if (isRunning) {
+    shouldStop = true;
+    engine.stop();
+    isRunning = false;
+    runButton.textContent = "実行";
+    runButton.disabled = false;
+    stopButton.disabled = true;
+    pauseButton.disabled = true;
+    pauseButton.textContent = "一時停止";
+    resetButton.disabled = false;
+  }
+
+  // すでにチュートリアル中でなければ、戻るべきステージと現在のコードを退避
+  if (overlay.hidden) {
+    tutorialReturnStageId = mainStageId;
+    tutorialSavedCode = editor ? editor.value : "";
+  }
+
+  const steps = buildTutorialSteps(tutKey);
   let currentStep = 0;
+
+  function finishTutorial() {
+    closeTutorialOverlayOnly();
+    localStorage.setItem(storageKey, 'true');
+    localStorage.setItem('tutorialCompleted', 'true');
+
+    if (stageSelect) {
+      stageSelect.value = tutorialReturnStageId;
+    }
+    engine.loadStage(tutorialReturnStageId);
+    clearOutput();
+    updateShoeUI();
+    updateStage8TestUI(tutorialReturnStageId);
+    if (typeof checkHintLock === 'function') checkHintLock();
+
+    if (editor) {
+      if (tutorialSavedCode !== null && tutorialSavedCode.trim() !== "") {
+        editor.value = tutorialSavedCode;
+      } else {
+        setStarterCodeForStage(tutorialReturnStageId);
+      }
+    }
+    tutorialSavedCode = null;
+  }
 
   function showStep(index) {
     if (index >= steps.length) {
-      if (window.tutorialOnTopElements) {
-        window.tutorialOnTopElements.forEach(el => el.classList.remove('tutorial-on-top'));
-        window.tutorialOnTopElements = null;
-      }
-      overlay.hidden = true;
-      localStorage.setItem('tutorialCompleted', 'true');
-      if (stageSelect) {
-        // チュートリアルが完了したら、自動的にステージ1に進む
-        stageSelect.value = 'stage1';
-        engine.loadStage('stage1');
-        updateShoeUI();
-if (typeof checkHintLock === 'function') checkHintLock();
-      }
-      setStarterCodeForStage('stage1');
+      finishTutorial();
       return;
     }
 
     const step = steps[index];
-    let el = step.target === 'snippet-toolbar' ? document.querySelector('.snippet-toolbar') : document.getElementById(step.target);
-    if (!el) { showStep(index + 1); return; }
+    let el = step.target === 'snippet-toolbar'
+      ? document.querySelector('.snippet-toolbar')
+      : document.getElementById(step.target);
+    if (!el) {
+      showStep(index + 1);
+      return;
+    }
 
     const rect = el.getBoundingClientRect();
     const pad = 10;
-    
+
     highlight.style.top = (rect.top - pad) + 'px';
     highlight.style.left = (rect.left - pad) + 'px';
     highlight.style.width = (rect.width + pad * 2) + 'px';
     highlight.style.height = (rect.height + pad * 2) + 'px';
-    
+
+    text.style.whiteSpace = 'pre-line';
     text.textContent = step.text;
     bubble.className = 'tutorial-bubble ' + step.pos;
-    
+
     if (window.tutorialOnTopElements) {
-      window.tutorialOnTopElements.forEach(el => el.classList.remove('tutorial-on-top'));
+      window.tutorialOnTopElements.forEach(elItem => elItem.classList.remove('tutorial-on-top'));
       window.tutorialOnTopElements = null;
     }
 
     if (step.onTopElements) {
       window.tutorialOnTopElements = [];
       step.onTopElements.forEach(selector => {
-        const el = document.querySelector(selector);
-        if (el) {
-          el.classList.add('tutorial-on-top');
-          window.tutorialOnTopElements.push(el);
+        const topEl = document.querySelector(selector);
+        if (topEl) {
+          topEl.classList.add('tutorial-on-top');
+          window.tutorialOnTopElements.push(topEl);
         }
       });
     }
-    
-    // 実行待ちステップの場合は次へボタンを隠す
+
     if (step.waitForRun) {
       nextBtn.style.display = 'none';
-      if (step.codeToAdd) {
-        const hasCode = step.keyword ? editor.value.includes(step.keyword) : editor.value.replace(/\r\n/g, '\n').includes(step.codeToAdd.replace(/\r\n/g, '\n'));
-        if (!hasCode) {
-          if (editor.value.trim() === '') {
-            editor.value = step.codeToAdd;
-          } else {
-            editor.value = editor.value.trim() + '\n' + step.codeToAdd;
+      if (step.codeToAdd !== undefined) {
+        if (step.replaceCode) {
+          clearOutput();
+          editor.value = step.codeToAdd;
+        } else {
+          const hasCode = step.keyword
+            ? editor.value.includes(step.keyword)
+            : editor.value.replace(/\r\n/g, '\n').includes(step.codeToAdd.replace(/\r\n/g, '\n'));
+          if (!hasCode) {
+            if (editor.value.trim() === '') {
+              editor.value = step.codeToAdd;
+            } else {
+              editor.value = editor.value.trim() + '\n' + step.codeToAdd;
+            }
           }
         }
       }
     } else {
       nextBtn.style.display = 'block';
+      nextBtn.textContent = (index === steps.length - 1) ? 'ステージへ進む ▶' : '次へ';
     }
-    
-    // 位置計算
+
     setTimeout(() => {
       if (step.pos === 'right') {
-        bubble.style.top = (rect.top + 20) + 'px';
+        bubble.style.top = Math.max(16, rect.top + 20) + 'px';
         bubble.style.left = (rect.right + pad + 20) + 'px';
       } else if (step.pos === 'left') {
-        bubble.style.top = (rect.top + 20) + 'px';
-        bubble.style.left = (rect.left - bubble.offsetWidth - pad - 20) + 'px';
+        bubble.style.top = Math.max(16, rect.top + 20) + 'px';
+        bubble.style.left = Math.max(16, rect.left - bubble.offsetWidth - pad - 20) + 'px';
       } else if (step.pos === 'top') {
-        bubble.style.top = (rect.top - bubble.offsetHeight - pad - 20) + 'px';
-        bubble.style.left = (rect.left) + 'px';
+        bubble.style.top = Math.max(16, rect.top - bubble.offsetHeight - pad - 20) + 'px';
+        bubble.style.left = Math.max(16, rect.left) + 'px';
       } else if (step.pos === 'bottom') {
         bubble.style.top = (rect.bottom + pad + 20) + 'px';
-        // 右端が画面外に出ないように調整
         if (rect.left + bubble.offsetWidth > window.innerWidth) {
-          bubble.style.left = (window.innerWidth - bubble.offsetWidth - 20) + 'px';
+          bubble.style.left = Math.max(16, window.innerWidth - bubble.offsetWidth - 20) + 'px';
         } else {
-          bubble.style.left = (rect.left) + 'px';
+          bubble.style.left = Math.max(16, rect.left) + 'px';
         }
       }
-    }, 10); // 少し待ってからoffsetHeightを取得
+    }, 10);
   }
 
   tutorialAdvanceCheck = () => {
     if (overlay.hidden) return;
     const step = steps[currentStep];
     if (step && step.waitForRun && step.checkCondition) {
-      // 判定処理を少し遅延させて、アニメーション完了後などの確実な状態を取得する
       setTimeout(() => {
-        if (step.checkCondition()) {
+        if (!overlay.hidden && step.checkCondition()) {
           currentStep++;
           showStep(currentStep);
         }
-      }, 1000); // 動きを見せるために1秒待つ
+      }, 900);
     }
   };
 
-  // 強制的にステージ0を選択しておく
-  if (stageSelect) {
-    stageSelect.value = 'stage0';
-    engine.loadStage('stage0');
-    updateShoeUI();
-if (typeof checkHintLock === 'function') checkHintLock();
-  }
-  
+  // 専用疑似ステージ（tut1 / tut4 / tut7 / tut9 / tut10）をロード
+  engine.loadStage(tutKey);
+  clearOutput();
+  updateShoeUI();
+  updateStage8TestUI(tutKey);
+  if (typeof checkHintLock === 'function') checkHintLock();
+
   if (editor) {
     editor.value = "";
   }
-  
-  overlay.hidden = false;
-  setTimeout(() => { showStep(0); }, 300);
 
-  // 古いイベントリスナーを確実に消すため onclick を使用する
+  overlay.hidden = false;
+  setTimeout(() => { showStep(0); }, 200);
+
   nextBtn.onclick = () => {
     currentStep++;
     showStep(currentStep);
   };
-  
+
   const skipBtn = document.getElementById('btn-tutorial-skip');
   if (skipBtn) {
     skipBtn.onclick = () => {
-      overlay.hidden = true;
-      localStorage.setItem('tutorialCompleted', 'true');
-      if (stageSelect) {
-        stageSelect.value = 'stage1';
-        engine.loadStage('stage1');
-        updateShoeUI();
-if (typeof checkHintLock === 'function') checkHintLock();
-      }
-      setStarterCodeForStage('stage1');
+      finishTutorial();
     };
   }
 }
 
-// 少し遅延させてDOMの準備を確実に待つ
-setTimeout(() => initTutorial(false), 500);
+function maybeStartAutoTutorial(stageId) {
+  if (!TUTORIAL_BOUNDARY_STAGES.has(stageId)) return;
+  const tutKey = getTutorialKeyForStage(stageId);
+  if (!localStorage.getItem('pict_tut_done_' + tutKey)) {
+    startTutorialForStage(stageId, false);
+  }
+}
 
-// あとからチュートリアルを開始するボタン
+// 初回アクセス時（ステージ1などを初めて開いたとき）に該当チュートリアルを自動表示
+setTimeout(() => {
+  const initialStage = stageSelect ? stageSelect.value : "stage1";
+  maybeStartAutoTutorial(initialStage);
+}, 400);
+
+// ヘッダーの「チュートリアル」ボタンを押したときは現在のステージ区分に応じたチュートリアルを表示
 const btnStartTutorial = document.getElementById("btn-start-tutorial");
 if (btnStartTutorial) {
   btnStartTutorial.addEventListener("click", () => {
-    initTutorial(true);
+    const curStage = stageSelect ? stageSelect.value : "stage1";
+    startTutorialForStage(curStage, true);
   });
 }

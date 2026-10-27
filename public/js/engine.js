@@ -130,6 +130,59 @@ const STAGES = {
       { x:  280, y:   90, label: "パターン2" }  // パターン2: 右下(F地点)にヒヨコ、左上(A地点)に爆弾
     ],
     points: COMMON_POINTS
+  },
+  // チュートリアル①（ステージ1〜3用：移動・方向転換の専用疑似ステージ）
+  tut1: {
+    hasItem: false,
+    initialDirection: -90,
+    initialOffset: { x: 0, y: 120 },
+    goalOffset: { x: -200, y: -150 },
+    points: COMMON_POINTS
+  },
+  // チュートリアル②（ステージ4〜6用：ヒヨコ運搬・部位回転・whileの専用疑似ステージ）
+  tut4: {
+    hasItem: true,
+    initialDirection: -90,
+    initialOffset: { x: 0, y: 130 },
+    itemOffset: { x: 60, y: -250 },
+    goalOffset: { x: -220, y: 130 },
+    points: COMMON_POINTS
+  },
+  // チュートリアル③（ステージ7〜8用：靴と針山の専用疑似ステージ）
+  tut7: {
+    hasItem: false,
+    initialDirection: -90,
+    initialOffset: { x: 0, y: 150 },
+    goalOffset: { x: 0, y: -190 },
+    shoes: [
+      { x: 65, y: 70 }
+    ],
+    needleZone: { x: -2000, y: -90, width: 4000, height: 35 },
+    points: COMMON_POINTS
+  },
+  // チュートリアル④（ステージ9用：複数のヒヨコと繰り返しの専用疑似ステージ）
+  tut9: {
+    hasItem: true,
+    requiredGoalCount: 2,
+    initialDirection: -90,
+    initialOffset: { x: 0, y: 130 },
+    goalOffset: { x: 0, y: 130 },
+    nests: [
+      { x: 60, y: -250, count: 2, label: "B側" }
+    ],
+    points: COMMON_POINTS
+  },
+  // チュートリアル⑤（ステージ10用：爆弾と条件分岐の専用疑似ステージ）
+  tut10: {
+    hasItem: true,
+    initialDirection: -90,
+    initialOffset: { x: 0, y: -40 },
+    goalOffset: { x: -220, y: 130 },
+    testCases: [
+      { x: 60, y:   90, label: "パターン1" }, // パターン1: E地点にヒヨコ、B地点に爆弾
+      { x: 60, y: -250, label: "パターン2" }  // パターン2: B地点にヒヨコ、E地点に爆弾
+    ],
+    points: COMMON_POINTS
   }
 };
 
