@@ -11,24 +11,32 @@ const COMMON_POINTS = [
 const STAGES = {
   stage0: {
     hasItem: true,
-    initialDirection: 0,
+    initialDirection: -90,
     initialOffset: { x: -180, y: 0 },
     itemOffset: { x: -5, y: -45 },
     goalOffset: { x: 180, y: 0 },
     points: COMMON_POINTS
   },
-  // ステージ1：移動・方向転換のみ①（自由なルートでゴールへ）
+  // ステージ1：移動・方向転換①（実行するだけでクリア）
   stage1: {
     hasItem: false,
-    initialDirection: 0,
+    initialDirection: -90,
     initialOffset: { x: -240, y: -30 },
     goalOffset: { x: 240, y: -30 },
     points: COMMON_POINTS
   },
-  // ステージ2：移動・方向転換のみ②（中央の薄い壁を迂回しよう）
+  // ステージ2：移動・方向転換②（壁なし・異なる初期位置からゴールへ）
   stage2: {
     hasItem: false,
-    initialDirection: 0,
+    initialDirection: -90,
+    initialOffset: { x: -240, y: 120 },
+    goalOffset: { x: 240, y: -30 },
+    points: COMMON_POINTS
+  },
+  // ステージ3：移動・方向転換③（中央の薄い壁を迂回しよう）
+  stage3: {
+    hasItem: false,
+    initialDirection: -90,
     initialOffset: { x: -240, y: -20 },
     goalOffset: { x: 240, y: -40 },
     walls: [
@@ -36,19 +44,28 @@ const STAGES = {
     ],
     points: COMMON_POINTS
   },
-  // ステージ3：掴んで運ぶ①（右腕で取るか、左腕で取るか）
-  stage3: {
-    hasItem: true,
-    initialDirection: 0,
-    initialOffset: { x: -240, y: -20 },
-    itemOffset: { x: 0, y: -40 },
-    goalOffset: { x: 240, y: -20 },
-    points: COMMON_POINTS
-  },
-  // ステージ4：掴んで運ぶ②（複数ルートでの運搬）
+  // ステージ4：掴んで運ぶ①（実行するとヒヨコを掴むところまで進む）
   stage4: {
     hasItem: true,
-    initialDirection: 0,
+    initialDirection: -90,
+    initialOffset: { x: -240, y: -20 },
+    itemOffset: { x: 0, y: -40 },
+    goalOffset: { x: 240, y: -40 },
+    points: COMMON_POINTS
+  },
+  // ステージ5：掴んで運ぶ②（自分でヒヨコを掴んで運ぼう・while導入）
+  stage5: {
+    hasItem: true,
+    initialDirection: -90,
+    initialOffset: { x: -250, y: -20 },
+    itemOffset: { x: 50, y: -185 },
+    goalOffset: { x: 240, y: -40 },
+    points: COMMON_POINTS
+  },
+  // ステージ6：掴んで運ぶ③（複数ルートでの運搬）
+  stage6: {
+    hasItem: true,
+    initialDirection: -90,
     initialOffset: { x: -250, y: -20 },
     items: [
       { x: 50, y: -185 },
@@ -57,10 +74,10 @@ const STAGES = {
     goalOffset: { x: 250, y: 50 },
     points: COMMON_POINTS
   },
-  // ステージ5：靴と針山①（上下2つの靴と縦の針山）
-  stage5: {
+  // ステージ7：靴と針山①（上下2つの靴と縦の針山）
+  stage7: {
     hasItem: true,
-    initialDirection: 0,
+    initialDirection: -90,
     initialOffset: { x: -240, y: -20 },
     itemOffset: { x: 165, y: -210 },
     goalOffset: { x: 240, y: -40 },
@@ -71,10 +88,10 @@ const STAGES = {
     needleZone: { x: 80, y: -2000, width: 40, height: 4000 },
     points: COMMON_POINTS
   },
-  // ステージ6：靴と針山②（左右2つの靴と横の針山）
-  stage6: {
+  // ステージ8：靴と針山②（左右2つの靴と横の針山）
+  stage8: {
     hasItem: true,
-    initialDirection: 0,
+    initialDirection: -90,
     initialOffset: { x: 0, y: 30 },
     items: [
       { x: -120, y: -185 },
@@ -88,11 +105,11 @@ const STAGES = {
     needleZone: { x: -2000, y: -140, width: 4000, height: 35 },
     points: COMMON_POINTS
   },
-  // ステージ7：3羽のヒヨコを運ぼう（繰り返しの活用）
-  stage7: {
+  // ステージ9：3羽のヒヨコを運ぼう（繰り返しの活用）
+  stage9: {
     hasItem: true,
     requiredGoalCount: 3,
-    initialDirection: 0,
+    initialDirection: -90,
     initialOffset: { x: -240, y: -40 },
     goalOffset: { x: 240, y: -40 },
     // 2か所の巣に各3羽（計6羽配置、3羽運べばクリア）
@@ -102,10 +119,10 @@ const STAGES = {
     ],
     points: COMMON_POINTS
   },
-  // ステージ8：ヒヨコを探そう（条件分岐 if...else）
-  stage8: {
+  // ステージ10：ヒヨコを探そう（条件分岐 if...else）
+  stage10: {
     hasItem: true,
-    initialDirection: 0,
+    initialDirection: -90,
     initialOffset: { x: -40, y: -40 },
     goalOffset: { x: 240, y: -40 },
     testCases: [
@@ -209,7 +226,7 @@ class PictoEngine {
       radius: stage.goalRadius || 80
     };
 
-    const initialDir = stage.initialDirection !== undefined ? stage.initialDirection : 0;
+    const initialDir = stage.initialDirection !== undefined ? stage.initialDirection : -90;
     const initOffsetX = stage.initialOffset ? stage.initialOffset.x : 0;
     const initOffsetY = stage.initialOffset ? stage.initialOffset.y : 0;
     const hasItem = stage.hasItem !== undefined ? stage.hasItem : true;
@@ -356,8 +373,8 @@ class PictoEngine {
 
       if (distL <= grabRadius) {
         item.attachedTo = "leftArm";
-        item.offsetX = item.x - leftHand.x;
-        item.offsetY = item.y - leftHand.y;
+        item.offsetX = 0;
+        item.offsetY = 0;
         this.state.hasGrabbedItem = true;
         this.state.item = item;
         this.state.particles.push({
@@ -366,8 +383,8 @@ class PictoEngine {
         break;
       } else if (distR <= grabRadius) {
         item.attachedTo = "rightArm";
-        item.offsetX = item.x - rightHand.x;
-        item.offsetY = item.y - rightHand.y;
+        item.offsetX = 0;
+        item.offsetY = 0;
         this.state.hasGrabbedItem = true;
         this.state.item = item;
         this.state.particles.push({
@@ -410,7 +427,7 @@ class PictoEngine {
       const leftFoot = this.getLegPosition("leftLeg");
       const rightFoot = this.getLegPosition("rightLeg");
       return unworn.some(shoe =>
-        this.distance(this.state.x, this.state.y, shoe.x, shoe.y) <= 30 ||
+        this.distance(this.state.x, this.state.y, shoe.x, shoe.y) <= 35 ||
         this.distance(leftFoot.x, leftFoot.y, shoe.x, shoe.y) <= 35 ||
         this.distance(rightFoot.x, rightFoot.y, shoe.x, shoe.y) <= 35
       );
@@ -787,62 +804,20 @@ class PictoEngine {
       throw new Error("向くの引数は地点名(\"A\"など)または角度(数字)を指定してください");
     }
     const label = target.trim();
-    if (label === "ゴール" || label.toUpperCase() === "GOAL") {
-      throw new Error("ゴールは直接向くことができません。地点(\"A\"など)や角度を指定してください");
+    if (label === "ゴール" || label.toUpperCase() === "GOAL" || label === "ヒヨコ" || label === "靴") {
+      throw new Error(`"${label}" には直接向くことができません。地点("A"など)や角度(数字)を指定してください`);
     }
 
-    let tx = null, ty = null;
-    if (label === "ヒヨコ") {
-      if (!this.state.hasItem) {
-        throw new Error("このステージにはヒヨコがいません");
-      }
-      const availableItems = (this.state.items || [this.state.item]).filter(it =>
-        it && !it.attachedTo && (this.distance(it.x, it.y, this.goal.x, this.goal.y) > this.goal.radius)
-      );
-      let targetChick = this.state.item;
-      if (availableItems.length > 0) {
-        let minD = Infinity;
-        for (const it of availableItems) {
-          const d = this.distance(this.state.x, this.state.y, it.x, it.y);
-          if (d < minD) {
-            minD = d;
-            targetChick = it;
-          }
-        }
-      }
-      this.state.item = targetChick;
-      // 近づく方向（左側か右側か）に応じて、右腕または左腕で掴みやすい斜め下の立ち位置を目標にする
-      const sideOffset = this.state.x > targetChick.x ? 50 : -50;
-      tx = targetChick.x + sideOffset;
-      ty = targetChick.y + 35;
-      this.state.targetPoint = { x: tx, y: ty, label: "ヒヨコ" };
-    } else if (label === "靴") {
-      const unworn = (this.state.shoes || []).filter(s => s.exists && !s.isWorn);
-      if (unworn.length === 0) return;
-      let closest = unworn[0];
-      let minD = this.distance(this.state.x, this.state.y, closest.x, closest.y);
-      for (const s of unworn) {
-        const d = this.distance(this.state.x, this.state.y, s.x, s.y);
-        if (d < minD) {
-          minD = d;
-          closest = s;
-        }
-      }
-      tx = closest.x;
-      ty = closest.y;
-      this.state.targetPoint = { x: tx, y: ty, label: "靴" };
-    } else {
-      let pt = (this.state.points || []).find(p => p.label === label);
-      if (!pt && this.state.checkpoints) {
-        pt = this.state.checkpoints.find(c => c.label === label || c.num === label);
-      }
-      if (!pt) {
-        throw new Error(`"${label}" という地点は見つかりません`);
-      }
-      tx = pt.x;
-      ty = pt.y;
-      this.state.targetPoint = { x: tx, y: ty, label: label };
+    let pt = (this.state.points || []).find(p => p.label === label);
+    if (!pt && this.state.checkpoints) {
+      pt = this.state.checkpoints.find(c => c.label === label || c.num === label);
     }
+    if (!pt) {
+      throw new Error(`"${label}" という地点は見つかりません`);
+    }
+    const tx = pt.x;
+    const ty = pt.y;
+    this.state.targetPoint = { x: tx, y: ty, label: label };
 
     const targetDeg = Math.atan2(ty - this.state.y, tx - this.state.x) * 180 / Math.PI;
     const diff = ((targetDeg - this.state.direction + 540) % 360) - 180;

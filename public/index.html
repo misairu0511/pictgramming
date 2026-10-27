@@ -22,14 +22,16 @@
         <button id="btn-start-tutorial" class="btn btn-secondary">チュートリアル</button>
         <select id="stage-select" class="stage-select" style="margin-left: 10px;">
             <option value="stage0" hidden>ステージ0: チュートリアル</option>
-            <option value="stage1">ステージ1: 移動と方向転換① (分かれ道)</option>
-            <option value="stage2">ステージ2: 移動と方向転換② (壁の迂回)</option>
-            <option value="stage3">ステージ3: ヒヨコを運ぼう① (腕の回転)</option>
-            <option value="stage4">ステージ4: ヒヨコを運ぼう② (複数ルート)</option>
-            <option value="stage5">ステージ5: 靴と針山① (縦の針山)</option>
-            <option value="stage6">ステージ6: 靴と針山② (横の針山)</option>
-            <option value="stage7">ステージ7: 3羽のヒヨコを運ぼう (繰り返し)</option>
-            <option value="stage8">ステージ8: ヒヨコを探そう (条件分岐)</option>
+            <option value="stage1">ステージ1: 移動と方向転換① (基本)</option>
+            <option value="stage2">ステージ2: 移動と方向転換② (曲がり角)</option>
+            <option value="stage3">ステージ3: 移動と方向転換③ (壁の迂回)</option>
+            <option value="stage4">ステージ4: ヒヨコを運ぼう① (掴んで運ぶ)</option>
+            <option value="stage5">ステージ5: ヒヨコを運ぼう② (whileで移動)</option>
+            <option value="stage6">ステージ6: ヒヨコを運ぼう③ (複数ルート)</option>
+            <option value="stage7">ステージ7: 靴と針山① (縦の針山)</option>
+            <option value="stage8">ステージ8: 靴と針山② (横の針山)</option>
+            <option value="stage9">ステージ9: 3羽のヒヨコを運ぼう (繰り返し)</option>
+            <option value="stage10">ステージ10: ヒヨコを探そう (条件分岐)</option>
           </select>
         <div id="stage8-test-selector" style="display: none; align-items: center; gap: 4px; margin-left: 6px; padding: 2px 6px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 6px;">
           <span style="font-size: 11px; font-weight: bold; color: #0369a1;">テスト:</span>
@@ -126,14 +128,7 @@
         </button>
       </div>
 
-      <textarea id="java-editor" spellcheck="false" aria-label="Java 文の入力欄">向く("A");
-while (近くにいない("A")) {
-  移動(30);
-}
-向く("C");
-while (近くにいない("C")) {
-  移動(30);
-}</textarea>
+      <textarea id="java-editor" spellcheck="false" aria-label="Java 文の入力欄"></textarea>
 
       <div class="snippet-toolbar">
         <button id="btn-snippet-move" class="snippet-btn" data-snippet="移動(30);" type="button">移動(30);</button>
@@ -154,7 +149,7 @@ while (近くにいない("C")) {
         <div class="help-scroll">
           <ul>
             <li><code>移動(数字);</code> 矢印の方向へ進む（マイナスで後ろ）</li>
-            <li><code>向く("A");</code> 地点（<code>"A"</code>, <code>"B"</code>…）や <code>"ヒヨコ"</code>, <code>"靴"</code> の方向へ矢印を向ける</li>
+            <li><code>向く("A");</code> 指定した地点（<code>"A"</code>, <code>"B"</code>…）の方向へ矢印を向ける</li>
             <li><code>向く(数字);</code> 矢印の向きを指定した角度だけ回す（プラスで右回り、マイナスで左回り）</li>
             <li><code>部位回転("体の部位", 数字);</code> 手足を回す（腕を動かしてヒヨコに触れると自動で掴みます！）</li>
             <li><code>掴む();</code> 近くのヒヨコを掴む ／ <code>離す();</code> 掴んでいるヒヨコを離す</li>
@@ -192,6 +187,8 @@ while (近くにいない("C")) {
           <option value="stage6">ステージ6</option>
           <option value="stage7">ステージ7</option>
           <option value="stage8">ステージ8</option>
+          <option value="stage9">ステージ9</option>
+          <option value="stage10">ステージ10</option>
         </select>
         <button id="btn-delete-all-logs" class="btn btn-secondary" style="font-size: 11px; padding: 4px 8px; color: #ef4444; border-color: #ef4444;">全削除</button>
       </div>

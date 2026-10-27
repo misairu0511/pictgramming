@@ -1,7 +1,29 @@
 const canvas = document.getElementById("stage-canvas");
 const editor = document.getElementById("java-editor");
-if (!editor.value.trim()) {
-  editor.value = `// ピクトグラムを動かすプログラムを書いてみよう！\n移動(50);\n回転(90);\n部位回転("左腕", 45);\n`;
+const STAGE_STARTER_CODES = {
+  stage1: `// 「実行」ボタンを押してピクトグラムをゴールまで動かしてみよう！\n向く(90);\n移動(480);\n`,
+  stage2: `// 前に進むコードだけが書かれています。\n// 「向く(90);」と「移動(数字);」を追加してゴールを目指そう！\n移動(150);\n`,
+  stage3: `// まっすぐ進むと壁にぶつかってしまいます。\n// 「向く」や「移動」を使って壁を迂回してみよう！\n向く(90);\n移動(150);\n`,
+  stage4: `// 実行するとヒヨコを掴むところまで進みます。\n// 掴んだヒヨコを右側のゴールまで運んで「離す();」してみよう！\n向く(90);\n移動(180);\n部位回転("右腕", -60);\n`,
+  stage5: `// 遠い場所へ進むときは「while」を使うと便利です！\n// B地点の近くまで進むコードを用意しました。\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\n// B地点に着いたら、ヒヨコを掴んでゴールへ運ぼう！\n`,
+  stage6: `// B地点側とE地点側にヒヨコがいます。\n// 好きなルートを選んで、ヒヨコを1羽ゴールへ運ぼう！\n`,
+  stage7: `// 針山を越えるには「靴」を履く必要があります。\n// 1足目の靴の近くまで行って靴を履くコードを用意しました。\n移動(60);\n向く(90);\nwhile (近くにいない("靴")) {\n  移動(30);\n}\n靴を履く();\n// もう1足の靴も履いて、ヒヨコを拾ってゴールを目指そう！\n`,
+  stage8: `// 横に広がる針山があります。\n// 靴を履いて針山を突破するか、迂回してヒヨコをゴールへ運ぼう！\n`,
+  stage9: `// 1羽だけ運ぶプログラムです。\n// 「繰り返し(3回)」を使って、3羽まとめて運べるようにしてみよう！\n向く("A");\nwhile (近くにいない("A")) {\n  移動(30);\n}\n部位回転("右腕", -60);\n向く("C");\nwhile (近くにいない("C")) {\n  移動(30);\n}\n向く(90);\n移動(170);\n離す();\n部位回転("右腕", 60);\n`,
+  stage10: `// A地点にヒヨコがいるか確認するプログラムです（テスト①はクリアできます）。\n// 「もし」「そうでなければ」を使って、ヒヨコがいないときはD地点へ向かうようにしてみよう！\n向く("A");\nwhile (近くにいない("A")) {\n  移動(30);\n}\nもし (近くにいる("ヒヨコ")) {\n  部位回転("右腕", -60);\n  向く("C");\n  while (近くにいない("C")) {\n    移動(30);\n  }\n  向く(90);\n  移動(170);\n  離す();\n}\n`
+};
+
+function setStarterCodeForStage(stageId) {
+  if (!editor) return;
+  const code = STAGE_STARTER_CODES[stageId] !== undefined ? STAGE_STARTER_CODES[stageId] : "";
+  editor.value = code;
+  if (typeof historyStack !== 'undefined') {
+    historyStack.length = 0;
+    historyStack.push({ val: editor.value, start: 0, end: 0 });
+    historyIndex = 0;
+  }
+  if (typeof updateToolbarState === "function") updateToolbarState();
+  if (typeof resetStage8Clears === "function") resetStage8Clears();
 }
 
 // Firebase Setup
@@ -36,7 +58,7 @@ let stage8ClearedCases = new Set();
 
 function updateStage8TestUI(stageId) {
   if (!stage8TestSelector) return;
-  if (stageId === "stage8") {
+  if (stageId === "stage10") {
     stage8TestSelector.style.display = "inline-flex";
     updateStage8ButtonsUI();
   } else {
@@ -176,6 +198,7 @@ if (stageSelect) {
       setTimeout(() => {
         stage8ClearedCases.clear();
         engine.loadStage(newStage);
+        setStarterCodeForStage(newStage);
         checkHintLock();
         clearOutput();
         updateShoeUI();
@@ -187,7 +210,8 @@ if (stageSelect) {
     } else {
       stage8ClearedCases.clear();
       engine.loadStage(newStage);
-      checkHintLock();
+        setStarterCodeForStage(newStage);
+        checkHintLock();
       clearOutput();
       updateShoeUI();
       updateStage8TestUI(newStage);
@@ -202,7 +226,7 @@ let tutorialAdvanceCheck = null;
 
 function updateShoeUI() {
   if (!stageSelect) return;
-  const isShoeStage = stageSelect.value === "stage4" || stageSelect.value === "stage5";
+  const isShoeStage = stageSelect.value === "stage7" || stageSelect.value === "stage8";
   document.querySelectorAll(".shoe-snippet").forEach(el => el.style.display = isShoeStage ? "inline-block" : "none");
   const shoeHelp1 = document.getElementById("shoe-help-1");
   const shoeHelp2 = document.getElementById("shoe-help-2");
@@ -675,8 +699,8 @@ function calculateDTWScore(myEvents, pastEvents, stageId) {
   if (!myEvents || !pastEvents || myEvents.length === 0 || pastEvents.length === 0) return 0;
   let wPos = 1.0, wDir = 0.5, wArm = 0.2, wLeg = 0.0;
   const stageNum = parseInt(stageId.replace('stage', ''), 10);
-  if (!isNaN(stageNum) && (stageNum === 1 || stageNum === 2)) { wArm = 0.0; }
-  if (!isNaN(stageNum) && (stageNum === 5 || stageNum === 6)) { wLeg = 0.2; }
+  if (!isNaN(stageNum) && (stageNum >= 1 && stageNum <= 3)) { wArm = 0.0; }
+  if (!isNaN(stageNum) && (stageNum === 7 || stageNum === 8)) { wLeg = 0.2; }
   
   let n = myEvents.length;
   let m = pastEvents.length;
@@ -714,10 +738,10 @@ function findBestHintLog(othersClears, myEvents, stageId) {
   
   // ステージ1・2はヒヨコなし、ステージ5・6は靴があるため重みを調整
   const stageNum = parseInt(stageId.replace('stage', ''), 10);
-  if (!isNaN(stageNum) && (stageNum === 1 || stageNum === 2)) {
+  if (!isNaN(stageNum) && (stageNum >= 1 && stageNum <= 3)) {
     wArm = 0.0;
   }
-  if (!isNaN(stageNum) && (stageNum === 5 || stageNum === 6)) {
+  if (!isNaN(stageNum) && (stageNum === 7 || stageNum === 8)) {
     wLeg = 0.2;
   }
   
@@ -890,7 +914,7 @@ async function runProgram() {
       currentLogSession.timestamp = new Date().toISOString();
       currentLogSession.sessionId = sessionId;
       currentLogSession.stageId = typeof initialStageId !== 'undefined' ? initialStageId : engine.currentStageId;
-      if (currentLogSession.stageId === "stage8") {
+      if (currentLogSession.stageId === "stage10") {
         currentLogSession.testCase = engine.currentTestCase;
       }
       
@@ -930,7 +954,7 @@ async function runProgram() {
       if (finalGoalResult === "ゴールした") {
         updateStageLocks(true);
         const clearOverlay = document.getElementById("clear-overlay");
-        const isStage8 = stageSelect && stageSelect.value === "stage8";
+        const isStage8 = stageSelect && stageSelect.value === "stage10";
         
         if (isStage8) {
           stage8ClearedCases.add(engine.currentTestCase);
@@ -1082,7 +1106,7 @@ if (btnLogHistory && logModal) {
 
 function updateShoeUI() {
   if (!stageSelect) return;
-  const isShoeStage = stageSelect.value === "stage5" || stageSelect.value === "stage6";
+  const isShoeStage = stageSelect.value === "stage7" || stageSelect.value === "stage8";
   document.querySelectorAll(".shoe-snippet").forEach(el => el.style.display = isShoeStage ? "inline-block" : "none");
   const shoeHelp1 = document.getElementById("shoe-help-1");
   const shoeHelp2 = document.getElementById("shoe-help-2");
@@ -1372,14 +1396,16 @@ async function updateStageLocks(skipReload = false) {
   
   const stageTitles = {
     stage0: "ステージ0: チュートリアル",
-    stage1: "ステージ1: 移動と方向転換① (分かれ道)",
-    stage2: "ステージ2: 移動と方向転換② (壁の迂回)",
-    stage3: "ステージ3: ヒヨコを運ぼう① (腕の回転)",
-    stage4: "ステージ4: ヒヨコを運ぼう② (複数ルート)",
-    stage5: "ステージ5: 靴と針山① (縦の針山)",
-    stage6: "ステージ6: 靴と針山② (横の針山)",
-    stage7: "ステージ7: 3羽のヒヨコを運ぼう (繰り返し)",
-    stage8: "ステージ8: ヒヨコを探そう (条件分岐)"
+    stage1: "ステージ1: 移動と方向転換① (基本)",
+    stage2: "ステージ2: 移動と方向転換② (曲がり角)",
+    stage3: "ステージ3: 移動と方向転換③ (壁の迂回)",
+    stage4: "ステージ4: ヒヨコを運ぼう① (掴んで運ぶ)",
+    stage5: "ステージ5: ヒヨコを運ぼう② (whileで移動)",
+    stage6: "ステージ6: ヒヨコを運ぼう③ (複数ルート)",
+    stage7: "ステージ7: 靴と針山① (縦の針山)",
+    stage8: "ステージ8: 靴と針山② (横の針山)",
+    stage9: "ステージ9: 3羽のヒヨコを運ぼう (繰り返し)",
+    stage10: "ステージ10: ヒヨコを探そう (条件分岐)"
   };
 
   try {
@@ -1414,6 +1440,7 @@ if (isTutorialCompleted && stageSelect && stageSelect.value === 'stage0') {
 
 // ページ読み込み時にロック状況を更新
 updateStageLocks();
+setStarterCodeForStage(stageSelect ? stageSelect.value : "stage1");
   if (stageSelect && window.restoreHintState) window.restoreHintState(stageSelect.value);
   const clearOverlay = document.getElementById("clear-overlay");
 if (clearOverlay) {
@@ -1443,6 +1470,7 @@ if (btnDeleteAllLogs) {
       // ステージ1に戻してロック状況をリセット
       if (stageSelect) stageSelect.value = "stage1";
       engine.loadStage("stage1");
+      setStarterCodeForStage("stage1");
       updateStageLocks();
       clearOutput();
     } catch (e) {
@@ -1476,10 +1504,10 @@ function initTutorial(force = false) {
     { 
       target: 'java-editor', 
       onTopElements: ['#btn-run', '.stage-frame'],
-      text: 'まずはヒヨコの近くまで歩きます。「向く("ヒヨコ");」と「while」を追加しました！【実行】ボタンを押してみてください。', 
+      text: 'まずはヒヨコの近くまで歩きます。「向く(90);」と「while」を追加しました！【実行】ボタンを押してみてください。', 
       pos: 'left', 
-      codeToAdd: '向く("ヒヨコ");\nwhile (近くにいない("ヒヨコ")) {\n  移動(30);\n}',
-      keyword: '向く("ヒヨコ")',
+      codeToAdd: '向く(90);\nwhile (近くにいない("ヒヨコ")) {\n  移動(30);\n}',
+      keyword: '向く(90)',
       waitForRun: true,
       checkCondition: () => editor.value.includes('向く')
     },
@@ -1498,7 +1526,7 @@ function initTutorial(force = false) {
       onTopElements: ['#btn-run', '.stage-frame'],
       text: '最後にゴールまで歩いて「離す();」でゴールしましょう！【実行】ボタンを押してください！', 
       pos: 'left', 
-      codeToAdd: '向く(5);\n移動(210);\n離す();',
+      codeToAdd: '移動(240);\n離す();',
       keyword: '離す()',
       waitForRun: true,
       checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
@@ -1521,7 +1549,7 @@ function initTutorial(force = false) {
         updateShoeUI();
 if (typeof checkHintLock === 'function') checkHintLock();
       }
-      editor.value = "";
+      setStarterCodeForStage('stage1');
       return;
     }
 
@@ -1642,7 +1670,7 @@ if (typeof checkHintLock === 'function') checkHintLock();
         updateShoeUI();
 if (typeof checkHintLock === 'function') checkHintLock();
       }
-      editor.value = "";
+      setStarterCodeForStage('stage1');
     };
   }
 }
