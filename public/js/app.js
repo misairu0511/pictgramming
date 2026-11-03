@@ -226,6 +226,40 @@ function updateHintButtonsUI(hasHint) {
   }
 }
 
+function normalizeCodeForHintCheck(str) {
+  return (str || "")
+    .replace(/\/\/.*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\s+/g, "");
+}
+
+function isModifiedExecutionLog(logData, stageId) {
+  if (!logData || logData.eventType === "hint_view") return false;
+  if (logData.goalResult === "ゴールした") return true;
+
+  const starterNorm = normalizeCodeForHintCheck(STAGE_STARTER_CODES[stageId] || "");
+  const currentNorm = normalizeCodeForHintCheck(logData.sourceCode || "");
+
+  // 初期コードから実質的なコード変更（コメント・空白を除く）がない場合は不可
+  if (!currentNorm || currentNorm === starterNorm) return false;
+
+  // 少なくとも1つ以上の動作コマンドが実際に実行されていることを確認（構文エラーのみや空ループを除外）
+  const events = Array.isArray(logData.events) ? logData.events : [];
+  const hasActionEvent = events.some(ev => {
+    const msg = ev && ev.message ? ev.message : "";
+    return (
+      msg.startsWith("移動") ||
+      msg.startsWith("向く") ||
+      msg.startsWith("回転") ||
+      msg.startsWith("部位回転") ||
+      msg.startsWith("掴む") ||
+      msg.startsWith("離す") ||
+      msg.startsWith("靴")
+    );
+  });
+  return hasActionEvent;
+}
+
 async function checkHintLock() {
   if (!btnShowHint) return;
   const stageId = stageSelect ? stageSelect.value : "stage1";
@@ -241,19 +275,25 @@ async function checkHintLock() {
   btnShowHint.title = "実行履歴を確認中...";
 
   try {
-    // データベース（ログ）から、このユーザーがこのステージで一度でも実行したか確認する
+    // データベース（ログ）から、このユーザーがこのステージで初期コードから書き換えて実行した履歴があるか確認する
     const snapshot = await db.collection('logs')
       .where('userId', '==', userId)
       .where('stageId', '==', stageId)
-      .limit(1)
       .get();
       
-    if (!snapshot.empty) {
+    let hasValidAttempt = false;
+    snapshot.forEach(doc => {
+      if (isModifiedExecutionLog(doc.data(), stageId)) {
+        hasValidAttempt = true;
+      }
+    });
+
+    if (hasValidAttempt) {
       btnShowHint.disabled = false;
       btnShowHint.title = currentTargetHintLogId ? "別のヒントを探す" : "ヒントを見る";
     } else {
       btnShowHint.disabled = true;
-      btnShowHint.title = "まずは自分でプログラムを実行してみましょう！";
+      btnShowHint.title = "まずは自分でプログラムを書き足して実行してみましょう！";
     }
   } catch(e) {
     console.error("Hint lock check failed:", e);
@@ -753,9 +793,13 @@ if (btnShowHint) {
         let myLatestEvents = [];
         if (!myLatestSnapshot.empty) {
           let myLogs = [];
-          myLatestSnapshot.forEach(doc => { if(doc.data().eventType !== 'hint_view') myLogs.push(doc.data()); });
+          myLatestSnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.eventType !== 'hint_view') myLogs.push(data);
+          });
           myLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-          if (myLogs.length > 0) myLatestEvents = myLogs[0].events || [];
+          const latestModifiedLog = myLogs.find(l => isModifiedExecutionLog(l, stageId)) || myLogs[0];
+          if (latestModifiedLog) myLatestEvents = latestModifiedLog.events || [];
         }
           
         console.log("未クリア(DTW)モード: 他人クリア件数=" + othersClears.length + " (未視聴候補=" + candidateClears.length + ")");
