@@ -142,7 +142,7 @@
         <button class="snippet-btn unlock-stage4" data-snippet="掴む();" type="button" style="display:none;">掴む();</button>
         <button class="snippet-btn unlock-stage4" data-snippet="離す();" type="button" style="display:none;">離す();</button>
         <button class="snippet-btn shoe-snippet" data-snippet="靴を履く();" type="button" style="display:none;">靴を履く();</button>
-        <button class="snippet-btn unlock-stage4" data-snippet="while (近くにいない(&quot;A&quot;)) {\n  移動(30);\n}" type="button" style="display:none;">while</button>
+        <button class="snippet-btn unlock-stage5" data-snippet="while (近くにいない(&quot;A&quot;)) {\n  移動(30);\n}" type="button" style="display:none;">while</button>
         <button class="snippet-btn unlock-stage9" data-snippet="繰り返し(3回) {\n  $CURSOR$\n}" type="button" style="display:none;">繰り返し</button>
         <button class="snippet-btn unlock-stage10" data-snippet="もし (近くにいる(&quot;ヒヨコ&quot;)) {\n  $CURSOR$\n}" type="button" style="display:none;">もし</button>
         <button class="snippet-btn unlock-stage10" data-snippet="もし (近くにいる(&quot;ヒヨコ&quot;)) {\n  $CURSOR$\n} そうでなければ {\n  \n}" type="button" style="display:none;">もし...else</button>
@@ -158,10 +158,10 @@
             <li id="help-part-rotate" class="unlock-stage4" style="display:none;"><code>部位回転("部位名", 数字);</code> 手足を回す（腕を回してヒヨコに触れると自動で掴みます）</li>
             <li class="unlock-stage4" style="display:none;"><code>掴む();</code> 近くのヒヨコを掴む ／ <code>離す();</code> 持っているヒヨコをその場に離す</li>
             <li id="shoe-help-1" style="display:none;"><code>靴を履く();</code> 近くの靴を履く（足を部位回転させて靴に触れても履けます。すべての靴を履くと針山を通れます）</li>
-            <li class="unlock-stage4" style="display:none;"><code>while (条件) { ... }</code> 条件を満たしている間、<code>{ }</code> の中を繰り返す（例：<code>while (近くにいない("A")) { 移動(30); }</code>）</li>
+            <li class="unlock-stage5" style="display:none;"><code>while (条件) { ... }</code> 条件を満たしている間、<code>{ }</code> の中を繰り返す（例：<code>while (近くにいない("A")) { 移動(30); }</code>）</li>
             <li class="unlock-stage9" style="display:none;"><code>繰り返し(数字回) { ... }</code> 指定した回数だけ <code>{ }</code> の中を繰り返す</li>
             <li class="unlock-stage10" style="display:none;"><code>もし (条件) { ... } そうでなければ { ... }</code> 条件に合うかどうかで動きを分ける</li>
-            <li id="help-condition-targets" class="unlock-stage4" style="display:none;"><strong>【条件】</strong> <code>近くにいる("対象")</code> ／ <code>近くにいない("対象")</code><br>
+            <li id="help-condition-targets" class="unlock-stage5" style="display:none;"><strong>【条件】</strong> <code>近くにいる("対象")</code> ／ <code>近くにいない("対象")</code><br>
               対象には地点（<code>"A"</code>〜<code>"F"</code>）のほか、<code>"ゴール"</code>, <code>"ヒヨコ"</code> を指定できます</li>
           </ul>
           <div class="part-name-list unlock-stage4" style="display:none;">

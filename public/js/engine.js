@@ -139,13 +139,13 @@ const STAGES = {
     goalOffset: { x: -200, y: -150 },
     points: COMMON_POINTS
   },
-  // チュートリアル②（ステージ4〜6用：ヒヨコ運搬・部位回転・whileの専用疑似ステージ）
+  // チュートリアル②（ステージ4〜6用：ヒヨコ運搬・部位回転・離すの専用疑似ステージ）
   tut4: {
     hasItem: true,
     initialDirection: -90,
-    initialOffset: { x: 0, y: 130 },
-    itemOffset: { x: 60, y: -250 },
-    goalOffset: { x: -220, y: 130 },
+    initialOffset: { x: -180, y: 80 },
+    itemOffset: { x: -120, y: -120 },
+    goalOffset: { x: 140, y: -120 },
     points: COMMON_POINTS
   },
   // チュートリアル③（ステージ7〜8用：靴と針山の専用疑似ステージ）
@@ -578,8 +578,18 @@ class PictoEngine {
       );
     }
     if (target === "ゴール" || target.toUpperCase() === "GOAL") {
-      const goalNearRadius = 125; // ゴール円(80)より大きく余裕を持たせた判定半径
-      return pts.some(p => this.distance(p.x, p.y, this.goal.x, this.goal.y) <= goalNearRadius);
+      // ピクトグラムの体中心がゴール円(80)の中に入っているか、または持っているヒヨコがゴール内に入っているかで判定
+      const bodyInGoal = this.distance(this.state.x, this.state.y, this.goal.x, this.goal.y) <= this.goal.radius;
+      if (bodyInGoal) return true;
+      const items = this.state.items || (this.state.item ? [this.state.item] : []);
+      const heldInGoal = items.some(it => {
+        if (!it || !it.attachedTo) return false;
+        const handPos = this.getHandPosition(it.attachedTo);
+        const ix = handPos.x + it.offsetX;
+        const iy = handPos.y + it.offsetY;
+        return this.distance(ix, iy, this.goal.x, this.goal.y) <= this.goal.radius - 12;
+      });
+      return heldInGoal;
     }
     if (this.state.points) {
       const pt = this.state.points.find(p => p.label === target);
@@ -599,13 +609,10 @@ class PictoEngine {
   spawnGoalParticles(px, py) {
     if (!this.state.particles) this.state.particles = [];
     this.state.particles.push({
-      x: px, y: py, text: "❤️", startTime: Date.now(), duration: 2500, distance: 40, color: "rgba(255, 50, 50, 1)", animationType: 'up_down', fontSize: 30
+      x: px - 20, y: py - 10, text: "✨", startTime: Date.now(), duration: 2000, distance: 35, color: "rgba(255, 215, 0, 1)", animationType: 'up_down', fontSize: 20
     });
     this.state.particles.push({
-      x: px - 25, y: py - 10, text: "✨", startTime: Date.now(), duration: 2300, distance: 45, color: "rgba(255, 215, 0, 1)", animationType: 'up_down', fontSize: 20
-    });
-    this.state.particles.push({
-      x: px + 25, y: py - 5, text: "✨", startTime: Date.now(), duration: 2700, distance: 35, color: "rgba(255, 215, 0, 1)", animationType: 'up_down', fontSize: 20
+      x: px + 20, y: py - 5, text: "✨", startTime: Date.now(), duration: 2200, distance: 30, color: "rgba(255, 215, 0, 1)", animationType: 'up_down', fontSize: 20
     });
   }
 
@@ -616,11 +623,11 @@ class PictoEngine {
         const handPos = this.getHandPosition(it.attachedTo);
         it.x = handPos.x + it.offsetX;
         it.y = handPos.y + it.offsetY;
-        // ピクトグラムが「近くにいる("ゴール")」の範囲内に入っている状態で離した場合は、腕の向きに関わらずゴール内に着地させる
+        // ピクトグラムが「近くにいる("ゴール")」の範囲内に入っている状態で離した場合は、腕の向きに関わらずゴール円の内側に着地させる
         const itemDistToGoal = this.distance(it.x, it.y, this.goal.x, this.goal.y);
-        if (this.isNearTarget("ゴール") && itemDistToGoal > this.goal.radius - 10) {
+        if (this.isNearTarget("ゴール") && itemDistToGoal > this.goal.radius - 28) {
           const angle = Math.atan2(it.y - this.goal.y, it.x - this.goal.x);
-          const targetR = this.goal.radius - 15;
+          const targetR = 24;
           it.x = this.goal.x + Math.cos(angle) * targetR;
           it.y = this.goal.y + Math.sin(angle) * targetR;
         }
@@ -878,32 +885,17 @@ class PictoEngine {
     let endX = startX + Math.cos(radians) * distance;
     let endY = startY + Math.sin(radians) * distance;
 
-    // 向いている目標地点がある場合、飛び越さないようにぴったり目標地点で止める
-    if (distance > 0 && this.state.targetPoint) {
+    // 向く("A")などで目標地点に向かっている状態で、while等の小刻みな移動(distance <= 60)で目標地点のすぐ手前まで来た場合のみ目標地点に吸着させる
+    if (distance > 0 && distance <= 60 && this.state.targetPoint) {
       const distToTarget = this.distance(startX, startY, this.state.targetPoint.x, this.state.targetPoint.y);
-      if (distToTarget > 0 && distToTarget <= distance + 22) {
+      if (distToTarget > 0 && distToTarget <= distance + 18) {
         endX = this.state.targetPoint.x;
         endY = this.state.targetPoint.y;
-      }
-    } else if (distance > 0 && this.state.points && this.state.points.length > 0) {
-      // 角度指定などで歩いている場合も、途中に地点の中心があればそこへ吸着して飛び越しを防ぐ
-      for (const pt of this.state.points) {
-        const distStart = this.distance(startX, startY, pt.x, pt.y);
-        if (distStart > 5 && distStart <= distance + 22) {
-          // 進行方向と地点の方向がほぼ一致しているか確認
-          const angleToPt = Math.atan2(pt.y - startY, pt.x - startX);
-          const diff = Math.abs(Math.atan2(Math.sin(radians - angleToPt), Math.cos(radians - angleToPt)));
-          if (diff < 0.25) {
-            endX = pt.x;
-            endY = pt.y;
-            break;
-          }
-        }
       }
     }
 
     const actualDist = this.distance(startX, startY, endX, endY);
-    const moveDuration = Math.min(this.animationMs, Math.max(160, actualDist * 6));
+    const moveDuration = Math.max(160, actualDist * 6);
     let moveError = null;
 
     await this.animate(moveDuration, (progress) => {
@@ -946,7 +938,7 @@ class PictoEngine {
       this.state.targetPoint = null;
     }
     const start = this.state.direction;
-    const turnDuration = Math.min(this.animationMs, Math.max(180, Math.abs(angle) * 4));
+    const turnDuration = Math.max(180, Math.abs(angle) * 4);
     await this.animate(turnDuration, (progress) => {
       this.state.direction = start + angle * progress;
       this.draw();
@@ -1510,16 +1502,10 @@ class PictoEngine {
         item.y = cy;
       }
 
-      // 当たり判定の可視化
+      // 当たり判定の可視化（枠自体は拡大縮小させず一定サイズに保つ）
       this.ctx.save();
       this.ctx.translate(cx, cy);
-      {
-        let baseScale = 0.6;
-        if (item.attachedTo) {
-          baseScale = 0.6 * (1.0 + 0.25 * Math.sin(Date.now() / 150));
-        }
-        this.ctx.scale(baseScale, baseScale);
-      }
+      this.ctx.scale(0.6, 0.6);
       this.ctx.beginPath();
       this.ctx.arc(0, 0, 35, 0, Math.PI * 2);
       

@@ -502,7 +502,7 @@ code {
   100% { transform: scale(1); opacity: 1; }
 }
 
-/* チュートリアルオーバーレイ */
+/* 繝√Η繝ｼ繝医Μ繧｢繝ｫ繧ｪ繝ｼ繝舌・繝ｬ繧､ */
 .tutorial-overlay {
   position: fixed;
   top: 0;
@@ -510,13 +510,13 @@ code {
   width: 100vw;
   height: 100vh;
   z-index: 9999;
-  pointer-events: auto; /* ブロック */
+  pointer-events: auto; /* 繝悶Ο繝・け */
   background: transparent;
 }
 
 .tutorial-highlight {
   position: absolute;
-  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.85); /* 画面全体を暗くする */
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.85); /* 逕ｻ髱｢蜈ｨ菴薙ｒ證励￥縺吶ｋ */
   border-radius: 8px;
   pointer-events: none;
   background: transparent;
@@ -527,15 +527,17 @@ code {
 .tutorial-bubble {
   position: absolute;
   background: #ffffff;
-  padding: 20px;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-  width: 280px;
+  padding: 15px 18px;
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  width: 360px;
+  max-width: calc(100vw - 32px);
   z-index: 10002;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
+  border: 2px solid #3b82f6;
 }
 
 .tutorial-bubble::after {
@@ -546,34 +548,52 @@ code {
 
 .tutorial-bubble.left::after {
   right: -20px;
-  top: 20px;
+  top: var(--arrow-top, 20px);
   border-left-color: #fff;
 }
 
 .tutorial-bubble.right::after {
   left: -20px;
-  top: 20px;
+  top: var(--arrow-top, 20px);
   border-right-color: #fff;
 }
 
 .tutorial-bubble.top::after {
   bottom: -20px;
-  left: 20px;
+  left: var(--arrow-left, 24px);
   border-top-color: #fff;
 }
 
 .tutorial-bubble.bottom::after {
   top: -20px;
-  left: 20px;
+  left: var(--arrow-left, 24px);
   border-bottom-color: #fff;
 }
 
 #tutorial-text {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   color: #1e293b;
   font-weight: 700;
   line-height: 1.5;
+}
+
+@keyframes tutorialPulseRing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.95), 0 0 12px 2px rgba(245, 158, 11, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(245, 158, 11, 0), 0 0 16px 4px rgba(245, 158, 11, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0), 0 0 12px 2px rgba(245, 158, 11, 0.7);
+  }
+}
+
+.tutorial-action-target {
+  outline: 3px solid #f59e0b !important;
+  outline-offset: 2px !important;
+  animation: tutorialPulseRing 1.4s infinite !important;
 }
 
 .btn-tutorial-skip {

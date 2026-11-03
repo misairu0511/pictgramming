@@ -1,16 +1,16 @@
 const canvas = document.getElementById("stage-canvas");
 const editor = document.getElementById("java-editor");
 const STAGE_STARTER_CODES = {
-  stage1: `// 「実行」ボタンを押してみよう\n向く(90);\n移動(480);\n`,
-  stage2: `// 前に進む\n移動(150);\n`,
-  stage3: `向く(90);\n移動(150);\n`,
-  stage4: `// ヒヨコを掴む\n向く(90);\n移動(180);\n部位回転("右腕", -60);\n`,
-  stage5: `// B地点の近くまで進む\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\n`,
+  stage1: `// 「実行」ボタンを押してみましょう\n向く(90);\n移動(480);\n`,
+  stage2: `// 前に進みます\n移動(150);\n`,
+  stage3: `// 壁を避けて GOAL まで進みます\n`,
+  stage4: `// ヒヨコを掴みます\n向く(90);\n移動(180);\n部位回転("右腕", -60);\n`,
+  stage5: `// B地点の近くまで進みます\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\n`,
   stage6: ``,
-  stage7: `// 1足目の靴を履く\n移動(60);\n向く(90);\nwhile (近くにいない("靴")) {\n  移動(30);\n}\n部位回転("右足", -60);\n`,
+  stage7: `// 2足の靴を両方履いてから針山を越え、ヒヨコを GOAL まで運びます\n`,
   stage8: ``,
-  stage9: `// 繰り返しを使って3羽のヒヨコを運ぼう\n繰り返し(3回) {\n  \n}\n`,
-  stage10: `向く("A");\nwhile (近くにいない("A")) {\n  移動(30);\n}\nもし (近くにいる("ヒヨコ")) {\n  \n}\n`
+  stage9: `// 「繰り返し」を使って3羽のヒヨコを運びます\n繰り返し(3回) {\n  \n}\n`,
+  stage10: `// A地点またはF地点を調べて、爆弾を避けてヒヨコを GOAL まで運びます\n`
 };
 
 function setStarterCodeForStage(stageId) {
@@ -105,23 +105,23 @@ const STAGE_INFO = {
   },
   tut1: {
     title: "📘 チュートリアル①：移動と方向転換（ステージ1〜3）",
-    goal: "🎯 練習：矢印の向きへ進み、途中で向きを変えて左上の GOAL へ進もう"
+    goal: "🎯 練習：矢印の向きへ進み、途中で向きを変えて左上の GOAL へ進みましょう"
   },
   tut4: {
     title: "📘 チュートリアル②：ヒヨコを掴んで運ぶ（ステージ4〜6）",
-    goal: "🎯 練習：B地点のヒヨコを右腕で掴み、D地点の GOAL の中で離そう"
+    goal: "🎯 練習：ヒヨコの横まで進んで右腕で掴み、GOAL の中で離しましょう"
   },
   tut7: {
     title: "📘 チュートリアル③：靴と針山（ステージ7〜8）",
-    goal: "🎯 練習：右足を回して靴を履き、赤い針山を越えて GOAL へ進もう"
+    goal: "🎯 練習：右足を回して靴を履き、赤い針山を越えて GOAL へ進みましょう"
   },
   tut9: {
     title: "📘 チュートリアル④：複数のヒヨコと「繰り返し」（ステージ9）",
-    goal: "🎯 練習：「繰り返し」を使って、B地点の巣からヒヨコを1羽ずつ GOAL へ運ぼう"
+    goal: "🎯 練習：「繰り返し」を使って、B地点の巣からヒヨコを1羽ずつ GOAL へ運びましょう"
   },
   tut10: {
     title: "📘 チュートリアル⑤：爆弾と「もし〜そうでなければ」（ステージ10）",
-    goal: "🎯 練習：爆弾を掴まないよう「もし」でヒヨコを確かめて GOAL へ運ぼう"
+    goal: "🎯 練習：爆弾を掴まないよう「もし」でヒヨコを確かめて GOAL へ運びましょう"
   }
 };
 
@@ -271,6 +271,7 @@ if (stageSelect) {
     }
     const applyStageSwitch = () => {
       stage8ClearedCases.clear();
+      stageStartTime = Date.now();
       engine.loadStage(newStage);
       setStarterCodeForStage(newStage);
       checkHintLock();
@@ -322,11 +323,12 @@ function updateShoeUI() {
 
   const stageNum = getStageNumber(activeId);
   const isStage4Plus = stageNum >= 4;
+  const isStage5Plus = stageNum >= 5;
   const isShoeStage = activeId === "stage7" || activeId === "stage8" || activeId === "tut7";
   const isStage9Plus = stageNum >= 9;
   const isStage10 = stageNum >= 10;
 
-  // 段階的表示：ステージ4以降（部位回転・掴む・離す・while・条件・部位名一覧）
+  // 段階的表示：ステージ4以降（部位回転・掴む・離す・部位名一覧）
   document.querySelectorAll(".unlock-stage4").forEach(el => {
     if (el.tagName === "LI") {
       el.style.display = isStage4Plus ? "list-item" : "none";
@@ -335,6 +337,11 @@ function updateShoeUI() {
     } else {
       el.style.display = isStage4Plus ? "inline-block" : "none";
     }
+  });
+
+  // 段階的表示：ステージ5以降（while・条件判定）
+  document.querySelectorAll(".unlock-stage5").forEach(el => {
+    el.style.display = isStage5Plus ? (el.tagName === "LI" ? "list-item" : "inline-block") : "none";
   });
 
   // 段階的表示：ステージ7〜8のみ（靴を履く）
@@ -389,24 +396,27 @@ let currentLogSession = null;
 let currentTargetHintLogId = null;
 let currentTargetHintEvents = null;
 let lastViewedHint = "ヒントなし";
+let stageStartTime = Date.now();
 
-    async function saveHintViewLog(actionType, targetId, score) {
+async function saveHintViewLog(actionType, targetId, score) {
   if (!userId) return;
   const stageId = stageSelect ? stageSelect.value : "stage1";
   const activeId = (typeof engine !== "undefined" && engine.currentStageId) ? engine.currentStageId : stageId;
   if (stageId === "stage0" || activeId.startsWith("tut")) return; // 不要なログ（チュートリアル）を弾く
+  const elapsedSeconds = Math.round((Date.now() - stageStartTime) / 1000);
   try {
-await db.collection('logs').add({
-  eventType: 'hint_view',
-  userId: userId,
-  stageId: stageId,
-  timestamp: new Date().toISOString(),
-  hintActionType: actionType,
-  targetHintLogId: targetId,
-  scoreWhenHintViewed: score
-});
+    await db.collection('logs').add({
+      eventType: 'hint_view',
+      userId: userId,
+      stageId: stageId,
+      timestamp: new Date().toISOString(),
+      elapsedSeconds: elapsedSeconds,
+      hintActionType: actionType,
+      targetHintLogId: targetId,
+      scoreWhenHintViewed: score
+    });
   } catch (e) {
-console.error("Failed to save hint view log", e);
+    console.error("Failed to save hint view log", e);
   }
 }
 
@@ -1060,6 +1070,7 @@ async function runProgram() {
         currentLogSession.nickname = nicknameInput.value.trim() || "名無し";
       }
       currentLogSession.timestamp = new Date().toISOString();
+      currentLogSession.elapsedSeconds = Math.round((Date.now() - stageStartTime) / 1000);
       currentLogSession.sessionId = sessionId;
       currentLogSession.stageId = typeof initialStageId !== 'undefined' ? initialStageId : engine.currentStageId;
       if (currentLogSession.stageId === "stage10") {
@@ -1619,50 +1630,59 @@ function getTutorialKeyForStage(stageId) {
 function closeTutorialOverlayOnly() {
   const overlay = document.getElementById('tutorial-wrapper');
   if (window.tutorialOnTopElements) {
-    window.tutorialOnTopElements.forEach(el => el.classList.remove('tutorial-on-top'));
+    window.tutorialOnTopElements.forEach(el => {
+      el.classList.remove('tutorial-on-top');
+      el.classList.remove('tutorial-action-target');
+    });
     window.tutorialOnTopElements = null;
   }
+  if (runButton) runButton.classList.remove('tutorial-action-target');
   if (overlay) overlay.hidden = true;
   tutorialAdvanceCheck = null;
 }
 
 function buildTutorialSteps(tutKey) {
+  const runOnTop = ['#btn-run', '#java-editor', '.stage-frame', '.log-panel'];
+
   if (tutKey === "tut1") {
     return [
       {
         target: 'java-editor',
+        onTopElements: ['.stage-frame'],
         pos: 'left',
-        text: 'ピクトグラミングへようこそ！\nここでは簡単な文を書いて、画面のピクトグラムを GOAL まで動かす練習をします。（※本番のステージとは配置が違う練習用ステージです）'
+        text: 'プログラムを書いて、ピクトグラムを GOAL まで動かす練習をしましょう。'
       },
       {
-        target: 'java-editor',
-        onTopElements: ['#btn-run', '.stage-frame'],
-        pos: 'left',
-        text: 'ピクトグラムは「矢印の向き」へ進みます。\nまずは「移動(270);」で上へ進んでみましょう！右上の【実行】ボタンを押してみてください。',
-        codeToAdd: '移動(270);',
+        target: 'btn-run',
+        onTopElements: runOnTop,
+        pos: 'bottom',
+        text: '「移動(270);」を入力しました。\n【実行】を押して、矢印の向き（上）へ進めてみましょう。',
+        codeToAdd: '// 矢印の向きへ進みます\n移動(270);',
         replaceCode: true,
         waitForRun: true,
         checkCondition: () => engine.state.y < (engine.canvas.height / 2)
       },
       {
-        target: 'java-editor',
-        onTopElements: ['#btn-run', '.stage-frame'],
-        pos: 'left',
-        text: '上に進みましたね！次は左にある GOAL に向かうため、「向く(-90);」で左へ90度向きを変え、「移動(200);」で進みます。\nもう一度【実行】ボタンを押してください！',
-        codeToAdd: '向く(-90);\n移動(200);',
+        target: 'btn-run',
+        onTopElements: runOnTop,
+        pos: 'bottom',
+        text: '「向く(-90);」で左を向き、「移動(200);」で GOAL へ進みます。\nもう一度【実行】を押してください。',
+        codeToAdd: '// 左へ向きを変えてゴールへ進みます\n向く(-90);\n移動(200);',
         keyword: '向く(-90)',
         waitForRun: true,
         checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
       },
       {
         target: 'stage-goal-banner',
+        onTopElements: ['.stage-frame'],
         pos: 'bottom',
-        text: 'お見事、練習ステージの GOAL に到着しました！\n各ステージのクリア条件は、いつもここの「🎯 目標」に書かれています。'
+        text: '各ステージのクリア条件は、ここの「🎯 目標」で確認できます。'
       },
       {
         target: 'btn-show-hint',
+        onTopElements: ['.stage-frame'],
         pos: 'bottom',
-        text: 'もし途中で解き方に迷ったら、自分で1回以上【実行】したあとに「💡 ヒントを見る」を押すと、他の人の動きをヒントとして見ることができます。\nそれでは本番のステージへ進みましょう！'
+        text: '迷ったときは、1回以上【実行】したあとに「💡 ヒントを見る」から他の人の動きを参考にできます。'
       }
     ];
   }
@@ -1671,33 +1691,35 @@ function buildTutorialSteps(tutKey) {
     return [
       {
         target: 'java-editor',
+        onTopElements: ['.stage-frame'],
         pos: 'left',
-        text: 'ステージ4〜6からは「ヒヨコ」が登場します！\nヒヨコを掴んで GOAL の中まで運び、そこで離すとクリアになります。（※練習用の配置で試してみましょう）'
+        text: 'ここからは「ヒヨコ」を掴んで、GOAL の中で離すとクリアになります。'
       },
       {
-        target: 'java-editor',
-        onTopElements: ['#btn-run', '.stage-frame'],
-        pos: 'left',
-        text: '「向く("B");」と「while (近くにいない("B")) { 移動(30); }」でB地点まで歩き、「部位回転("右腕", -60);」で右腕を振ってヒヨコを掴みます！\n【実行】ボタンを押して動きを見てみましょう！',
-        codeToAdd: '// B地点まで歩いて右腕でヒヨコを掴む\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\n部位回転("右腕", -60);',
+        target: 'btn-run',
+        onTopElements: runOnTop,
+        pos: 'bottom',
+        text: 'ヒヨコの横まで進み、「部位回転("右腕", -60);」で右腕を振って掴みます。\n【実行】を押してみましょう。',
+        codeToAdd: '// ヒヨコの横まで進んで、右腕で掴みます\n移動(160);\n部位回転("右腕", -60);',
         replaceCode: true,
         waitForRun: true,
         checkCondition: () => engine.state.hasGrabbedItem
       },
       {
-        target: 'java-editor',
-        onTopElements: ['#btn-run', '.stage-frame'],
-        pos: 'left',
-        text: '右腕がヒヨコに触れてキャッチできました！\n続けてD地点にある GOAL まで歩き、「離す();」でヒヨコを GOAL の中に置きましょう。【実行】ボタンを押してください！',
-        codeToAdd: '// ゴールまで運んで離す\n向く("D");\nwhile (近くにいない("ゴール")) {\n  移動(30);\n}\n離す();',
+        target: 'btn-run',
+        onTopElements: runOnTop,
+        pos: 'bottom',
+        text: 'ヒヨコを掴めました。続けて右を向いて GOAL まで運び、「離す();」で置きます。\n【実行】を押してください。',
+        codeToAdd: '// 右を向いてゴールまで運び、離します\n向く(90);\n移動(260);\n離す();',
         keyword: '離す()',
         waitForRun: true,
         checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
       },
       {
         target: 'java-editor',
+        onTopElements: ['.stage-frame'],
         pos: 'left',
-        text: 'バッチリです！\n「向く("地点名")」「while (近くにいない(...))」「部位回転」「離す()」を組み合わせて、本番のステージでもヒヨコを GOAL まで運んでみましょう！'
+        text: 'ヒヨコを GOAL まで運ぶことができました。\n次のステージからも、同じようにヒヨコを届けてみましょう。'
       }
     ];
   }
@@ -1705,29 +1727,30 @@ function buildTutorialSteps(tutKey) {
   if (tutKey === "tut7") {
     return [
       {
-        target: 'java-editor',
-        onTopElements: ['#btn-run', '.stage-frame'],
-        pos: 'left',
-        text: 'ステージ7・8では、赤い「針山」と「靴」が登場します！\nまずは靴を履かずに針山へ進むとどうなるか、【実行】ボタンを押して確かめてみましょう。',
-        codeToAdd: '// 靴を履かずにそのまま進むと…？\n移動(240);',
+        target: 'btn-run',
+        onTopElements: runOnTop,
+        pos: 'bottom',
+        text: '赤い「針山」と「靴」が登場します。\nまずは靴を履かずに【実行】を押して、どうなるか見てみましょう。',
+        codeToAdd: '// 靴を履かずにそのまま進みます\n移動(240);',
         replaceCode: true,
         waitForRun: true,
         checkCondition: () => log.textContent.includes('針山に触れてしまった')
       },
       {
-        target: 'java-editor',
-        onTopElements: ['#btn-run', '.stage-frame'],
-        pos: 'left',
-        text: '靴を履いていないと「針山に触れてしまった！」とエラーになってしまいます。\n今度は靴の近くまで歩いて「部位回転("右足", -60);」で足を回し、靴を履いてから針山を越えてみましょう！【実行】ボタンを押してください。',
-        codeToAdd: '// 靴の近くで右足を回して履き、針山を越えてゴールへ！\n移動(120);\n部位回転("右足", -60);\n移動(220);',
+        target: 'btn-run',
+        onTopElements: runOnTop,
+        pos: 'bottom',
+        text: '靴を履いていないと、針山は通れません。\n今度は「部位回転("右足", -60);」で靴を履いてから進みます。【実行】を押してください。',
+        codeToAdd: '// 右足を回して靴を履き、針山を越えて進みます\n移動(120);\n部位回転("右足", -60);\n移動(220);',
         replaceCode: true,
         waitForRun: true,
         checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
       },
       {
         target: 'java-editor',
+        onTopElements: ['.stage-frame'],
         pos: 'left',
-        text: '靴を履いたことで、赤い針山の上を安全に通り抜けられました！\n本番のステージには靴が2足あります。「2足すべての靴」を履いてから針山を渡りましょう！'
+        text: '靴を履くと、針山の上を通れるようになります。\nステージにあるすべての靴を履いてから、針山を渡ってみましょう。'
       }
     ];
   }
@@ -1735,29 +1758,30 @@ function buildTutorialSteps(tutKey) {
   if (tutKey === "tut9") {
     return [
       {
-        target: 'java-editor',
-        onTopElements: ['#btn-run', '.stage-frame'],
-        pos: 'left',
-        text: 'ステージ9では、複数のヒヨコを GOAL へ運びます。\nピクトグラムが一度に持てるヒヨコは「1羽だけ」です。まずは1往復するプログラムを【実行】して結果を見てみましょう！',
-        codeToAdd: '// まずは1羽だけ運んでみる\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\n部位回転("右腕", -60);\n向く("E");\nwhile (近くにいない("ゴール")) {\n  移動(30);\n}\n離す();',
+        target: 'btn-run',
+        onTopElements: runOnTop,
+        pos: 'bottom',
+        text: '一度に持てるヒヨコは「1羽だけ」です。\nまずは1往復するプログラムを【実行】してみましょう。',
+        codeToAdd: '// まずは1羽だけ運びます\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\n部位回転("右腕", -60);\n向く("E");\nwhile (近くにいない("ゴール")) {\n  移動(30);\n}\n離す();',
         replaceCode: true,
         waitForRun: true,
-        checkCondition: () => log.textContent.includes('足りません')
+        checkCondition: () => log.textContent.includes('まだヒヨコが残っている')
       },
       {
-        target: 'java-editor',
-        onTopElements: ['#btn-run', '.stage-frame'],
-        pos: 'left',
-        text: '1羽運べましたが、まだ巣にヒヨコが残っていますね。\n同じ往復の動きを何度も書く代わりに「繰り返し(2回) { ... }」で囲み、最後に上げた右腕を元に戻す「部位回転("右腕", 60);」を入れて【実行】してみましょう！',
-        codeToAdd: '// 「繰り返し」で往復してすべてのヒヨコを運ぶ\n繰り返し(2回) {\n  向く("B");\n  while (近くにいない("B")) {\n    移動(30);\n  }\n  部位回転("右腕", -60);\n  向く("E");\n  while (近くにいない("ゴール")) {\n    移動(30);\n  }\n  離す();\n  部位回転("右腕", 60);\n}',
+        target: 'btn-run',
+        onTopElements: runOnTop,
+        pos: 'bottom',
+        text: 'まだヒヨコが残っていますね。\n「繰り返し(2回) { ... }」で囲み、最後に右腕を戻す文を入れました。【実行】を押してみましょう。',
+        codeToAdd: '// 「繰り返し」を使って往復し、すべてのヒヨコを運びます\n繰り返し(2回) {\n  向く("B");\n  while (近くにいない("B")) {\n    移動(30);\n  }\n  部位回転("右腕", -60);\n  向く("E");\n  while (近くにいない("ゴール")) {\n    移動(30);\n  }\n  離す();\n  部位回転("右腕", 60);\n}',
         replaceCode: true,
         waitForRun: true,
         checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
       },
       {
         target: 'java-editor',
+        onTopElements: ['.stage-frame'],
         pos: 'left',
-        text: '「繰り返し」を使うことで、短いプログラムで何往復もヒヨコを運ぶことができました！\n本番のステージ9では「繰り返し(3回) { ... }」を使って3羽のヒヨコを GOAL まで運びましょう！'
+        text: '「繰り返し」を使うと、同じ動きを何回も行うことができます。\n回数を指定して、すべてのヒヨコを GOAL まで運んでみましょう。'
       }
     ];
   }
@@ -1765,29 +1789,30 @@ function buildTutorialSteps(tutKey) {
   // tut10: ステージ10用（爆弾と条件分岐）
   return [
     {
-      target: 'java-editor',
-      onTopElements: ['#btn-run', '.stage-frame'],
-      pos: 'left',
-      text: 'ステージ10では「爆弾」が登場します！\n近くを歩くだけなら大丈夫ですが、爆弾の上で腕を回して「爆弾を掴む」と爆発してゲームオーバーになります。まずは【実行】ボタンを押して確かめてみましょう！',
-      codeToAdd: '// 確かめずにB地点で右腕を回すと…？\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\n部位回転("右腕", -60);',
+      target: 'btn-run',
+      onTopElements: runOnTop,
+      pos: 'bottom',
+      text: '腕を回して「爆弾」を掴むと、ゲームオーバーになります。\nまずは【実行】を押して確かめてみましょう。',
+      codeToAdd: '// 確かめずにB地点で右腕を回します\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\n部位回転("右腕", -60);',
       replaceCode: true,
       waitForRun: true,
       checkCondition: () => log.textContent.includes('爆弾を掴んでしまった')
     },
     {
-      target: 'java-editor',
-      onTopElements: ['#btn-run', '.stage-frame'],
-      pos: 'left',
-      text: '💥 爆弾を掴んでしまいゲームオーバーになりました！\nそこで「もし (近くにいる("ヒヨコ")) { ... } そうでなければ { ... }」を使います。B地点にヒヨコがいなければ腕を回さずE地点へ向かうプログラムを【実行】してみましょう！',
-      codeToAdd: '// 「もし」でヒヨコがいるか確かめてから腕を回す\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\nもし (近くにいる("ヒヨコ")) {\n  部位回転("右腕", -60);\n} そうでなければ {\n  向く("E");\n  while (近くにいない("E")) {\n    移動(30);\n  }\n  部位回転("右腕", -60);\n}\n向く("D");\nwhile (近くにいない("ゴール")) {\n  移動(30);\n}\n離す();',
+      target: 'btn-run',
+      onTopElements: runOnTop,
+      pos: 'bottom',
+      text: '💥 爆発してしまいました。\n「もし (近くにいる("ヒヨコ"))」で確かめてから掴むプログラムに変えました。【実行】を押してみましょう。',
+      codeToAdd: '// 「もし」でヒヨコがいるか確かめてから掴みます\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\nもし (近くにいる("ヒヨコ")) {\n  部位回転("右腕", -60);\n} そうでなければ {\n  向く("E");\n  while (近くにいない("E")) {\n    移動(30);\n  }\n  部位回転("右腕", -60);\n}\n向く("D");\nwhile (近くにいない("ゴール")) {\n  移動(30);\n}\n離す();',
       replaceCode: true,
       waitForRun: true,
       checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
     },
     {
       target: 'stage8-test-selector',
+      onTopElements: ['.stage-frame'],
       pos: 'bottom',
-      text: 'お見事！爆弾を避けてヒヨコだけを GOAL に運べました！\n本番のステージ10では、右上の「パターン1」「パターン2」を切り替えて、ヒヨコと爆弾の位置が入れ替わっても同じプログラムで両方クリアできるか挑戦しましょう！'
+      text: 'ここの「パターン1」「パターン2」で配置を切り替えられます。\nどちらのパターンでもクリアできるプログラムを作ってみましょう。'
     }
   ];
 }
@@ -1840,6 +1865,7 @@ function startTutorialForStage(targetStageId, force = false) {
     if (stageSelect) {
       stageSelect.value = tutorialReturnStageId;
     }
+    stageStartTime = Date.now();
     engine.loadStage(tutorialReturnStageId);
     clearOutput();
     updateShoeUI();
@@ -1884,9 +1910,13 @@ function startTutorialForStage(targetStageId, force = false) {
     bubble.className = 'tutorial-bubble ' + step.pos;
 
     if (window.tutorialOnTopElements) {
-      window.tutorialOnTopElements.forEach(elItem => elItem.classList.remove('tutorial-on-top'));
+      window.tutorialOnTopElements.forEach(elItem => {
+        elItem.classList.remove('tutorial-on-top');
+        elItem.classList.remove('tutorial-action-target');
+      });
       window.tutorialOnTopElements = null;
     }
+    if (runButton) runButton.classList.remove('tutorial-action-target');
 
     if (step.onTopElements) {
       window.tutorialOnTopElements = [];
@@ -1900,6 +1930,7 @@ function startTutorialForStage(targetStageId, force = false) {
     }
 
     if (step.waitForRun) {
+      el.classList.add('tutorial-action-target');
       nextBtn.style.display = 'none';
       if (step.codeToAdd !== undefined) {
         if (step.replaceCode) {
@@ -1924,23 +1955,37 @@ function startTutorialForStage(targetStageId, force = false) {
     }
 
     setTimeout(() => {
+      const targetCenterX = rect.left + rect.width / 2;
+      const targetCenterY = rect.top + rect.height / 2;
+      let bubbleTop = 16;
+      let bubbleLeft = 16;
+
       if (step.pos === 'right') {
-        bubble.style.top = Math.max(16, rect.top + 20) + 'px';
-        bubble.style.left = (rect.right + pad + 20) + 'px';
+        bubbleTop = Math.max(16, rect.top + 20);
+        bubbleLeft = rect.right + pad + 18;
       } else if (step.pos === 'left') {
-        bubble.style.top = Math.max(16, rect.top + 20) + 'px';
-        bubble.style.left = Math.max(16, rect.left - bubble.offsetWidth - pad - 20) + 'px';
+        bubbleTop = Math.max(16, rect.top + 20);
+        bubbleLeft = Math.max(16, rect.left - bubble.offsetWidth - pad - 18);
       } else if (step.pos === 'top') {
-        bubble.style.top = Math.max(16, rect.top - bubble.offsetHeight - pad - 20) + 'px';
-        bubble.style.left = Math.max(16, rect.left) + 'px';
+        bubbleTop = Math.max(16, rect.top - bubble.offsetHeight - pad - 18);
+        bubbleLeft = targetCenterX - bubble.offsetWidth / 2;
       } else if (step.pos === 'bottom') {
-        bubble.style.top = (rect.bottom + pad + 20) + 'px';
-        if (rect.left + bubble.offsetWidth > window.innerWidth) {
-          bubble.style.left = Math.max(16, window.innerWidth - bubble.offsetWidth - 20) + 'px';
-        } else {
-          bubble.style.left = Math.max(16, rect.left) + 'px';
-        }
+        bubbleTop = rect.bottom + pad + 14;
+        bubbleLeft = targetCenterX - bubble.offsetWidth / 2;
       }
+
+      // 画面端からはみ出さないようにクランプ
+      bubbleLeft = Math.max(16, Math.min(window.innerWidth - bubble.offsetWidth - 16, bubbleLeft));
+      bubbleTop = Math.max(16, Math.min(window.innerHeight - bubble.offsetHeight - 16, bubbleTop));
+
+      bubble.style.top = bubbleTop + 'px';
+      bubble.style.left = bubbleLeft + 'px';
+
+      // 吹き出しのしっぽ（三角形）がターゲットの中央を正確に指すようCSS変数を設定
+      const arrowLeft = Math.max(18, Math.min(bubble.offsetWidth - 38, targetCenterX - bubbleLeft - 10));
+      const arrowTop = Math.max(18, Math.min(bubble.offsetHeight - 38, targetCenterY - bubbleTop - 10));
+      bubble.style.setProperty('--arrow-left', arrowLeft + 'px');
+      bubble.style.setProperty('--arrow-top', arrowTop + 'px');
     }, 10);
   }
 
