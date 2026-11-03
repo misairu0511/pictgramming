@@ -395,6 +395,7 @@ let shouldStop = false;
 let currentLogSession = null;
 let currentTargetHintLogId = null;
 let currentTargetHintEvents = null;
+let viewedHintLogIds = new Set();
 let lastViewedHint = "ヒントなし";
 let stageStartTime = Date.now();
 
@@ -438,6 +439,7 @@ window.restoreHintState = async function(stageId) {
   
   currentTargetHintLogId = null;
   currentTargetHintEvents = null;
+  viewedHintLogIds.clear();
   lastViewedHint = "ヒントなし";
   if (typeof updateHintButtonsUI === 'function') updateHintButtonsUI(false);
   
@@ -465,6 +467,7 @@ window.restoreHintState = async function(stageId) {
         if (targetDoc.exists) {
           currentTargetHintLogId = targetId;
           currentTargetHintEvents = targetDoc.data().events;
+          viewedHintLogIds.add(targetId);
           lastViewedHint = "ヒントなし";
           if (typeof updateHintButtonsUI === 'function') updateHintButtonsUI(true);
           console.log("Replay button restored successfully!");
@@ -701,7 +704,7 @@ if (btnShowHint) {
           othersClears.push({ id: doc.id, ...doc.data() });
         }
       });
-      if (stageId === "stage8") {
+      if (stageId === "stage10") {
         const testFiltered = othersClears.filter(d => d.testCase === engine.currentTestCase);
         if (testFiltered.length > 0) {
           othersClears = testFiltered;
@@ -711,6 +714,13 @@ if (btnShowHint) {
       if (othersClears.length === 0) {
         addLog("まだあなた以外にクリアした人がいないため、ヒントを表示できません。", "info");
         return;
+      }
+
+      // すでに見たヒントIDを除外した候補リストを作成（すべて見尽くした場合は直前の1件のみ除外してリセット）
+      let candidateClears = othersClears.filter(log => !viewedHintLogIds.has(log.id));
+      if (candidateClears.length === 0) {
+        viewedHintLogIds.clear();
+        candidateClears = othersClears.filter(log => othersClears.length === 1 || log.id !== currentTargetHintLogId);
       }
       
       const myClearSnapshot = await db.collection('logs')
@@ -722,17 +732,18 @@ if (btnShowHint) {
 
       if (!myClearSnapshot.empty) {
         console.log("他人クリア件数: " + othersClears.length);
-        const randomLog = othersClears[Math.floor(Math.random() * othersClears.length)];
+        const randomLog = candidateClears[Math.floor(Math.random() * candidateClears.length)];
         addLog(`【別解再生】${randomLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
         currentTargetHintLogId = randomLog.id;
         currentTargetHintEvents = randomLog.events;
+        viewedHintLogIds.add(randomLog.id);
         lastViewedHint = "別解再生";
         await saveHintViewLog("new_search", currentTargetHintLogId, null);
         updateHintBadge();
         
         isRunning = true;
         await engine.playGhost(randomLog.events);
-          isRunning = false;
+        isRunning = false;
       } else {
         const myLatestSnapshot = await db.collection('logs')
           .where('stageId', '==', stageId)
@@ -746,21 +757,16 @@ if (btnShowHint) {
           myLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
           if (myLogs.length > 0) myLatestEvents = myLogs[0].events || [];
         }
-
-        const mySnapshot = await db.collection('logs')
-          .where('stageId', '==', stageId)
-          .where('userId', '==', userId)
-          .where('goalResult', 'in', ['持ったがゴールに入れていない', 'ゴールしているが離していない'])
-          .get();
           
-        console.log("未クリア(DTW)モード: 他人クリア件数=" + othersClears.length);
-        const bestLog = findBestHintLog(othersClears, myLatestEvents, stageId);
+        console.log("未クリア(DTW)モード: 他人クリア件数=" + othersClears.length + " (未視聴候補=" + candidateClears.length + ")");
+        const bestLog = findBestHintLog(candidateClears, myLatestEvents, stageId);
         if (!bestLog.events || bestLog.events.length === 0) return;
         let score = Math.round(bestLog._calculatedDistanceScore || 0);
         
         addLog(`【お手本再生】${bestLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
         currentTargetHintLogId = bestLog.id;
         currentTargetHintEvents = bestLog.events;
+        viewedHintLogIds.add(bestLog.id);
         lastViewedHint = "お手本再生";
         await saveHintViewLog("new_search", currentTargetHintLogId, score);
         updateHintBadge();
@@ -1293,18 +1299,33 @@ function createPictoContext() {
     移動: async (val) => {
       checkStop();
       if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("移動の引数は数字である必要があります");
-      addLog(`移動(${val});`);
-      await engine.animateMove(val);
+      const msg = `移動(${val});`;
+      addLog(msg, "", false);
+      try {
+        await engine.animateMove(val);
+      } finally {
+        recordEventState(msg);
+      }
     },
     向く: async (target) => {
       checkStop();
       if (typeof target === "number" && Number.isFinite(target)) {
-        addLog(`向く(${target});`);
-        await engine.animateFace(target);
+        const msg = `向く(${target});`;
+        addLog(msg, "", false);
+        try {
+          await engine.animateFace(target);
+        } finally {
+          recordEventState(msg);
+        }
       } else if (typeof target === "string") {
         const label = target.trim();
-        addLog(`向く("${label}");`);
-        await engine.animateFace(label);
+        const msg = `向く("${label}");`;
+        addLog(msg, "", false);
+        try {
+          await engine.animateFace(label);
+        } finally {
+          recordEventState(msg);
+        }
       } else {
         throw new Error("向くの引数は地点名(\"A\"など)または角度(数字)である必要があります");
       }
@@ -1313,13 +1334,23 @@ function createPictoContext() {
       checkStop();
       if (typeof val === "string") {
         const label = val.trim();
-        addLog(`向く("${label}");`);
-        await engine.animateFace(label);
+        const msg = `向く("${label}");`;
+        addLog(msg, "", false);
+        try {
+          await engine.animateFace(label);
+        } finally {
+          recordEventState(msg);
+        }
         return;
       }
       if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("回転の引数は数字である必要があります");
-      addLog(`向く(${val});`);
-      await engine.animateTurn(val);
+      const msg = `向く(${val});`;
+      addLog(msg, "", false);
+      try {
+        await engine.animateTurn(val);
+      } finally {
+        recordEventState(msg);
+      }
     },
     部位回転: async (part, val) => {
       checkStop();
@@ -1330,68 +1361,123 @@ function createPictoContext() {
       const realPart = partNames[label] || partAliases[label.toLowerCase()];
       if (!realPart) throw new Error(`"${label}"は使えない部位名です`);
       
-      addLog(`部位回転("${realPart}", ${val});`);
-      await engine.animatePartRotate(realPart, val);
+      const msg = `部位回転("${realPart}", ${val});`;
+      addLog(msg, "", false);
+      try {
+        await engine.animatePartRotate(realPart, val);
+      } finally {
+        recordEventState(msg);
+      }
     },
     "掴む": async function() {
       checkStop();
-      addLog("掴む();");
-      engine.grabItem();
-      await new Promise(r => setTimeout(r, 100));
+      const msg = "掴む();";
+      addLog(msg, "", false);
+      try {
+        engine.grabItem();
+        await new Promise(r => setTimeout(r, 100));
+      } finally {
+        recordEventState(msg);
+      }
     },
     "離す": async function() {
       checkStop();
-      addLog("離す();");
-      engine.releaseItem();
-      await new Promise(r => setTimeout(r, 100));
+      const msg = "離す();";
+      addLog(msg, "", false);
+      try {
+        engine.releaseItem();
+        await new Promise(r => setTimeout(r, 100));
+      } finally {
+        recordEventState(msg);
+      }
     },
     "靴を履く": async function() {
       checkStop();
-      addLog("靴を履く();");
-      engine.equipShoe();
-      await new Promise(r => setTimeout(r, 100));
+      const msg = "靴を履く();";
+      addLog(msg, "", false);
+      try {
+        engine.equipShoe();
+        await new Promise(r => setTimeout(r, 100));
+      } finally {
+        recordEventState(msg);
+      }
     },
     "履く": async function() {
       checkStop();
-      addLog("靴を履く();");
-      engine.equipShoe();
-      await new Promise(r => setTimeout(r, 100));
+      const msg = "靴を履く();";
+      addLog(msg, "", false);
+      try {
+        engine.equipShoe();
+        await new Promise(r => setTimeout(r, 100));
+      } finally {
+        recordEventState(msg);
+      }
     },
     "靴を脱ぐ": async function() {
       checkStop();
-      addLog("靴を脱ぐ();");
-      engine.unequipShoe();
-      await new Promise(r => setTimeout(r, 100));
+      const msg = "靴を脱ぐ();";
+      addLog(msg, "", false);
+      try {
+        engine.unequipShoe();
+        await new Promise(r => setTimeout(r, 100));
+      } finally {
+        recordEventState(msg);
+      }
     },
     "脱ぐ": async function() {
       checkStop();
-      addLog("靴を脱ぐ();");
-      engine.unequipShoe();
-      await new Promise(r => setTimeout(r, 100));
+      const msg = "靴を脱ぐ();";
+      addLog(msg, "", false);
+      try {
+        engine.unequipShoe();
+        await new Promise(r => setTimeout(r, 100));
+      } finally {
+        recordEventState(msg);
+      }
     },
     "右足で履く": async function() {
       checkStop();
-      addLog("靴を履く();");
-      engine.equipShoe();
-      await new Promise(r => setTimeout(r, 100));
+      const msg = "靴を履く();";
+      addLog(msg, "", false);
+      try {
+        engine.equipShoe();
+        await new Promise(r => setTimeout(r, 100));
+      } finally {
+        recordEventState(msg);
+      }
     },
     "左足で履く": async function() {
       checkStop();
-      addLog("靴を履く();");
-      engine.equipShoe();
-      await new Promise(r => setTimeout(r, 100));
+      const msg = "靴を履く();";
+      addLog(msg, "", false);
+      try {
+        engine.equipShoe();
+        await new Promise(r => setTimeout(r, 100));
+      } finally {
+        recordEventState(msg);
+      }
     },
     "右足で脱ぐ": async function() {
       checkStop();
-      addLog("靴を脱ぐ();");
-      engine.unequipShoe();
-      await new Promise(r => setTimeout(r, 100));
+      const msg = "靴を脱ぐ();";
+      addLog(msg, "", false);
+      try {
+        engine.unequipShoe();
+        await new Promise(r => setTimeout(r, 100));
+      } finally {
+        recordEventState(msg);
+      }
     },
     "左足で脱ぐ": async function() {
       checkStop();
-      addLog("靴を脱ぐ();");
-      engine.unequipShoe();
-      await new Promise(r => setTimeout(r, 100));
+      const msg = "靴を脱ぐ();";
+      addLog(msg, "", false);
+      try {
+        engine.unequipShoe();
+        await new Promise(r => setTimeout(r, 100));
+      } finally {
+        recordEventState(msg);
+      }
     },
     "近くにいる": async function(label) {
       checkStop();
@@ -1460,13 +1546,7 @@ function clearOutput() {
   if (clearOverlay) clearOverlay.hidden = true;
 }
 
-function addLog(message, type = "") {
-  const row = document.createElement("div");
-  row.className = `log-entry ${type}`.trim();
-  row.textContent = message;
-  log.appendChild(row);
-  log.scrollTop = log.scrollHeight;
-
+function recordEventState(message, type = "") {
   if (currentLogSession && isRunning) {
     const parts = (engine.state && engine.state.parts) ? engine.state.parts : {};
     currentLogSession.events.push({ 
@@ -1484,6 +1564,18 @@ function addLog(message, type = "") {
       leftKnee: parts.leftKnee ? parts.leftKnee.rotation : 0,
       rightKnee: parts.rightKnee ? parts.rightKnee.rotation : 0
     });
+  }
+}
+
+function addLog(message, type = "", shouldRecordEvent = true) {
+  const row = document.createElement("div");
+  row.className = `log-entry ${type}`.trim();
+  row.textContent = message;
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+
+  if (shouldRecordEvent) {
+    recordEventState(message, type);
   }
 }
 
