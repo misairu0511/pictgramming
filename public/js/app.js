@@ -260,19 +260,42 @@ function isModifiedExecutionLog(logData, stageId) {
   return hasActionEvent;
 }
 
+let isHintLocked = true;
+let hintPopoverTimer = null;
+
+function showHintLockPopover() {
+  const popover = document.getElementById("hint-lock-popover");
+  if (!popover) return;
+  popover.hidden = false;
+  if (hintPopoverTimer) clearTimeout(hintPopoverTimer);
+  hintPopoverTimer = setTimeout(() => {
+    popover.hidden = true;
+  }, 3200);
+}
+
+function hideHintLockPopover() {
+  const popover = document.getElementById("hint-lock-popover");
+  if (popover) popover.hidden = true;
+  if (hintPopoverTimer) {
+    clearTimeout(hintPopoverTimer);
+    hintPopoverTimer = null;
+  }
+}
+
 async function checkHintLock() {
   if (!btnShowHint) return;
   const stageId = stageSelect ? stageSelect.value : "stage1";
   const activeId = (typeof engine !== "undefined" && engine.currentStageId) ? engine.currentStageId : stageId;
   
   if (stageId === "stage0" || activeId.startsWith("tut")) {
+    isHintLocked = true;
     btnShowHint.disabled = true;
+    btnShowHint.style.opacity = "0.5";
+    hideHintLockPopover();
     return;
   }
 
-  // 判定中はボタンを無効化
-  btnShowHint.disabled = true;
-  btnShowHint.title = "実行履歴を確認中...";
+  btnShowHint.disabled = false;
 
   try {
     // データベース（ログ）から、このユーザーがこのステージで初期コードから書き換えて実行した履歴があるか確認する
@@ -289,16 +312,19 @@ async function checkHintLock() {
     });
 
     if (hasValidAttempt) {
-      btnShowHint.disabled = false;
+      isHintLocked = false;
+      hideHintLockPopover();
+      btnShowHint.style.opacity = "1";
       btnShowHint.title = currentTargetHintLogId ? "別のヒントを探す" : "ヒントを見る";
     } else {
-      btnShowHint.disabled = true;
+      isHintLocked = true;
+      btnShowHint.style.opacity = "0.7";
       btnShowHint.title = "まずは自分でプログラムを書き足して実行してみましょう！";
     }
   } catch(e) {
     console.error("Hint lock check failed:", e);
-    // エラー時は安全のためロック解除
-    btnShowHint.disabled = false;
+    isHintLocked = false;
+    btnShowHint.style.opacity = "1";
     btnShowHint.title = currentTargetHintLogId ? "別のヒントを探す" : "ヒントを見る";
   }
 }
@@ -752,6 +778,10 @@ if (btnShowHint) {
 
   btnShowHint.addEventListener("click", async () => {
     if (isRunning) return;
+    if (isHintLocked) {
+      showHintLockPopover();
+      return;
+    }
     btnShowHint.disabled = true;
     const originalText = btnShowHint.innerHTML;
     btnShowHint.innerHTML = "検索中...";

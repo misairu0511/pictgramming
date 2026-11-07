@@ -707,3 +707,42 @@ code {
 .btn-copy-user-id:hover {
   background: rgba(255, 255, 255, 0.28);
 }
+
+.hint-lock-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  background: #fffbeb;
+  color: #92400e;
+  border: 2px solid #f59e0b;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+  z-index: 1200;
+  pointer-events: none;
+  animation: hintPopoverFadeIn 0.18s ease-out;
+}
+
+.hint-lock-popover::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  right: 42px;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 8px solid #f59e0b;
+}
+
+@keyframes hintPopoverFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

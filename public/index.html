@@ -39,7 +39,7 @@
       <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
         
         <!-- Hint Group -->
-        <div style="display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 2px dashed #f59e0b; border-radius: 8px; background-color: #fef3c7; flex-shrink: 0;">
+        <div style="position: relative; display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 2px dashed #f59e0b; border-radius: 8px; background-color: #fef3c7; flex-shrink: 0;">
           <span style="font-size: 13px; font-weight: bold; color: #b45309; display: flex; align-items: center; gap: 4px;">
             💡<span style="letter-spacing: -0.5px;">ヒント</span>
           </span>
@@ -52,6 +52,9 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
               同じヒントを見る
             </button>
+          </div>
+          <div id="hint-lock-popover" class="hint-lock-popover" hidden>
+            まずは自分でプログラムを書き足して「実行」してみましょう！
           </div>
         </div>
 
