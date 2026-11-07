@@ -462,10 +462,35 @@ async function saveHintViewLog(actionType, targetId, score) {
 }
 
 
+function generateShortUserId() {
+  const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"; // 0/O, 1/I などの紛らわしい文字を除外
+  let code = "U-";
+  for (let i = 0; i < 4; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
 let userId = localStorage.getItem("pictgramming_user_id");
-if (!userId) {
-  userId = "user_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+if (!userId || userId.startsWith("user_")) {
+  userId = generateShortUserId();
   localStorage.setItem("pictgramming_user_id", userId);
+}
+
+const userIdDisplayEl = document.getElementById("user-id-display");
+const btnCopyUserId = document.getElementById("btn-copy-user-id");
+if (userIdDisplayEl) {
+  userIdDisplayEl.textContent = userId;
+}
+if (btnCopyUserId) {
+  btnCopyUserId.addEventListener("click", () => {
+    navigator.clipboard.writeText(userId).then(() => {
+      btnCopyUserId.textContent = "コピー完了";
+      setTimeout(() => {
+        btnCopyUserId.textContent = "コピー";
+      }, 1500);
+    });
+  });
 }
 
 

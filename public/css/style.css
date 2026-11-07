@@ -668,3 +668,42 @@ code {
   align-items: center;
   gap: 2px;
 }
+
+.user-id-badge {
+  position: fixed;
+  right: 16px;
+  bottom: 12px;
+  z-index: 950;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #f8fafc;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(4px);
+}
+
+.user-id-badge strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92rem;
+  color: #38bdf8;
+  letter-spacing: 0.5px;
+}
+
+.btn-copy-user-id {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.74rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-copy-user-id:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
