@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ピクトグラミング</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20261117a">
 </head>
 <body>
   <header class="app-header">
@@ -22,7 +22,7 @@
         <button id="btn-start-tutorial" class="btn btn-secondary">チュートリアル</button>
         <select id="stage-select" class="stage-select" style="margin-left: 10px;">
             <option value="stage0" hidden>ステージ0: チュートリアル</option>
-            <option value="stage1">ステージ1: 移動と方向転換① (基本)</option>
+            <option value="stage1" selected>ステージ1: 移動と方向転換① (基本)</option>
             <option value="stage2">ステージ2: 移動と方向転換② (曲がり角)</option>
             <option value="stage3">ステージ3: 移動と方向転換③ (壁の迂回)</option>
             <option value="stage4">ステージ4: ヒヨコを運ぼう① (掴んで運ぶ)</option>
@@ -120,6 +120,9 @@
           <h2 id="editor-title">Java 入力</h2>
           <p>クラスや main は不要です。一文ずつ書いて実行できます。</p>
         </div>
+        <button type="button" id="btn-open-tut-code" class="btn btn-secondary" style="height: 32px; padding: 0 12px; font-size: 12px; min-width: auto; display: inline-flex; align-items: center; gap: 4px; border-color: #93c5fd; background: #eff6ff; color: #1d4ed8;">
+          📘 チュートリアルのコード
+        </button>
       </div>
 
       <div class="editor-toolbar" style="display: flex; gap: 8px; margin-bottom: 8px; background-color: #f1f5f9; padding: 6px; border-radius: 6px;">
@@ -152,20 +155,23 @@
       </div>
 
       <div class="command-help">
-        <div class="help-title">使える文</div>
-        <div class="help-scroll">
+        <div class="help-header-tabs">
+          <button type="button" id="tab-btn-commands" class="help-tab-btn active">使える文</button>
+          <button type="button" id="tab-btn-tut-codes" class="help-tab-btn">📘 チュートリアルのコード</button>
+        </div>
+        <div id="help-panel-commands" class="help-scroll">
           <ul>
             <li><code>移動(数字);</code> 矢印の方向へ進む（1マス＝<code>40</code>、マイナスで後ろへ下がる）</li>
-            <li><code>向く(数字);</code> 今の向きから指定した角度だけ回す（<code>90</code> で右へ90度、<code>-90</code> で左へ90度）</li>
-            <li id="help-face-point"><code>向く("A");</code> 地点（<code>"A"</code>〜<code>"F"</code>）の方向へ矢印を向ける（※ゴールには直接向けません）</li>
-            <li id="help-part-rotate" class="unlock-stage4" style="display:none;"><code>部位回転("部位名", 数字);</code> 手足を回す（腕を回してヒヨコに触れると自動で掴みます）</li>
+            <li><code>向く(数字);</code> / <code>向き(数字);</code> 今の向きから指定した角度だけ回す（<code>90</code> で右へ90度、<code>-90</code> で左へ90度）</li>
+            <li id="help-face-point"><code>向く("A");</code> / <code>向き("A");</code> 地点（<code>A</code>〜<code>F</code>）の方向へ矢印を向ける（<code>""</code> は省略可・ゴールには直接向けません）</li>
+            <li id="help-part-rotate" class="unlock-stage4" style="display:none;"><code>部位回転("部位名", 数字);</code> 手足を回す（<code>""</code> 省略可・腕を回してヒヨコに触れると自動で掴みます）</li>
             <li class="unlock-stage4" style="display:none;"><code>掴む();</code> 近くのヒヨコを掴む ／ <code>離す();</code> 持っているヒヨコをその場に離す</li>
             <li id="shoe-help-1" style="display:none;"><code>靴を履く();</code> 近くの靴を履く（足を部位回転させて靴に触れても履けます。すべての靴を履くと針山を通れます）</li>
             <li class="unlock-stage5" style="display:none;"><code>while (条件) { ... }</code> 条件を満たしている間、<code>{ }</code> の中を繰り返す（例：<code>while (近くにいない("A")) { 移動(30); }</code>）</li>
             <li class="unlock-stage9" style="display:none;"><code>繰り返し(数字回) { ... }</code> 指定した回数だけ <code>{ }</code> の中を繰り返す</li>
             <li class="unlock-stage10" style="display:none;"><code>もし (条件) { ... } そうでなければ { ... }</code> 条件に合うかどうかで動きを分ける</li>
             <li id="help-condition-targets" class="unlock-stage5" style="display:none;"><strong>【条件】</strong> <code>近くにいる("対象")</code> ／ <code>近くにいない("対象")</code><br>
-              対象には地点（<code>"A"</code>〜<code>"F"</code>）のほか、<code>"ゴール"</code>, <code>"ヒヨコ"</code> を指定できます</li>
+              対象には地点（<code>A</code>〜<code>F</code>）のほか、<code>ゴール</code>, <code>ヒヨコ</code> を指定できます（<code>""</code> は省略可）</li>
           </ul>
           <div class="part-name-list unlock-stage4" style="display:none;">
             <div>体の部位名（画面のピクトグラムにカーソルを合わせても確認できます）</div>
@@ -180,6 +186,16 @@
             <code>"左膝"</code>
             <code>"右膝"</code>
           </div>
+        </div>
+        <div id="help-panel-tut-codes" class="help-scroll" hidden>
+          <div class="tut-code-pills" id="tut-code-pills">
+            <button type="button" class="tut-pill-btn active" data-tut="tut1">① 移動・向き</button>
+            <button type="button" class="tut-pill-btn" data-tut="tut4">② ヒヨコ運搬</button>
+            <button type="button" class="tut-pill-btn" data-tut="tut7">③ 靴と針山</button>
+            <button type="button" class="tut-pill-btn" data-tut="tut9">④ 繰り返し</button>
+            <button type="button" class="tut-pill-btn" data-tut="tut10">⑤ もし(条件分岐)</button>
+          </div>
+          <div id="tut-code-display" class="tut-code-display"></div>
         </div>
       </div>
     </section>
@@ -241,7 +257,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <script src="js/engine.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/engine.js?v=20261117a"></script>
+  <script src="js/app.js?v=20261117a"></script>
 </body>
 </html>

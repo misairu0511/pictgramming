@@ -26,6 +26,25 @@ function setStarterCodeForStage(stageId) {
   if (typeof resetStage8Clears === "function") resetStage8Clears();
 }
 
+// localStorage がブラウザ設定や大学アカウントのポリシーでブロックされてもクラッシュしない安全ラッパー
+const _memoryStorage = {};
+function safeGetStorage(key) {
+  try {
+    return window.localStorage ? window.localStorage.getItem(key) : (_memoryStorage[key] || null);
+  } catch (e) {
+    console.warn("localStorage.getItem blocked:", e);
+    return _memoryStorage[key] || null;
+  }
+}
+function safeSetStorage(key, val) {
+  _memoryStorage[key] = String(val);
+  try {
+    if (window.localStorage) window.localStorage.setItem(key, String(val));
+  } catch (e) {
+    console.warn("localStorage.setItem blocked:", e);
+  }
+}
+
 // Firebase Setup
 const firebaseConfig = {
   apiKey: "AIzaSyBc4s66rHugPmNVV_Ra-S7P4vOfe2tNxQA",
@@ -36,8 +55,32 @@ const firebaseConfig = {
   appId: "1:835896621128:web:e5ae40c7d4b91ff1e6407d",
   measurementId: "G-6RP66BRFLG"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+let db = null;
+try {
+  if (typeof firebase !== "undefined") {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  }
+} catch (e) {
+  console.error("Firebase initialization failed:", e);
+}
+if (!db) {
+  // Firebase が拡張機能やアカウント制限でブロックされた場合でも画面操作・実行・チュートリアルが止まらないようダミーを用意
+  const dummyQuery = {
+    where: () => dummyQuery,
+    limit: () => dummyQuery,
+    get: async () => ({ empty: true, forEach: () => {} }),
+    add: async () => ({}),
+    doc: () => ({
+      get: async () => ({ exists: false, data: () => ({}) }),
+      set: async () => ({})
+    })
+  };
+  db = {
+    collection: () => dummyQuery,
+    batch: () => ({ delete: () => {}, commit: async () => {} })
+  };
+}
 
 const log = document.getElementById("stage-log");
 const runButton = document.getElementById("btn-run");
@@ -101,7 +144,7 @@ const STAGE_INFO = {
   },
   stage10: {
     title: "ステージ10：ヒヨコを探そう",
-    goal: "🎯 目標：爆弾に触れないようヒヨコを GOAL まで運ぼう（パターン1・2の両方でクリアしよう）"
+    goal: "🎯 目標：爆弾に触れないようヒヨコを GOAL まで運ぼう（実行するとパターン1→パターン2の順にテストされます）"
   },
   tut1: {
     title: "📘 チュートリアル①：移動と方向転換（ステージ1〜3）",
@@ -372,6 +415,49 @@ if (stageSelect) {
 }
 
 let tutorialAdvanceCheck = null;
+const TUTORIAL_BOUNDARY_STAGES = new Set(["stage1", "stage4", "stage7", "stage9", "stage10"]);
+let tutorialReturnStageId = "stage1";
+let tutorialSavedCode = null;
+let activeTutorialScrollHandler = null;
+let tutorialInitTimer = null;
+let tutorialAdvanceTimer = null;
+
+const TUTORIAL_REFERENCE_CODES = {
+  tut1: [
+    {
+      title: "チュートリアル①：移動と方向転換（ステージ1〜3）",
+      code: `// 矢印の向きへ進みます\n移動(270);\n// 左へ向きを変えてゴールへ進みます\n向く(-90);\n移動(200);`
+    }
+  ],
+  tut4: [
+    {
+      title: "チュートリアル②：ヒヨコを掴んで運ぶ（ステージ4〜6）",
+      code: `// ヒヨコの横まで進んで、右腕で掴みます\n移動(160);\n部位回転("右腕", -60);\n// 右を向いてゴールまで運び、離します\n向く(90);\n移動(260);\n離す();`
+    },
+    {
+      title: "地点（A〜F）へ向かって移動する例（ステージ5〜）",
+      code: `// B地点の近くに着くまで移動を繰り返します\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}`
+    }
+  ],
+  tut7: [
+    {
+      title: "チュートリアル③：靴を履いて針山を越える（ステージ7〜8）",
+      code: `// 右足を回して靴を履き、針山を越えて進みます\n移動(120);\n部位回転("右足", -60);\n移動(220);`
+    }
+  ],
+  tut9: [
+    {
+      title: "チュートリアル④：「繰り返し」で複数のヒヨコを運ぶ（ステージ9）",
+      code: `// 「繰り返し」を使って往復し、すべてのヒヨコを運びます\n繰り返し(2回) {\n  向く("B");\n  while (近くにいない("B")) {\n    移動(30);\n  }\n  部位回転("右腕", -60);\n  向く("E");\n  while (近くにいない("ゴール")) {\n    移動(30);\n  }\n  離す();\n  部位回転("右腕", 60);\n}`
+    }
+  ],
+  tut10: [
+    {
+      title: "チュートリアル⑤：「もし〜そうでなければ」でヒヨコを探す（ステージ10）",
+      code: `// 「もし」でヒヨコがいるか確かめてから掴みます\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\nもし (近くにいる("ヒヨコ")) {\n  部位回転("右腕", -60);\n} そうでなければ {\n  向く("E");\n  while (近くにいない("E")) {\n    移動(30);\n  }\n  部位回転("右腕", -60);\n}\n向く("F");\nwhile (近くにいない("ゴール")) {\n  移動(30);\n}\n離す();`
+    }
+  ]
+};
 
 function getStageNumber(id) {
   if (!id) return 1;
@@ -452,6 +538,10 @@ function updateShoeUI() {
     if (isStage10) extraTargets += `, <code>"爆弾"</code>`;
     helpCondTargets.innerHTML = `<strong>【条件】</strong> <code>近くにいる("対象")</code> ／ <code>近くにいない("対象")</code><br>対象には地点（<code>"A"</code>〜<code>"F"</code>）のほか、${extraTargets} を指定できます`;
   }
+
+  if (typeof syncTutorialReferenceCodeForStage === "function") {
+    syncTutorialReferenceCodeForStage(stageSelect.value);
+  }
 }
 
 const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
@@ -461,6 +551,7 @@ let shouldStop = false;
 let currentLogSession = null;
 let currentTargetHintLogId = null;
 let currentTargetHintEvents = null;
+let currentTargetHintSourceCode = null;
 let viewedHintLogIds = new Set();
 let lastViewedHint = "ヒントなし";
 let stageStartTime = Date.now();
@@ -497,10 +588,10 @@ function generateShortUserId() {
   return code;
 }
 
-let userId = localStorage.getItem("pictgramming_user_id");
+let userId = safeGetStorage("pictgramming_user_id");
 if (!userId || userId.startsWith("user_")) {
   userId = generateShortUserId();
-  localStorage.setItem("pictgramming_user_id", userId);
+  safeSetStorage("pictgramming_user_id", userId);
 }
 
 const userIdDisplayEl = document.getElementById("user-id-display");
@@ -530,6 +621,7 @@ window.restoreHintState = async function(stageId) {
   
   currentTargetHintLogId = null;
   currentTargetHintEvents = null;
+  currentTargetHintSourceCode = null;
   viewedHintLogIds.clear();
   lastViewedHint = "ヒントなし";
   if (typeof updateHintButtonsUI === 'function') updateHintButtonsUI(false);
@@ -556,12 +648,19 @@ window.restoreHintState = async function(stageId) {
         const targetDoc = await db.collection('logs').doc(targetId).get();
         console.log("Target ghost exists:", targetDoc.exists);
         if (targetDoc.exists) {
-          currentTargetHintLogId = targetId;
-          currentTargetHintEvents = targetDoc.data().events;
-          viewedHintLogIds.add(targetId);
-          lastViewedHint = "ヒントなし";
-          if (typeof updateHintButtonsUI === 'function') updateHintButtonsUI(true);
-          console.log("Replay button restored successfully!");
+          const targetData = targetDoc.data();
+          const isValid = targetData.sourceCode ? await verifyHintCode(stageId, targetData.sourceCode) : false;
+          if (isValid) {
+            currentTargetHintLogId = targetId;
+            currentTargetHintEvents = targetData.events;
+            currentTargetHintSourceCode = targetData.sourceCode || null;
+            viewedHintLogIds.add(targetId);
+            lastViewedHint = "ヒントなし";
+            if (typeof updateHintButtonsUI === 'function') updateHintButtonsUI(true);
+            console.log("Replay button restored successfully!");
+          } else {
+            console.log("Previous hint failed current stage verification; skipping restore.");
+          }
         }
       }
     }
@@ -577,16 +676,16 @@ window.restoreHintState = async function(stageId) {
 const sessionId = "session_" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 
 // ログ番号（これまで何回実行したか）を管理
-let logCount = parseInt(localStorage.getItem("pictgramming_log_count") || "0", 10);
+let logCount = parseInt(safeGetStorage("pictgramming_log_count") || "0", 10);
 
 const nicknameInput = document.getElementById("user-nickname");
 if (nicknameInput) {
-  const savedNickname = localStorage.getItem("pictgramming_nickname");
+  const savedNickname = safeGetStorage("pictgramming_nickname");
   if (savedNickname) {
     nicknameInput.value = savedNickname;
   }
   nicknameInput.addEventListener("input", (e) => {
-    localStorage.setItem("pictgramming_nickname", e.target.value.trim());
+    safeSetStorage("pictgramming_nickname", e.target.value.trim());
   });
 }
 
@@ -616,10 +715,13 @@ const partAliases = {
   migihiza: "rightKnee",
   "頭": "head",
   "体": "body",
+  "胴体": "body",
   "左腕": "leftArm",
   "右腕": "rightArm",
   "左足": "leftLeg",
   "右足": "rightLeg",
+  "左脚": "leftLeg",
+  "右脚": "rightLeg",
   "左肘": "leftElbow",
   "右肘": "rightElbow",
   "左膝": "leftKnee",
@@ -666,9 +768,7 @@ pauseButton.addEventListener("click", () => {
 });
 resetButton.addEventListener("click", () => {
   if (isRunning) return;
-  editor.value = "";
   clearOutput();
-  saveHistory();
 });
 clearStageButton.addEventListener("click", () => {
   if (isRunning) return;
@@ -773,9 +873,235 @@ if (btnClearEditor) {
 
 updateToolbarState();
 
-if (btnShowHint) {
-  
+const STAGE10_FALLBACK_HINT_CODE = `向く("A");
+while (近くにいない("A")) {
+  移動(30);
+}
+もし (近くにいる("ヒヨコ")) {
+  部位回転("右腕", -60);
+  向く("F");
+  while (近くにいない("ゴール")) {
+    移動(30);
+  }
+  離す();
+} そうでなければ {
+  向く("F");
+  while (近くにいない("F")) {
+    移動(30);
+  }
+  部位回転("右腕", -60);
+  向く("A");
+  while (近くにいない("ゴール")) {
+    移動(30);
+  }
+  離す();
+}`;
 
+let _simEngine = null;
+function getHintSimEngine() {
+  if (_simEngine) return _simEngine;
+  const dummyCanvas = {
+    width: canvas ? canvas.width : 720,
+    height: canvas ? canvas.height : 560,
+    getContext: () => new Proxy({}, { get: () => () => {} })
+  };
+  _simEngine = new PictoEngine(dummyCanvas);
+  _simEngine.draw = () => {};
+  _simEngine.startRenderLoop = () => {};
+  _simEngine.wait = async () => {};
+  _simEngine.animate = async (dur, fn) => {
+    fn(1);
+  };
+  return _simEngine;
+}
+
+function createSimPictoContext(simEngine) {
+  let loopSteps = 0;
+  const resolveTarget = (t) => typeof t === "string" ? t.trim() : t;
+  return {
+    移動: async (val) => {
+      if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("ERR");
+      await simEngine.animateMove(val);
+    },
+    向く: async (target) => {
+      await simEngine.animateFace(resolveTarget(target));
+    },
+    向き: async (target) => {
+      await simEngine.animateFace(resolveTarget(target));
+    },
+    回転: async (val) => {
+      if (typeof val === "string") {
+        await simEngine.animateFace(val.trim());
+        return;
+      }
+      if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("ERR");
+      await simEngine.animateTurn(val);
+    },
+    部位回転: async (part, val) => {
+      if (typeof part !== "string" || typeof val !== "number" || !Number.isFinite(val)) throw new Error("ERR");
+      const label = part.trim();
+      const realPart = partNames[label] || partAliases[label.toLowerCase()];
+      if (!realPart) throw new Error("ERR");
+      await simEngine.animatePartRotate(realPart, val);
+    },
+    "掴む": async () => { simEngine.grabItem(); },
+    "離す": async () => { simEngine.releaseItem(); },
+    "靴を履く": async () => { simEngine.equipShoe(); },
+    "履く": async () => { simEngine.equipShoe(); },
+    "靴を脱ぐ": async () => { simEngine.unequipShoe(); },
+    "脱ぐ": async () => { simEngine.unequipShoe(); },
+    "右足で履く": async () => { simEngine.equipShoe(); },
+    "左足で履く": async () => { simEngine.equipShoe(); },
+    "右足で脱ぐ": async () => { simEngine.unequipShoe(); },
+    "左足で脱ぐ": async () => { simEngine.unequipShoe(); },
+    "近くにいる": async (label) => simEngine.isNearTarget(label),
+    "近くにいない": async (label) => !simEngine.isNearTarget(label),
+    "地点にいる": async (label) => simEngine.isNearTarget(label),
+    "地点にいない": async (label) => !simEngine.isNearTarget(label),
+    "ヒヨコの近くにいる": async () => simEngine.isNearItem(),
+    "ヒヨコの近くにいない": async () => !simEngine.isNearItem(),
+    "爆弾の近くにいる": async () => simEngine.isNearTarget("爆弾"),
+    "爆弾の近くにいない": async () => !simEngine.isNearTarget("爆弾"),
+    "靴の近くにいる": async () => simEngine.isNearTarget("靴"),
+    "靴の近くにいない": async () => !simEngine.isNearTarget("靴"),
+    "ヒヨコを持っている": async () => {
+      const items = simEngine.state.items || (simEngine.state.item ? [simEngine.state.item] : []);
+      return items.some(it => it && it.attachedTo !== null);
+    },
+    yield: async () => {
+      loopSteps++;
+      if (loopSteps > 250) throw new Error("LOOP_LIMIT");
+    }
+  };
+}
+
+function isSimRunCleanClear(simEngine, stageId) {
+  if (simEngine.evaluateGoalStatus() !== "ゴールした") return false;
+  if (!simEngine.state.hasItem) return true;
+  const stageDef = STAGES[stageId];
+  const requiredCount = stageDef && stageDef.requiredGoalCount
+    ? stageDef.requiredGoalCount
+    : (stageDef && stageDef.requireAllItems ? simEngine.state.items.length : 1);
+  const inGoalItems = (simEngine.state.items || []).filter(it =>
+    it && it.attachedTo === null && simEngine.distance(it.x, it.y, simEngine.goal.x, simEngine.goal.y) <= simEngine.goal.radius + 5
+  );
+  return inGoalItems.length >= requiredCount;
+}
+
+const _hintVerifyCache = new Map();
+async function verifyHintCode(stageId, sourceCode) {
+  if (!stageId || !sourceCode || typeof sourceCode !== "string") return false;
+  const trimmed = sourceCode.trim();
+  if (!trimmed) return false;
+  const cacheKey = `${stageId}::${trimmed}`;
+  if (_hintVerifyCache.has(cacheKey)) return _hintVerifyCache.get(cacheKey);
+
+  let ok = false;
+  try {
+    const jsCode = transpileToJava(trimmed);
+    const fn = new AsyncFunction("picto", jsCode);
+    const simEngine = getHintSimEngine();
+
+    simEngine.loadStage(stageId);
+    if (stageId === "stage10" || stageId === "tut10") {
+      simEngine.setTestCase(0);
+      simEngine.reset();
+      await fn(createSimPictoContext(simEngine));
+      if (isSimRunCleanClear(simEngine, stageId)) {
+        simEngine.setTestCase(1);
+        simEngine.reset();
+        await fn(createSimPictoContext(simEngine));
+        ok = isSimRunCleanClear(simEngine, stageId);
+      }
+    } else {
+      await fn(createSimPictoContext(simEngine));
+      ok = isSimRunCleanClear(simEngine, stageId);
+    }
+  } catch (e) {
+    ok = false;
+  }
+
+  _hintVerifyCache.set(cacheKey, ok);
+  return ok;
+}
+
+async function playHintLog(targetLog, stageId) {
+  if (!targetLog) return;
+  const source = targetLog.sourceCode ? targetLog.sourceCode.trim() : "";
+  shouldStop = false;
+  runButton.disabled = true;
+  stopButton.disabled = false;
+  pauseButton.disabled = false;
+  pauseButton.textContent = "一時停止";
+  resetButton.disabled = true;
+
+  try {
+    if (stageId === "stage10") {
+      const isValidStage10Source = source ? await verifyHintCode("stage10", source) : false;
+      const stage10Source = isValidStage10Source ? source : STAGE10_FALLBACK_HINT_CODE;
+      const jsCode = transpileToJava(stage10Source);
+      const fn = new AsyncFunction("picto", jsCode);
+
+      // パターン1を再生
+      engine.setTestCase(0);
+      updateStage8ButtonsUI();
+      engine.reset();
+      engine.isGhostMode = true;
+      engine.state.color = "#9ca3af";
+      engine.draw();
+      addLog("▶ ヒント：【パターン1】の動きを再生します", "info", false);
+      try {
+        await fn(createPictoContext(true));
+      } catch (err1) {
+        if (err1 && err1.message === "STOP") throw err1;
+      }
+
+      if (!shouldStop && !engine.isStopped) {
+        await engine.wait(800);
+      }
+
+      // 続けてパターン2を再生
+      if (!shouldStop && !engine.isStopped) {
+        engine.setTestCase(1);
+        updateStage8ButtonsUI();
+        engine.reset();
+        engine.isGhostMode = true;
+        engine.state.color = "#9ca3af";
+        engine.draw();
+        addLog("▶ ヒント：続けて【パターン2】の動きを再生します", "info", false);
+        try {
+          await fn(createPictoContext(true));
+        } catch (err2) {
+          if (err2 && err2.message === "STOP") throw err2;
+        }
+      }
+    } else if (source) {
+      const jsCode = transpileToJava(source);
+      const fn = new AsyncFunction("picto", jsCode);
+      engine.reset();
+      engine.isGhostMode = true;
+      engine.state.color = "#9ca3af";
+      engine.draw();
+      await fn(createPictoContext(true));
+    } else if (targetLog.events && targetLog.events.length > 0) {
+      await engine.playGhost(targetLog.events);
+    }
+  } catch (err) {
+    if (err && err.message !== "STOP") {
+      console.warn("Ghost playback stopped:", err.message);
+    }
+  } finally {
+    engine.isGhostMode = false;
+    engine.startRenderLoop();
+    runButton.disabled = false;
+    stopButton.disabled = true;
+    pauseButton.disabled = true;
+    pauseButton.textContent = "一時停止";
+    resetButton.disabled = false;
+  }
+}
+
+if (btnShowHint) {
   btnShowHint.addEventListener("click", async () => {
     if (isRunning) return;
     if (isHintLocked) {
@@ -799,11 +1125,23 @@ if (btnShowHint) {
           othersClears.push({ id: doc.id, ...doc.data() });
         }
       });
-      if (stageId === "stage10") {
-        const testFiltered = othersClears.filter(d => d.testCase === engine.currentTestCase);
-        if (testFiltered.length > 0) {
-          othersClears = testFiltered;
+      // 現行ステージ仕様で実際にゴール（ヒヨコ運搬・靴・両パターン含む）まで再現できるログのみを抽出
+      const verifiedClears = [];
+      for (const d of othersClears) {
+        if (d.sourceCode && await verifyHintCode(stageId, d.sourceCode)) {
+          verifiedClears.push(d);
         }
+      }
+      if (verifiedClears.length > 0) {
+        othersClears = verifiedClears;
+      } else if (stageId === "stage10" && othersClears.length > 0) {
+        // 既存のクリアログが旧仕様（片方のパターンのみクリア等）だった場合は両パターン対応コードを補完
+        othersClears = othersClears.map(d => ({
+          ...d,
+          sourceCode: STAGE10_FALLBACK_HINT_CODE
+        }));
+      } else {
+        othersClears = [];
       }
         
       if (othersClears.length === 0) {
@@ -831,13 +1169,14 @@ if (btnShowHint) {
         addLog(`【別解再生】${randomLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
         currentTargetHintLogId = randomLog.id;
         currentTargetHintEvents = randomLog.events;
+        currentTargetHintSourceCode = randomLog.sourceCode || null;
         viewedHintLogIds.add(randomLog.id);
         lastViewedHint = "別解再生";
         await saveHintViewLog("new_search", currentTargetHintLogId, null);
         updateHintBadge();
         
         isRunning = true;
-        await engine.playGhost(randomLog.events);
+        await playHintLog(randomLog, stageId);
         isRunning = false;
       } else {
         const myLatestSnapshot = await db.collection('logs')
@@ -859,18 +1198,19 @@ if (btnShowHint) {
           
         console.log("未クリア(DTW)モード: 他人クリア件数=" + othersClears.length + " (未視聴候補=" + candidateClears.length + ")");
         const bestLog = findBestHintLog(candidateClears, myLatestEvents, stageId);
-        if (!bestLog.events || bestLog.events.length === 0) return;
+        if (!bestLog || ((!bestLog.events || bestLog.events.length === 0) && !bestLog.sourceCode)) return;
         let score = Math.round(bestLog._calculatedDistanceScore || 0);
         
         addLog(`【お手本再生】${bestLog.nickname || '誰か'}さんのクリアの動きを再生します`, "info");
         currentTargetHintLogId = bestLog.id;
         currentTargetHintEvents = bestLog.events;
+        currentTargetHintSourceCode = bestLog.sourceCode || null;
         viewedHintLogIds.add(bestLog.id);
         lastViewedHint = "お手本再生";
         await saveHintViewLog("new_search", currentTargetHintLogId, score);
         updateHintBadge();
         isRunning = true;
-        await engine.playGhost(bestLog.events);
+        await playHintLog(bestLog, stageId);
         isRunning = false;
       }
     } catch (e) {
@@ -887,7 +1227,7 @@ if (btnShowHint) {
 
   if (btnReplayHint) {
     btnReplayHint.addEventListener("click", async () => {
-      if (isRunning || !currentTargetHintEvents) {
+      if (isRunning || (!currentTargetHintEvents && !currentTargetHintSourceCode)) {
         console.warn("Replay cancelled");
         return;
       }
@@ -908,21 +1248,21 @@ if (btnShowHint) {
           if (doc.exists && doc.data().nickname) {
             hintNickname = doc.data().nickname;
           }
+          if (doc.exists && !currentTargetHintSourceCode && doc.data().sourceCode) {
+            currentTargetHintSourceCode = doc.data().sourceCode;
+          }
         }
         
         lastViewedHint = hintTypeStr;
         if (typeof updateHintBadge === 'function') updateHintBadge();
         addLog(`【${hintTypeStr}】さっきの${hintNickname}さんの動きをもう一度再生します`, "info");
         await saveHintViewLog("replay", currentTargetHintLogId, null);
-          
-        let eventsToPlay = currentTargetHintEvents;
-        // if (myClearSnapshot.empty && mySnapshot.empty) {
-        //   let grabIndex = currentTargetHintEvents.findIndex(evt => evt.message && evt.message.startsWith("掴む"));
-        //   eventsToPlay = grabIndex >= 0 ? currentTargetHintEvents.slice(0, grabIndex + 1) : currentTargetHintEvents;
-        // }
         
         isRunning = true;
-        await engine.playGhost(eventsToPlay);
+        await playHintLog({
+          events: currentTargetHintEvents,
+          sourceCode: currentTargetHintSourceCode
+        }, stageId);
       } catch (e) {
         console.error(e);
       } finally {
@@ -1138,20 +1478,113 @@ async function runProgram() {
   let finalGoalResult = null;
   try {
     let jsCode = transpileToJava(source);
-    const picto = createPictoContext();
     const fn = new AsyncFunction('picto', jsCode);
-    await fn(picto);
-    if (!shouldStop) {
-      addLog("完了しました。", "success");
-      
-      const goalResult = engine.evaluateGoalStatus();
-      finalGoalResult = goalResult;
-      const resultType = goalResult === "ゴールした" ? "success" : "info";
-      addLog(`【判定結果】 ${goalResult}`, resultType);
-      
-      currentLogSession.goalResult = goalResult;
+
+    if (initialStageId === "stage10" || initialStageId === "tut10") {
+      stage8ClearedCases.clear();
+      // --- パターン1を実行 ---
+      engine.setTestCase(0);
+      updateStage8ButtonsUI();
+      addLog("▶ 【パターン1】を実行します", "info", false);
+      let res1 = null;
+      let err1Thrown = false;
+      try {
+        await fn(createPictoContext(false));
+        if (!shouldStop) {
+          res1 = engine.evaluateGoalStatus();
+        }
+      } catch (err1) {
+        if (err1.message === "STOP") throw err1;
+        err1Thrown = true;
+        res1 = err1.message;
+        addLog(`エラー (パターン1): ${err1.message}`, "error");
+      }
+
+      if (!shouldStop && !err1Thrown && res1) {
+        if (res1 === "ゴールした") {
+          stage8ClearedCases.add(0);
+          updateStage8ButtonsUI();
+          addLog("【パターン1 判定結果】 ゴールした", "success", false);
+        } else {
+          addLog(`【パターン1 判定結果】 ${res1}`, "info", false);
+        }
+      }
+
+      // チュートリアル10のステップ0（爆弾体験ステップ）ではパターン1で爆発したらそこで終了
+      if (initialStageId === "tut10" && err1Thrown) {
+        finalGoalResult = res1;
+        currentLogSession.goalResult = res1;
+      } else if (!shouldStop) {
+        await engine.wait(800);
+        if (!shouldStop) {
+          // --- 続けてパターン2を実行 ---
+          engine.setTestCase(1);
+          updateStage8ButtonsUI();
+          addLog("▶ 続けて【パターン2】を実行します", "info", false);
+          let res2 = null;
+          let err2Thrown = false;
+          try {
+            await fn(createPictoContext(false));
+            if (!shouldStop) {
+              res2 = engine.evaluateGoalStatus();
+            }
+          } catch (err2) {
+            if (err2.message === "STOP") throw err2;
+            err2Thrown = true;
+            res2 = err2.message;
+            addLog(`エラー (パターン2): ${err2.message}`, "error");
+          }
+
+          if (!shouldStop && !err2Thrown && res2) {
+            if (res2 === "ゴールした") {
+              stage8ClearedCases.add(1);
+              updateStage8ButtonsUI();
+              addLog("【パターン2 判定結果】 ゴールした", "success", false);
+            } else {
+              addLog(`【パターン2 判定結果】 ${res2}`, "info", false);
+            }
+          }
+
+          if (!shouldStop) {
+            if (res1 === "ゴールした" && res2 === "ゴールした") {
+              finalGoalResult = "ゴールした";
+              addLog("完了しました。", "success");
+              addLog("【判定結果】 ゴールした（パターン1・パターン2の両方をクリア！）", "success");
+            } else if (res1 === "ゴールした") {
+              finalGoalResult = `パターン1のみクリア（パターン2: ${res2}）`;
+              addLog(`【判定結果】 ${finalGoalResult}`, "info");
+            } else if (res2 === "ゴールした") {
+              finalGoalResult = `パターン2のみクリア（パターン1: ${res1}）`;
+              addLog(`【判定結果】 ${finalGoalResult}`, "info");
+            } else {
+              finalGoalResult = res1 || res2 || "ゴールに届いていない";
+              addLog(`【判定結果】 ${finalGoalResult}`, "info");
+            }
+            currentLogSession.goalResult = finalGoalResult;
+          } else {
+            currentLogSession.goalResult = "手動中断";
+          }
+        } else {
+          currentLogSession.goalResult = "手動中断";
+        }
+      } else {
+        currentLogSession.goalResult = "手動中断";
+      }
     } else {
-      currentLogSession.goalResult = "手動中断";
+      const picto = createPictoContext(false);
+      await fn(picto);
+      if (!shouldStop) {
+        addLog("完了しました。", "success");
+        
+        const goalResult = engine.evaluateGoalStatus();
+        finalGoalResult = goalResult;
+        const resultType = goalResult === "ゴールした" ? "success" : "info";
+        addLog(`【判定結果】 ${goalResult}`, resultType);
+        
+        currentLogSession.goalResult = goalResult;
+      } else {
+        currentLogSession.goalResult = "手動中断";
+      }
     }
   } catch (error) {
     if (error.message !== "STOP") {
@@ -1179,7 +1612,7 @@ async function runProgram() {
       currentLogSession.sessionId = sessionId;
       currentLogSession.stageId = typeof initialStageId !== 'undefined' ? initialStageId : engine.currentStageId;
       if (currentLogSession.stageId === "stage10") {
-        currentLogSession.testCase = engine.currentTestCase;
+        currentLogSession.testCase = "both";
       }
       
       currentLogSession.hintViewed = lastViewedHint;
@@ -1200,7 +1633,7 @@ async function runProgram() {
       const isTutorialRun = currentLogSession.stageId === "stage0" || (currentLogSession.stageId && currentLogSession.stageId.startsWith("tut"));
       if (!isTutorialRun) {
         logCount++;
-        localStorage.setItem("pictgramming_log_count", logCount);
+        safeSetStorage("pictgramming_log_count", logCount);
         const customDocId = `${userId}_log${logCount}`;
         db.collection('logs').doc(customDocId).set(currentLogSession)
           .then(() => {
@@ -1217,29 +1650,18 @@ async function runProgram() {
       if (finalGoalResult === "ゴールした" && !isTutorialRun) {
         updateStageLocks(true);
         const clearOverlay = document.getElementById("clear-overlay");
-        const isStage8 = stageSelect && stageSelect.value === "stage10";
+        const isStage10 = stageSelect && stageSelect.value === "stage10";
         
-        if (isStage8) {
-          stage8ClearedCases.add(engine.currentTestCase);
-          updateStage8ButtonsUI();
-
-          if (stage8ClearedCases.size < 2) {
-            const currentName = engine.currentTestCase === 0 ? "パターン1" : "パターン2";
-            const nextCase = engine.currentTestCase === 0 ? 1 : 0;
-            const nextName = nextCase === 0 ? "パターン1" : "パターン2";
-            addLog(`【判定】${currentName} クリア！`, "success");
-            addLog(`表示エリア右上の「${nextName}」ボタンに切り替えて、同じプログラムでもう一方のパターンもクリアできるか確認しよう！`, "info");
-          } else {
-            addLog(`【判定】お見事！パターン1とパターン2の両方をクリアしました！条件分岐が完璧に書けています！`, "success");
-            if (clearOverlay) {
-              const btnNext = document.getElementById("btn-next-stage");
-              if (btnNext) {
-                btnNext.textContent = "🎉 全ステージクリア！";
-                btnNext.disabled = true;
-                btnNext.style.background = "#10b981";
-              }
-              clearOverlay.hidden = false;
+        if (isStage10) {
+          addLog(`【判定】お見事！パターン1とパターン2の両方をクリアしました！`, "success");
+          if (clearOverlay) {
+            const btnNext = document.getElementById("btn-next-stage");
+            if (btnNext) {
+              btnNext.textContent = "🎉 全ステージクリア！";
+              btnNext.disabled = true;
+              btnNext.style.background = "#10b981";
             }
+            clearOverlay.hidden = false;
           }
         } else {
           if (clearOverlay) {
@@ -1369,6 +1791,16 @@ if (btnLogHistory && logModal) {
 
 function transpileToJava(javaCode) {
   let jsCode = javaCode;
+
+  // 全角の引用符・括弧・セミコロン・カンマ・スペースを半角に正規化
+  jsCode = jsCode
+    .replace(/[“”″‟]/g, '"')
+    .replace(/[‘’′]/g, "'")
+    .replace(/（/g, '(')
+    .replace(/）/g, ')')
+    .replace(/；/g, ';')
+    .replace(/[，、]/g, ',')
+    .replace(/　/g, ' ');
   
   // Replace variable types
   jsCode = jsCode.replace(/\b(?:int|double|float|boolean|String)\b\s+/g, 'let ');
@@ -1381,78 +1813,113 @@ function transpileToJava(javaCode) {
   // Inject yield into loops to prevent freezing
   jsCode = jsCode.replace(/\b(for|while)\s*\(([\s\S]*?)\)\s*\{/g, '$1($2) { await picto.yield(); ');
   
-  // Support unquoted target names inside 近くにいる / 近くにいない / 向く (e.g. 近くにいる(爆弾) -> 近くにいる("爆弾"))
-  jsCode = jsCode.replace(/(近くにいる|近くにいない|向く|回転)\s*\(\s*(ヒヨコ|爆弾|靴|ゴール)\s*\)/g, '$1("$2")');
+  // Support unquoted target names inside 近くにいる / 近くにいない / 地点にいる / 地点にいない / 向く / 向き / 回転
+  // (e.g. 向く(A) -> 向く("A"), 近くにいない(B) -> 近くにいない("B"), 近くにいる(ヒヨコ) -> 近くにいる("ヒヨコ"))
+  jsCode = jsCode.replace(/(近くにいる|近くにいない|地点にいる|地点にいない|向く|向き|回転)\s*\(\s*(A|B|C|D|E|F|ヒヨコ|爆弾|靴|ゴール|GOAL)\s*\)/g, '$1("$2")');
+
+  // Support unquoted body part names inside 部位回転 (e.g. 部位回転(右腕, -60) -> 部位回転("右腕", -60))
+  jsCode = jsCode.replace(/(部位回転)\s*\(\s*(頭|体|胴体|左腕|右腕|左足|右足|左脚|右脚|左肘|右肘|左膝|右膝)\s*,/g, '$1("$2",');
 
   // Replace command keywords to await picto.method
-  jsCode = jsCode.replace(/(移動|向く|回転|部位回転|掴む|離す|靴を履く|靴を脱ぐ|履く|脱ぐ|右足で履く|左足で履く|右足で脱ぐ|左足で脱ぐ|近くにいない|近くにいる|地点にいない|地点にいる|ヒヨコの近くにいない|ヒヨコの近くにいる|爆弾の近くにいない|爆弾の近くにいる|靴の近くにいない|靴の近くにいる|ヒヨコを持っている)\s*\(/g, 'await picto.$1(');
+  jsCode = jsCode.replace(/(移動|向く|向き|回転|部位回転|掴む|離す|靴を履く|靴を脱ぐ|履く|脱ぐ|右足で履く|左足で履く|右足で脱ぐ|左足で脱ぐ|近くにいない|近くにいる|地点にいない|地点にいる|ヒヨコの近くにいない|ヒヨコの近くにいる|爆弾の近くにいない|爆弾の近くにいる|靴の近くにいない|靴の近くにいる|ヒヨコを持っている)\s*\(/g, 'await picto.$1(');
   
   return jsCode;
 }
 
-function createPictoContext() {
-  const checkStop = () => { if (shouldStop) throw new Error("STOP"); };
+function createPictoContext(isGhost = false) {
+  const checkStop = () => { if (shouldStop || (isGhost && engine.isStopped)) throw new Error("STOP"); };
+  const logCmd = (msg) => { if (!isGhost) addLog(msg, "", false); };
+  const recCmd = (msg) => { if (!isGhost) recordEventState(msg); };
   let loopSteps = 0;
+  let didActionInLoop = false;
 
   return {
     移動: async (val) => {
       checkStop();
       if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("移動の引数は数字である必要があります");
+      didActionInLoop = true;
       const msg = `移動(${val});`;
-      addLog(msg, "", false);
+      logCmd(msg);
       try {
         await engine.animateMove(val);
       } finally {
-        recordEventState(msg);
+        recCmd(msg);
       }
     },
     向く: async (target) => {
       checkStop();
+      didActionInLoop = true;
       if (typeof target === "number" && Number.isFinite(target)) {
         const msg = `向く(${target});`;
-        addLog(msg, "", false);
+        logCmd(msg);
         try {
           await engine.animateFace(target);
         } finally {
-          recordEventState(msg);
+          recCmd(msg);
         }
       } else if (typeof target === "string") {
         const label = target.trim();
         const msg = `向く("${label}");`;
-        addLog(msg, "", false);
+        logCmd(msg);
         try {
           await engine.animateFace(label);
         } finally {
-          recordEventState(msg);
+          recCmd(msg);
         }
       } else {
         throw new Error("向くの引数は地点名(\"A\"など)または角度(数字)である必要があります");
       }
     },
-    回転: async (val) => {
+    向き: async (target) => {
       checkStop();
-      if (typeof val === "string") {
-        const label = val.trim();
+      didActionInLoop = true;
+      if (typeof target === "number" && Number.isFinite(target)) {
+        const msg = `向く(${target});`;
+        logCmd(msg);
+        try {
+          await engine.animateFace(target);
+        } finally {
+          recCmd(msg);
+        }
+      } else if (typeof target === "string") {
+        const label = target.trim();
         const msg = `向く("${label}");`;
-        addLog(msg, "", false);
+        logCmd(msg);
         try {
           await engine.animateFace(label);
         } finally {
-          recordEventState(msg);
+          recCmd(msg);
+        }
+      } else {
+        throw new Error("向きの引数は地点名(\"A\"など)または角度(数字)である必要があります");
+      }
+    },
+    回転: async (val) => {
+      checkStop();
+      didActionInLoop = true;
+      if (typeof val === "string") {
+        const label = val.trim();
+        const msg = `向く("${label}");`;
+        logCmd(msg);
+        try {
+          await engine.animateFace(label);
+        } finally {
+          recCmd(msg);
         }
         return;
       }
       if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("回転の引数は数字である必要があります");
       const msg = `向く(${val});`;
-      addLog(msg, "", false);
+      logCmd(msg);
       try {
         await engine.animateTurn(val);
       } finally {
-        recordEventState(msg);
+        recCmd(msg);
       }
     },
     部位回転: async (part, val) => {
       checkStop();
+      didActionInLoop = true;
       if (typeof part !== "string") throw new Error("部位回転の第1引数は部位の名前(文字列)である必要があります");
       if (typeof val !== "number" || !Number.isFinite(val)) throw new Error("部位回転の第2引数は数字である必要があります");
       
@@ -1461,121 +1928,131 @@ function createPictoContext() {
       if (!realPart) throw new Error(`"${label}"は使えない部位名です`);
       
       const msg = `部位回転("${realPart}", ${val});`;
-      addLog(msg, "", false);
+      logCmd(msg);
       try {
         await engine.animatePartRotate(realPart, val);
       } finally {
-        recordEventState(msg);
+        recCmd(msg);
       }
     },
     "掴む": async function() {
       checkStop();
+      didActionInLoop = true;
       const msg = "掴む();";
-      addLog(msg, "", false);
+      logCmd(msg);
       try {
         engine.grabItem();
         await new Promise(r => setTimeout(r, 100));
       } finally {
-        recordEventState(msg);
+        recCmd(msg);
       }
     },
     "離す": async function() {
       checkStop();
+      didActionInLoop = true;
       const msg = "離す();";
-      addLog(msg, "", false);
+      logCmd(msg);
       try {
         engine.releaseItem();
         await new Promise(r => setTimeout(r, 100));
       } finally {
-        recordEventState(msg);
+        recCmd(msg);
       }
     },
     "靴を履く": async function() {
       checkStop();
+      didActionInLoop = true;
       const msg = "靴を履く();";
-      addLog(msg, "", false);
+      logCmd(msg);
       try {
         engine.equipShoe();
         await new Promise(r => setTimeout(r, 100));
       } finally {
-        recordEventState(msg);
+        recCmd(msg);
       }
     },
     "履く": async function() {
       checkStop();
+      didActionInLoop = true;
       const msg = "靴を履く();";
-      addLog(msg, "", false);
+      logCmd(msg);
       try {
         engine.equipShoe();
         await new Promise(r => setTimeout(r, 100));
       } finally {
-        recordEventState(msg);
+        recCmd(msg);
       }
     },
     "靴を脱ぐ": async function() {
       checkStop();
+      didActionInLoop = true;
       const msg = "靴を脱ぐ();";
-      addLog(msg, "", false);
+      logCmd(msg);
       try {
         engine.unequipShoe();
         await new Promise(r => setTimeout(r, 100));
       } finally {
-        recordEventState(msg);
+        recCmd(msg);
       }
     },
     "脱ぐ": async function() {
       checkStop();
+      didActionInLoop = true;
       const msg = "靴を脱ぐ();";
-      addLog(msg, "", false);
+      logCmd(msg);
       try {
         engine.unequipShoe();
         await new Promise(r => setTimeout(r, 100));
       } finally {
-        recordEventState(msg);
+        recCmd(msg);
       }
     },
     "右足で履く": async function() {
       checkStop();
+      didActionInLoop = true;
       const msg = "靴を履く();";
-      addLog(msg, "", false);
+      logCmd(msg);
       try {
         engine.equipShoe();
         await new Promise(r => setTimeout(r, 100));
       } finally {
-        recordEventState(msg);
+        recCmd(msg);
       }
     },
     "左足で履く": async function() {
       checkStop();
+      didActionInLoop = true;
       const msg = "靴を履く();";
-      addLog(msg, "", false);
+      logCmd(msg);
       try {
         engine.equipShoe();
         await new Promise(r => setTimeout(r, 100));
       } finally {
-        recordEventState(msg);
+        recCmd(msg);
       }
     },
     "右足で脱ぐ": async function() {
       checkStop();
+      didActionInLoop = true;
       const msg = "靴を脱ぐ();";
-      addLog(msg, "", false);
+      logCmd(msg);
       try {
         engine.unequipShoe();
         await new Promise(r => setTimeout(r, 100));
       } finally {
-        recordEventState(msg);
+        recCmd(msg);
       }
     },
     "左足で脱ぐ": async function() {
       checkStop();
+      didActionInLoop = true;
       const msg = "靴を脱ぐ();";
-      addLog(msg, "", false);
+      logCmd(msg);
       try {
         engine.unequipShoe();
         await new Promise(r => setTimeout(r, 100));
       } finally {
-        recordEventState(msg);
+        recCmd(msg);
       }
     },
     "近くにいる": async function(label) {
@@ -1624,15 +2101,19 @@ function createPictoContext() {
       return items.some(it => it && it.attachedTo !== null);
     },
     yield: async function() {
-      if (shouldStop) throw new Error("STOP");
+      if (shouldStop || (isGhost && engine.isStopped)) throw new Error("STOP");
       loopSteps++;
       if (loopSteps > 250) {
         throw new Error("繰り返しが多すぎるため自動停止しました（条件や向きを確認してください）");
       }
-      while (engine.isPaused && !shouldStop) {
+      while (engine.isPaused && !shouldStop && !(isGhost && engine.isStopped)) {
         await new Promise(r => setTimeout(r, 50));
       }
-      await new Promise(r => setTimeout(r, 1));
+      if (didActionInLoop) {
+        didActionInLoop = false;
+      } else {
+        await new Promise(r => setTimeout(r, 1));
+      }
       checkStop();
     }
   };
@@ -1805,9 +2286,102 @@ if (btnDeleteAllLogs) {
 }
 
 // --- 5段階インタラクティブ・チュートリアル制御（tut1, tut4, tut7, tut9, tut10） ---
-const TUTORIAL_BOUNDARY_STAGES = new Set(["stage1", "stage4", "stage7", "stage9", "stage10"]);
-let tutorialReturnStageId = "stage1";
-let tutorialSavedCode = null;
+
+function renderTutorialReferenceCode(tutKey) {
+  const displayEl = document.getElementById("tut-code-display");
+  const pillsContainer = document.getElementById("tut-code-pills");
+  if (!displayEl) return;
+
+  if (pillsContainer) {
+    pillsContainer.querySelectorAll(".tut-pill-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.getAttribute("data-tut") === tutKey);
+    });
+  }
+
+  const items = TUTORIAL_REFERENCE_CODES[tutKey] || TUTORIAL_REFERENCE_CODES.tut1;
+  displayEl.innerHTML = items.map((item, idx) => {
+    const encoded = encodeURIComponent(item.code);
+    return `
+      <div class="tut-code-card">
+        <div class="tut-code-card-header">
+          <span>${item.title}</span>
+          <button type="button" class="tut-code-copy-btn" data-code="${encoded}">コピー</button>
+        </div>
+        <pre class="tut-code-pre">${item.code}</pre>
+      </div>
+    `;
+  }).join("");
+
+  displayEl.querySelectorAll(".tut-code-copy-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const code = decodeURIComponent(btn.getAttribute("data-code") || "");
+      navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = "コピー完了!";
+        setTimeout(() => {
+          btn.textContent = "コピー";
+        }, 1500);
+      });
+    });
+  });
+}
+
+function setHelpTab(tabName) {
+  const tabBtnCommands = document.getElementById("tab-btn-commands");
+  const tabBtnTutCodes = document.getElementById("tab-btn-tut-codes");
+  const panelCommands = document.getElementById("help-panel-commands");
+  const panelTutCodes = document.getElementById("help-panel-tut-codes");
+  if (!tabBtnCommands || !tabBtnTutCodes || !panelCommands || !panelTutCodes) return;
+
+  const isTut = tabName === "tut";
+  tabBtnCommands.classList.toggle("active", !isTut);
+  tabBtnTutCodes.classList.toggle("active", isTut);
+  panelCommands.hidden = isTut;
+  panelTutCodes.hidden = !isTut;
+}
+
+function syncTutorialReferenceCodeForStage(stageId) {
+  const tutKey = getTutorialKeyForStage(stageId);
+  renderTutorialReferenceCode(tutKey);
+}
+
+const tabBtnCommandsEl = document.getElementById("tab-btn-commands");
+const tabBtnTutCodesEl = document.getElementById("tab-btn-tut-codes");
+const btnOpenTutCodeEl = document.getElementById("btn-open-tut-code");
+const tutCodePillsEl = document.getElementById("tut-code-pills");
+
+if (tabBtnCommandsEl) {
+  tabBtnCommandsEl.addEventListener("click", () => setHelpTab("commands"));
+}
+if (tabBtnTutCodesEl) {
+  tabBtnTutCodesEl.addEventListener("click", () => {
+    syncTutorialReferenceCodeForStage(stageSelect ? stageSelect.value : "stage1");
+    setHelpTab("tut");
+  });
+}
+if (btnOpenTutCodeEl) {
+  btnOpenTutCodeEl.addEventListener("click", () => {
+    const panelTutCodes = document.getElementById("help-panel-tut-codes");
+    if (panelTutCodes && !panelTutCodes.hidden) {
+      setHelpTab("commands");
+    } else {
+      syncTutorialReferenceCodeForStage(stageSelect ? stageSelect.value : "stage1");
+      setHelpTab("tut");
+      const helpEl = document.querySelector(".command-help");
+      if (helpEl && helpEl.scrollIntoView) {
+        helpEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+  });
+}
+if (tutCodePillsEl) {
+  tutCodePillsEl.querySelectorAll(".tut-pill-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tutKey = btn.getAttribute("data-tut") || "tut1";
+      renderTutorialReferenceCode(tutKey);
+    });
+  });
+}
+syncTutorialReferenceCodeForStage(stageSelect ? stageSelect.value : "stage1");
 
 function getTutorialKeyForStage(stageId) {
   if (stageId === "stage1" || stageId === "stage2" || stageId === "stage3" || stageId === "tut1") return "tut1";
@@ -1820,6 +2394,19 @@ function getTutorialKeyForStage(stageId) {
 
 function closeTutorialOverlayOnly() {
   const overlay = document.getElementById('tutorial-wrapper');
+  if (tutorialInitTimer) {
+    clearTimeout(tutorialInitTimer);
+    tutorialInitTimer = null;
+  }
+  if (tutorialAdvanceTimer) {
+    clearTimeout(tutorialAdvanceTimer);
+    tutorialAdvanceTimer = null;
+  }
+  if (activeTutorialScrollHandler) {
+    window.removeEventListener('scroll', activeTutorialScrollHandler, true);
+    window.removeEventListener('resize', activeTutorialScrollHandler);
+    activeTutorialScrollHandler = null;
+  }
   if (window.tutorialOnTopElements) {
     window.tutorialOnTopElements.forEach(el => {
       el.classList.remove('tutorial-on-top');
@@ -1828,26 +2415,21 @@ function closeTutorialOverlayOnly() {
     window.tutorialOnTopElements = null;
   }
   if (runButton) runButton.classList.remove('tutorial-action-target');
+  if (stageSelect) stageSelect.disabled = false;
   if (overlay) overlay.hidden = true;
   tutorialAdvanceCheck = null;
 }
 
 function buildTutorialSteps(tutKey) {
-  const runOnTop = ['#btn-run', '#java-editor', '.stage-frame', '.log-panel'];
+  const runOnTop = ['.app-header', '#btn-run', '#java-editor', '.stage-frame', '.log-panel'];
 
   if (tutKey === "tut1") {
     return [
       {
-        target: 'java-editor',
-        onTopElements: ['.stage-frame'],
-        pos: 'left',
-        text: 'プログラムを書いて、ピクトグラムを GOAL まで動かす練習をしましょう。'
-      },
-      {
         target: 'btn-run',
         onTopElements: runOnTop,
         pos: 'bottom',
-        text: '「移動(270);」を入力しました。\n【実行】を押して、矢印の向き（上）へ進めてみましょう。',
+        text: 'プログラムでピクトグラムを GOAL まで動かす練習をしましょう。\n「移動(270);」を入力しました。【実行】を押して、矢印の向き（上）へ進めてみましょう。',
         codeToAdd: '// 矢印の向きへ進みます\n移動(270);',
         replaceCode: true,
         waitForRun: true,
@@ -1858,8 +2440,8 @@ function buildTutorialSteps(tutKey) {
         onTopElements: runOnTop,
         pos: 'bottom',
         text: '「向く(-90);」で左を向き、「移動(200);」で GOAL へ進みます。\nもう一度【実行】を押してください。',
-        codeToAdd: '// 左へ向きを変えてゴールへ進みます\n向く(-90);\n移動(200);',
-        keyword: '向く(-90)',
+        codeToAdd: '// 矢印の向きへ進みます\n移動(270);\n// 左へ向きを変えてゴールへ進みます\n向く(-90);\n移動(200);',
+        replaceCode: true,
         waitForRun: true,
         checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
       },
@@ -1873,7 +2455,7 @@ function buildTutorialSteps(tutKey) {
         target: 'btn-show-hint',
         onTopElements: ['.stage-frame'],
         pos: 'bottom',
-        text: '迷ったときは、1回以上【実行】したあとに「💡 ヒントを見る」から他の人の動きを参考にできます。'
+        text: '迷ったときは、自分でプログラムを書いて1回以上【実行】したあとに「💡 ヒントを見る」から他の人の動きを参考にできます。'
       }
     ];
   }
@@ -1881,16 +2463,10 @@ function buildTutorialSteps(tutKey) {
   if (tutKey === "tut4") {
     return [
       {
-        target: 'java-editor',
-        onTopElements: ['.stage-frame'],
-        pos: 'left',
-        text: 'ここからは「ヒヨコ」を掴んで、GOAL の中で離すとクリアになります。'
-      },
-      {
         target: 'btn-run',
         onTopElements: runOnTop,
         pos: 'bottom',
-        text: 'ヒヨコの横まで進み、「部位回転("右腕", -60);」で右腕を振って掴みます。\n【実行】を押してみましょう。',
+        text: 'ここからは「ヒヨコ」を掴んで、GOAL の中で離すとクリアになります。\n「部位回転("右腕", -60);」で右腕を振って掴みます。【実行】を押してみましょう。',
         codeToAdd: '// ヒヨコの横まで進んで、右腕で掴みます\n移動(160);\n部位回転("右腕", -60);',
         replaceCode: true,
         waitForRun: true,
@@ -1901,8 +2477,8 @@ function buildTutorialSteps(tutKey) {
         onTopElements: runOnTop,
         pos: 'bottom',
         text: 'ヒヨコを掴めました。続けて右を向いて GOAL まで運び、「離す();」で置きます。\n【実行】を押してください。',
-        codeToAdd: '// 右を向いてゴールまで運び、離します\n向く(90);\n移動(260);\n離す();',
-        keyword: '離す()',
+        codeToAdd: '// ヒヨコの横まで進んで、右腕で掴みます\n移動(160);\n部位回転("右腕", -60);\n// 右を向いてゴールまで運び、離します\n向く(90);\n移動(260);\n離す();',
+        replaceCode: true,
         waitForRun: true,
         checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
       },
@@ -1910,7 +2486,7 @@ function buildTutorialSteps(tutKey) {
         target: 'java-editor',
         onTopElements: ['.stage-frame'],
         pos: 'left',
-        text: 'ヒヨコを GOAL まで運ぶことができました。\n次のステージからも、同じようにヒヨコを届けてみましょう。'
+        text: 'ヒヨコを GOAL まで運ぶことができました。\nチュートリアルのコードは画面右下の「📘 チュートリアルのコード」からいつでも見返せます。'
       }
     ];
   }
@@ -1994,7 +2570,7 @@ function buildTutorialSteps(tutKey) {
       onTopElements: runOnTop,
       pos: 'bottom',
       text: '💥 爆発してしまいました。\n「もし (近くにいる("ヒヨコ"))」で確かめてから掴むプログラムに変えました。【実行】を押してみましょう。',
-      codeToAdd: '// 「もし」でヒヨコがいるか確かめてから掴みます\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\nもし (近くにいる("ヒヨコ")) {\n  部位回転("右腕", -60);\n} そうでなければ {\n  向く("E");\n  while (近くにいない("E")) {\n    移動(30);\n  }\n  部位回転("右腕", -60);\n}\n向く("D");\nwhile (近くにいない("ゴール")) {\n  移動(30);\n}\n離す();',
+      codeToAdd: '// 「もし」でヒヨコがいるか確かめてから掴みます\n向く("B");\nwhile (近くにいない("B")) {\n  移動(30);\n}\nもし (近くにいる("ヒヨコ")) {\n  部位回転("右腕", -60);\n} そうでなければ {\n  向く("E");\n  while (近くにいない("E")) {\n    移動(30);\n  }\n  部位回転("右腕", -60);\n}\n向く("F");\nwhile (近くにいない("ゴール")) {\n  移動(30);\n}\n離す();',
       replaceCode: true,
       waitForRun: true,
       checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
@@ -2003,7 +2579,7 @@ function buildTutorialSteps(tutKey) {
       target: 'stage8-test-selector',
       onTopElements: ['.stage-frame'],
       pos: 'bottom',
-      text: 'ここの「パターン1」「パターン2」で配置を切り替えられます。\nどちらのパターンでもクリアできるプログラムを作ってみましょう。'
+      text: 'ステージ10では、【実行】や【ヒントを見る】を押すと「パターン1」と「パターン2」が順番に自動実行されます。\nどちらのパターンでもクリアできるプログラムを作ってみましょう。'
     }
   ];
 }
@@ -2015,7 +2591,7 @@ function startTutorialForStage(targetStageId, force = false) {
   const tutKey = getTutorialKeyForStage(mainStageId);
   const storageKey = 'pict_tut_done_' + tutKey;
 
-  if (!force && localStorage.getItem(storageKey)) {
+  if (!force && safeGetStorage(storageKey)) {
     return;
   }
 
@@ -2050,8 +2626,8 @@ function startTutorialForStage(targetStageId, force = false) {
 
   function finishTutorial() {
     closeTutorialOverlayOnly();
-    localStorage.setItem(storageKey, 'true');
-    localStorage.setItem('tutorialCompleted', 'true');
+    safeSetStorage(storageKey, 'true');
+    safeSetStorage('tutorialCompleted', 'true');
 
     if (stageSelect) {
       stageSelect.value = tutorialReturnStageId;
@@ -2073,6 +2649,75 @@ function startTutorialForStage(targetStageId, force = false) {
     tutorialSavedCode = null;
   }
 
+  let activeStepEl = null;
+  let activeStepCfg = null;
+
+  function updateTutorialPosition(immediate = false) {
+    if (!activeStepEl || !activeStepCfg || overlay.hidden) return;
+    const rect = activeStepEl.getBoundingClientRect();
+    const pad = 10;
+
+    if (immediate) {
+      highlight.style.transition = 'none';
+      bubble.style.transition = 'none';
+    } else {
+      highlight.style.transition = '';
+      bubble.style.transition = '';
+    }
+
+    highlight.style.top = (rect.top - pad) + 'px';
+    highlight.style.left = (rect.left - pad) + 'px';
+    highlight.style.width = (rect.width + pad * 2) + 'px';
+    highlight.style.height = (rect.height + pad * 2) + 'px';
+
+    const targetCenterX = rect.left + rect.width / 2;
+    const targetCenterY = rect.top + rect.height / 2;
+    let bubbleTop = 16;
+    let bubbleLeft = 16;
+
+    if (activeStepCfg.pos === 'right') {
+      bubbleTop = Math.max(16, rect.top + 20);
+      bubbleLeft = rect.right + pad + 18;
+    } else if (activeStepCfg.pos === 'left') {
+      bubbleTop = Math.max(16, rect.top + 20);
+      bubbleLeft = Math.max(16, rect.left - bubble.offsetWidth - pad - 18);
+    } else if (activeStepCfg.pos === 'top') {
+      bubbleTop = Math.max(16, rect.top - bubble.offsetHeight - pad - 18);
+      bubbleLeft = targetCenterX - bubble.offsetWidth / 2;
+    } else if (activeStepCfg.pos === 'bottom') {
+      bubbleTop = rect.bottom + pad + 18;
+      bubbleLeft = targetCenterX - bubble.offsetWidth / 2;
+    }
+
+    // 画面端からはみ出さないようにクランプしつつ、ターゲット要素（特に実行ボタン）と絶対に重ならないようにする
+    bubbleLeft = Math.max(16, Math.min(window.innerWidth - bubble.offsetWidth - 16, bubbleLeft));
+    if (activeStepCfg.pos === 'bottom') {
+      // 下配置の場合は常にターゲットの下端より下に配置し、実行ボタンの上に被さらないようにする
+      bubbleTop = Math.max(rect.bottom + pad + 14, bubbleTop);
+    } else if (activeStepCfg.pos === 'top') {
+      bubbleTop = Math.min(rect.top - bubble.offsetHeight - pad - 14, Math.max(16, bubbleTop));
+    } else {
+      bubbleTop = Math.max(16, Math.min(window.innerHeight - bubble.offsetHeight - 16, bubbleTop));
+    }
+
+    bubble.style.top = bubbleTop + 'px';
+    bubble.style.left = bubbleLeft + 'px';
+
+    // 吹き出しのしっぽ（三角形）がターゲットの中央を正確に指すようCSS変数を設定
+    const arrowLeft = Math.max(18, Math.min(bubble.offsetWidth - 38, targetCenterX - bubbleLeft - 10));
+    const arrowTop = Math.max(18, Math.min(bubble.offsetHeight - 38, targetCenterY - bubbleTop - 10));
+    bubble.style.setProperty('--arrow-left', arrowLeft + 'px');
+    bubble.style.setProperty('--arrow-top', arrowTop + 'px');
+  }
+
+  if (activeTutorialScrollHandler) {
+    window.removeEventListener('scroll', activeTutorialScrollHandler, true);
+    window.removeEventListener('resize', activeTutorialScrollHandler);
+  }
+  activeTutorialScrollHandler = () => updateTutorialPosition(true);
+  window.addEventListener('scroll', activeTutorialScrollHandler, true);
+  window.addEventListener('resize', activeTutorialScrollHandler);
+
   function showStep(index) {
     if (index >= steps.length) {
       finishTutorial();
@@ -2088,13 +2733,8 @@ function startTutorialForStage(targetStageId, force = false) {
       return;
     }
 
-    const rect = el.getBoundingClientRect();
-    const pad = 10;
-
-    highlight.style.top = (rect.top - pad) + 'px';
-    highlight.style.left = (rect.left - pad) + 'px';
-    highlight.style.width = (rect.width + pad * 2) + 'px';
-    highlight.style.height = (rect.height + pad * 2) + 'px';
+    activeStepEl = el;
+    activeStepCfg = step;
 
     text.style.whiteSpace = 'pre-line';
     text.textContent = step.text;
@@ -2121,6 +2761,12 @@ function startTutorialForStage(targetStageId, force = false) {
     }
 
     if (step.waitForRun) {
+      isRunning = false;
+      shouldStop = false;
+      if (runButton) {
+        runButton.disabled = false;
+        runButton.textContent = "実行";
+      }
       el.classList.add('tutorial-action-target');
       nextBtn.style.display = 'none';
       if (step.codeToAdd !== undefined) {
@@ -2145,55 +2791,39 @@ function startTutorialForStage(targetStageId, force = false) {
       nextBtn.textContent = (index === steps.length - 1) ? 'ステージへ進む ▶' : '次へ';
     }
 
+    updateTutorialPosition(true);
     setTimeout(() => {
-      const targetCenterX = rect.left + rect.width / 2;
-      const targetCenterY = rect.top + rect.height / 2;
-      let bubbleTop = 16;
-      let bubbleLeft = 16;
-
-      if (step.pos === 'right') {
-        bubbleTop = Math.max(16, rect.top + 20);
-        bubbleLeft = rect.right + pad + 18;
-      } else if (step.pos === 'left') {
-        bubbleTop = Math.max(16, rect.top + 20);
-        bubbleLeft = Math.max(16, rect.left - bubble.offsetWidth - pad - 18);
-      } else if (step.pos === 'top') {
-        bubbleTop = Math.max(16, rect.top - bubble.offsetHeight - pad - 18);
-        bubbleLeft = targetCenterX - bubble.offsetWidth / 2;
-      } else if (step.pos === 'bottom') {
-        bubbleTop = rect.bottom + pad + 14;
-        bubbleLeft = targetCenterX - bubble.offsetWidth / 2;
-      }
-
-      // 画面端からはみ出さないようにクランプ
-      bubbleLeft = Math.max(16, Math.min(window.innerWidth - bubble.offsetWidth - 16, bubbleLeft));
-      bubbleTop = Math.max(16, Math.min(window.innerHeight - bubble.offsetHeight - 16, bubbleTop));
-
-      bubble.style.top = bubbleTop + 'px';
-      bubble.style.left = bubbleLeft + 'px';
-
-      // 吹き出しのしっぽ（三角形）がターゲットの中央を正確に指すようCSS変数を設定
-      const arrowLeft = Math.max(18, Math.min(bubble.offsetWidth - 38, targetCenterX - bubbleLeft - 10));
-      const arrowTop = Math.max(18, Math.min(bubble.offsetHeight - 38, targetCenterY - bubbleTop - 10));
-      bubble.style.setProperty('--arrow-left', arrowLeft + 'px');
-      bubble.style.setProperty('--arrow-top', arrowTop + 'px');
-    }, 10);
+      updateTutorialPosition(false);
+    }, 20);
   }
 
   tutorialAdvanceCheck = () => {
     if (overlay.hidden) return;
     const step = steps[currentStep];
     if (step && step.waitForRun && step.checkCondition) {
-      setTimeout(() => {
-        if (!overlay.hidden && step.checkCondition()) {
-          currentStep++;
-          showStep(currentStep);
-        }
-      }, 900);
+      const passed = step.checkCondition();
+      if (passed) {
+        if (tutorialAdvanceTimer) clearTimeout(tutorialAdvanceTimer);
+        tutorialAdvanceTimer = setTimeout(() => {
+          tutorialAdvanceTimer = null;
+          if (!overlay.hidden) {
+            currentStep++;
+            showStep(currentStep);
+          }
+        }, 450);
+      } else if (step.codeToAdd && editor) {
+        // 万一チュートリアル中にコードが書き換えられて条件未達になった場合、正しいサンプルコードを再セットしてすぐ再実行できるようにする
+        editor.value = step.codeToAdd;
+      }
     }
   };
 
   // 専用疑似ステージ（tut1 / tut4 / tut7 / tut9 / tut10）をロード
+  if (tutorialInitTimer) {
+    clearTimeout(tutorialInitTimer);
+    tutorialInitTimer = null;
+  }
+  if (stageSelect) stageSelect.disabled = true;
   engine.loadStage(tutKey);
   clearOutput();
   updateShoeUI();
@@ -2205,7 +2835,7 @@ function startTutorialForStage(targetStageId, force = false) {
   }
 
   overlay.hidden = false;
-  setTimeout(() => { showStep(0); }, 200);
+  showStep(0);
 
   nextBtn.onclick = () => {
     currentStep++;
@@ -2223,16 +2853,16 @@ function startTutorialForStage(targetStageId, force = false) {
 function maybeStartAutoTutorial(stageId) {
   if (!TUTORIAL_BOUNDARY_STAGES.has(stageId)) return;
   const tutKey = getTutorialKeyForStage(stageId);
-  if (!localStorage.getItem('pict_tut_done_' + tutKey)) {
+  if (!safeGetStorage('pict_tut_done_' + tutKey)) {
     startTutorialForStage(stageId, false);
   }
 }
 
 // 初回アクセス時（ステージ1などを初めて開いたとき）に該当チュートリアルを自動表示
-setTimeout(() => {
+requestAnimationFrame(() => {
   const initialStage = stageSelect ? stageSelect.value : "stage1";
   maybeStartAutoTutorial(initialStage);
-}, 400);
+});
 
 // ヘッダーの「チュートリアル」ボタンを押したときは現在のステージ区分に応じたチュートリアルを表示
 const btnStartTutorial = document.getElementById("btn-start-tutorial");
