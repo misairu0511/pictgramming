@@ -152,11 +152,11 @@ const STAGE_INFO = {
   },
   tut4: {
     title: "📘 チュートリアル②：ヒヨコを掴んで運ぶ（ステージ4〜6）",
-    goal: "🎯 練習：ヒヨコの横まで進んで右腕で掴み、GOAL の中で離しましょう"
+    goal: "🎯 練習：ヒヨコの近くまで進んで掴み（部位回転 または 掴む）、GOAL の中で離しましょう"
   },
   tut7: {
     title: "📘 チュートリアル③：靴と針山（ステージ7〜8）",
-    goal: "🎯 練習：右足を回して靴を履き、赤い針山を越えて GOAL へ進みましょう"
+    goal: "🎯 練習：靴を履いて（部位回転 または 靴を履く／履く）、赤い針山を越えて GOAL へ進みましょう"
   },
   tut9: {
     title: "📘 チュートリアル④：複数のヒヨコと「繰り返し」（ステージ9）",
@@ -404,7 +404,7 @@ if (stageSelect) {
       stopButton.disabled = true;
       pauseButton.disabled = true;
       pauseButton.textContent = "一時停止";
-      resetButton.disabled = false;
+      if (resetButton) resetButton.disabled = false;
       
       // アニメーションループが停止するのを少し待ってからステージを切り替える
       setTimeout(applyStageSwitch, 150);
@@ -431,8 +431,12 @@ const TUTORIAL_REFERENCE_CODES = {
   ],
   tut4: [
     {
-      title: "チュートリアル②：ヒヨコを掴んで運ぶ（ステージ4〜6）",
-      code: `// ヒヨコの横まで進んで、右腕で掴みます\n移動(160);\n部位回転("右腕", -60);\n// 右を向いてゴールまで運び、離します\n向く(90);\n移動(260);\n離す();`
+      title: "チュートリアル②（方法1）：部位回転でヒヨコを掴む例",
+      code: `// ヒヨコの横まで進んで、右腕を回して掴みます\n移動(160);\n部位回転("右腕", -60);\n// 右を向いてゴールまで運び、離します\n向く(90);\n移動(260);\n離す();`
+    },
+    {
+      title: "チュートリアル②（方法2）：「掴む();」でヒヨコを掴む例",
+      code: `// 手がヒヨコに届く位置まで進んで「掴む();」で掴みます\n移動(200);\n掴む();\n// 右を向いてゴールまで運び、離します\n向く(90);\n移動(260);\n離す();`
     },
     {
       title: "地点（A〜F）へ向かって移動する例（ステージ5〜）",
@@ -441,8 +445,12 @@ const TUTORIAL_REFERENCE_CODES = {
   ],
   tut7: [
     {
-      title: "チュートリアル③：靴を履いて針山を越える（ステージ7〜8）",
+      title: "チュートリアル③（方法1）：部位回転で靴を履く例",
       code: `// 右足を回して靴を履き、針山を越えて進みます\n移動(120);\n部位回転("右足", -60);\n移動(220);`
+    },
+    {
+      title: "チュートリアル③（方法2）：「靴を履く();」／「履く();」で履く例",
+      code: `// 靴の近くまで進んで「靴を履く();」（または「履く();」）で履きます\n移動(120);\n靴を履く();\n移動(220);`
     }
   ],
   tut9: [
@@ -766,10 +774,12 @@ pauseButton.addEventListener("click", () => {
     addLog("一時停止中...", "info");
   }
 });
-resetButton.addEventListener("click", () => {
-  if (isRunning) return;
-  clearOutput();
-});
+if (resetButton) {
+  resetButton.addEventListener("click", () => {
+    if (isRunning) return;
+    clearOutput();
+  });
+}
 clearStageButton.addEventListener("click", () => {
   if (isRunning) return;
   clearOutput();
@@ -1033,7 +1043,7 @@ async function playHintLog(targetLog, stageId) {
   stopButton.disabled = false;
   pauseButton.disabled = false;
   pauseButton.textContent = "一時停止";
-  resetButton.disabled = true;
+  if (resetButton) resetButton.disabled = true;
 
   try {
     if (stageId === "stage10") {
@@ -1097,7 +1107,7 @@ async function playHintLog(targetLog, stageId) {
     stopButton.disabled = true;
     pauseButton.disabled = true;
     pauseButton.textContent = "一時停止";
-    resetButton.disabled = false;
+    if (resetButton) resetButton.disabled = false;
   }
 }
 
@@ -1468,7 +1478,7 @@ async function runProgram() {
   stopButton.disabled = false;
   pauseButton.disabled = false;
   pauseButton.textContent = "一時停止";
-  resetButton.disabled = true;
+  if (resetButton) resetButton.disabled = true;
 
   currentLogSession = {
     sourceCode: source,
@@ -1600,7 +1610,7 @@ async function runProgram() {
     stopButton.disabled = true;
     pauseButton.disabled = true;
     pauseButton.textContent = "一時停止";
-    resetButton.disabled = false;
+    if (resetButton) resetButton.disabled = false;
 
     if (currentLogSession) {
       currentLogSession.userId = userId;
@@ -2180,7 +2190,7 @@ function showPartTooltip(event) {
     return;
   }
 
-  partTooltip.textContent = `${part.ja}: "${part.code}"`;
+  partTooltip.textContent = `"${part.ja}"`;
   partTooltip.style.left = `${event.clientX - rect.left + 14}px`;
   partTooltip.style.top = `${event.clientY - rect.top + 14}px`;
   partTooltip.hidden = false;
@@ -2421,41 +2431,71 @@ function closeTutorialOverlayOnly() {
 }
 
 function buildTutorialSteps(tutKey) {
-  const runOnTop = ['.app-header', '#btn-run', '#java-editor', '.stage-frame', '.log-panel'];
+  const runOnTop = ['#btn-run', '#java-editor', '.stage-frame', '.log-panel'];
 
   if (tutKey === "tut1") {
     return [
       {
+        target: 'stage-canvas',
+        onTopElements: ['.stage-frame'],
+        pos: 'right',
+        text: '「ピクトグラミング」へようこそ！\n青い人型が「ピクトグラム」で、青い矢印（▶）が「今向いている方向」です。\n緑色の「GOAL」まで動かすとクリアになります（画面右下に移動の目安を表示しています）。'
+      },
+      {
+        target: 'stage-goal-banner',
+        onTopElements: ['#stage-goal-banner', '.stage-frame'],
+        pos: 'bottom',
+        text: '各ステージのクリア条件は「🎯 目標」に書かれています。'
+      },
+      {
+        target: 'java-editor',
+        onTopElements: ['#java-editor', '.editor-toolbar'],
+        pos: 'left',
+        text: '右側の黒い入力欄が、ピクトグラムへの命令（プログラム）を書く場所です。\n矢印ボタンで「元に戻す・やり直す」、ゴミ箱ボタンで「全て消去」ができます。'
+      },
+      {
+        target: '.snippet-toolbar',
+        onTopElements: ['.snippet-toolbar', '#java-editor'],
+        pos: 'top',
+        text: '入力欄の下のボタンを押すと、ワンクリックでプログラムに文を追加できます。'
+      },
+      {
+        target: '.command-help',
+        onTopElements: ['.command-help'],
+        pos: 'top',
+        text: '右下の「使える文」では、使える命令の書き方や意味を確認できます。\n「📘 チュートリアルのコード」タブを押すと、チュートリアルのお手本コードを確認できます。'
+      },
+      {
         target: 'btn-run',
         onTopElements: runOnTop,
         pos: 'bottom',
-        text: 'プログラムでピクトグラムを GOAL まで動かす練習をしましょう。\n「移動(270);」を入力しました。【実行】を押して、矢印の向き（上）へ進めてみましょう。',
+        text: '入力欄に「移動(270);」を入力しました。\n【実行】ボタンを押して、矢印の向きへ移動させてみましょう。',
         codeToAdd: '// 矢印の向きへ進みます\n移動(270);',
         replaceCode: true,
         waitForRun: true,
         checkCondition: () => engine.state.y < (engine.canvas.height / 2)
       },
       {
+        target: '.log-panel',
+        onTopElements: ['.log-panel', '.stage-frame'],
+        pos: 'top',
+        text: '左下の「実行結果」には、実行した命令やクリア判定、エラーメッセージが表示されます。\n「履歴を見る」から、過去に実行したプログラムを見返すことができます。'
+      },
+      {
         target: 'btn-run',
         onTopElements: runOnTop,
         pos: 'bottom',
-        text: '「向く(-90);」で左を向き、「移動(200);」で GOAL へ進みます。\nもう一度【実行】を押してください。',
+        text: '続けて「向く(-90);」で左を向き、「移動(200);」で GOAL へ進みます。\nもう一度【実行】を押してください。',
         codeToAdd: '// 矢印の向きへ進みます\n移動(270);\n// 左へ向きを変えてゴールへ進みます\n向く(-90);\n移動(200);',
         replaceCode: true,
         waitForRun: true,
         checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
       },
       {
-        target: 'stage-goal-banner',
-        onTopElements: ['.stage-frame'],
-        pos: 'bottom',
-        text: '各ステージのクリア条件は、ここの「🎯 目標」で確認できます。'
-      },
-      {
         target: 'btn-show-hint',
-        onTopElements: ['.stage-frame'],
+        onTopElements: ['#btn-show-hint', '.stage-frame'],
         pos: 'bottom',
-        text: '迷ったときは、自分でプログラムを書いて1回以上【実行】したあとに「💡 ヒントを見る」から他の人の動きを参考にできます。'
+        text: '見事クリアです！\n解き方に迷ったときは、自分でプログラムを書き足して1回以上【実行】すると、「💡 ヒントを見る」から他の人のクリアの動きを見ることができます。'
       }
     ];
   }
@@ -2463,10 +2503,16 @@ function buildTutorialSteps(tutKey) {
   if (tutKey === "tut4") {
     return [
       {
+        target: 'stage-canvas',
+        onTopElements: ['.stage-frame', '.command-help'],
+        pos: 'right',
+        text: 'ここからは「ヒヨコ」を掴んで、GOAL の中で離すとクリアになります。\nピクトグラムにカーソルを合わせると、"右腕" などの部位名が表示されます。'
+      },
+      {
         target: 'btn-run',
         onTopElements: runOnTop,
         pos: 'bottom',
-        text: 'ここからは「ヒヨコ」を掴んで、GOAL の中で離すとクリアになります。\n「部位回転("右腕", -60);」で右腕を振って掴みます。【実行】を押してみましょう。',
+        text: 'ヒヨコは「部位回転」で腕を当てるか、「掴む();」で掴めます。\nまずは「部位回転("右腕", -60);」で掴んでみましょう。【実行】を押してください。',
         codeToAdd: '// ヒヨコの横まで進んで、右腕で掴みます\n移動(160);\n部位回転("右腕", -60);',
         replaceCode: true,
         waitForRun: true,
@@ -2476,17 +2522,17 @@ function buildTutorialSteps(tutKey) {
         target: 'btn-run',
         onTopElements: runOnTop,
         pos: 'bottom',
-        text: 'ヒヨコを掴めました。続けて右を向いて GOAL まで運び、「離す();」で置きます。\n【実行】を押してください。',
-        codeToAdd: '// ヒヨコの横まで進んで、右腕で掴みます\n移動(160);\n部位回転("右腕", -60);\n// 右を向いてゴールまで運び、離します\n向く(90);\n移動(260);\n離す();',
+        text: '次は手が届く位置まで進んで「掴む();」で掴み、GOAL で「離す();」を使ってみましょう。\n【実行】を押してください。',
+        codeToAdd: '// 手がヒヨコに届く位置まで進んで「掴む();」で掴みます\n移動(200);\n掴む();\n// 右を向いてゴールまで運び、離します\n向く(90);\n移動(260);\n離す();',
         replaceCode: true,
         waitForRun: true,
         checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
       },
       {
         target: 'java-editor',
-        onTopElements: ['.stage-frame'],
+        onTopElements: ['.stage-frame', '.command-help'],
         pos: 'left',
-        text: 'ヒヨコを GOAL まで運ぶことができました。\nチュートリアルのコードは画面右下の「📘 チュートリアルのコード」からいつでも見返せます。'
+        text: 'クリアです！「部位回転」と「掴む();」はどちらを使ってもOKです。\nお手本コードは「📘 チュートリアルのコード」からいつでも確認できます。'
       }
     ];
   }
@@ -2507,8 +2553,18 @@ function buildTutorialSteps(tutKey) {
         target: 'btn-run',
         onTopElements: runOnTop,
         pos: 'bottom',
-        text: '靴を履いていないと、針山は通れません。\n今度は「部位回転("右足", -60);」で靴を履いてから進みます。【実行】を押してください。',
+        text: '靴を履いていないと、針山は通れません。\n靴は「部位回転("右足", -60);」で足を回して触れるか、靴の近くで「靴を履く();」（または「履く();」）を使うと履けます。\nまずは「部位回転」で履いてみましょう。【実行】を押してください。',
         codeToAdd: '// 右足を回して靴を履き、針山を越えて進みます\n移動(120);\n部位回転("右足", -60);\n移動(220);',
+        replaceCode: true,
+        waitForRun: true,
+        checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
+      },
+      {
+        target: 'btn-run',
+        onTopElements: runOnTop,
+        pos: 'bottom',
+        text: '足を回して靴を履けました！\n今度は足を回さずに、「靴を履く();」（「履く();」でも可）を使って靴を履いてみましょう。【実行】を押してください。',
+        codeToAdd: '// 靴の近くまで進んで「靴を履く();」（または「履く();」）で履きます\n移動(120);\n靴を履く();\n移動(220);',
         replaceCode: true,
         waitForRun: true,
         checkCondition: () => engine.evaluateGoalStatus() === "ゴールした"
@@ -2517,7 +2573,7 @@ function buildTutorialSteps(tutKey) {
         target: 'java-editor',
         onTopElements: ['.stage-frame'],
         pos: 'left',
-        text: '靴を履くと、針山の上を通れるようになります。\nステージにあるすべての靴を履いてから、針山を渡ってみましょう。'
+        text: '「部位回転」と「靴を履く();（履く();）」のどちらでも靴を履くことができました！\nステージにあるすべての靴を履いてから、針山を渡ってみましょう。'
       }
     ];
   }
@@ -2612,7 +2668,7 @@ function startTutorialForStage(targetStageId, force = false) {
     stopButton.disabled = true;
     pauseButton.disabled = true;
     pauseButton.textContent = "一時停止";
-    resetButton.disabled = false;
+    if (resetButton) resetButton.disabled = false;
   }
 
   // すでにチュートリアル中でなければ、戻るべきステージと現在のコードを退避
@@ -2725,9 +2781,7 @@ function startTutorialForStage(targetStageId, force = false) {
     }
 
     const step = steps[index];
-    let el = step.target === 'snippet-toolbar'
-      ? document.querySelector('.snippet-toolbar')
-      : document.getElementById(step.target);
+    let el = document.getElementById(step.target) || document.querySelector(step.target);
     if (!el) {
       showStep(index + 1);
       return;

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ピクトグラミング</title>
-  <link rel="stylesheet" href="css/style.css?v=20261117a">
+  <link rel="stylesheet" href="css/style.css?v=20261117b">
 </head>
 <body>
   <header class="app-header">
@@ -61,7 +61,6 @@
         <!-- Execution Group -->
         <div style="display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 2px solid #cbd5e1; border-radius: 8px; background-color: #f8fafc; flex-shrink: 0;">
           <span style="font-size: 13px; font-weight: bold; color: #475569; letter-spacing: -0.5px;">▶ 実行</span>
-          <button class="btn btn-secondary" id="btn-reset" type="button" style="min-width: 64px; height: 34px; padding: 0 8px;">リセット</button>
           <button class="btn btn-secondary" id="btn-pause" type="button" disabled style="min-width: 68px; height: 34px; padding: 0 8px;">一時停止</button>
           <button class="btn btn-secondary" id="btn-stop" type="button" disabled style="min-width: 56px; height: 34px; padding: 0 8px;">停止</button>
           <button class="btn btn-primary" id="btn-run" type="button" style="min-width: 68px; height: 34px; font-weight: bold; font-size: 14px; padding: 0 12px;">実行</button>
@@ -166,7 +165,7 @@
             <li id="help-face-point"><code>向く("A");</code> / <code>向き("A");</code> 地点（<code>A</code>〜<code>F</code>）の方向へ矢印を向ける（<code>""</code> は省略可・ゴールには直接向けません）</li>
             <li id="help-part-rotate" class="unlock-stage4" style="display:none;"><code>部位回転("部位名", 数字);</code> 手足を回す（<code>""</code> 省略可・腕を回してヒヨコに触れると自動で掴みます）</li>
             <li class="unlock-stage4" style="display:none;"><code>掴む();</code> 近くのヒヨコを掴む ／ <code>離す();</code> 持っているヒヨコをその場に離す</li>
-            <li id="shoe-help-1" style="display:none;"><code>靴を履く();</code> 近くの靴を履く（足を部位回転させて靴に触れても履けます。すべての靴を履くと針山を通れます）</li>
+            <li id="shoe-help-1" style="display:none;"><code>靴を履く();</code> / <code>履く();</code> 近くの靴を履く（足を部位回転させて靴に触れても履けます。すべての靴を履くと針山を通れます）</li>
             <li class="unlock-stage5" style="display:none;"><code>while (条件) { ... }</code> 条件を満たしている間、<code>{ }</code> の中を繰り返す（例：<code>while (近くにいない("A")) { 移動(30); }</code>）</li>
             <li class="unlock-stage9" style="display:none;"><code>繰り返し(数字回) { ... }</code> 指定した回数だけ <code>{ }</code> の中を繰り返す</li>
             <li class="unlock-stage10" style="display:none;"><code>もし (条件) { ... } そうでなければ { ... }</code> 条件に合うかどうかで動きを分ける</li>
@@ -257,7 +256,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <script src="js/engine.js?v=20261117a"></script>
-  <script src="js/app.js?v=20261117a"></script>
+  <script src="js/engine.js?v=20261117e"></script>
+  <script src="js/app.js?v=20261117e"></script>
 </body>
 </html>

@@ -155,7 +155,7 @@ const STAGES = {
     initialOffset: { x: 0, y: 150 },
     goalOffset: { x: 0, y: -190 },
     shoes: [
-      { x: 65, y: 70 }
+      { x: 50, y: 98 }
     ],
     needleZone: { x: -2000, y: -90, width: 4000, height: 35 },
     points: COMMON_POINTS
@@ -196,11 +196,11 @@ class PictoEngine {
     this.currentTestCase = 0;
     this.partLabels = {
       head: { ja: "頭", code: "head" },
-      body: { ja: "胴体", code: "body" },
+      body: { ja: "体", code: "body" },
       leftArm: { ja: "左腕", code: "leftArm" },
       rightArm: { ja: "右腕", code: "rightArm" },
-      leftLeg: { ja: "左脚", code: "leftLeg" },
-      rightLeg: { ja: "右脚", code: "rightLeg" },
+      leftLeg: { ja: "左足", code: "leftLeg" },
+      rightLeg: { ja: "右足", code: "rightLeg" },
       leftElbow: { ja: "左肘", code: "leftElbow" },
       rightElbow: { ja: "右肘", code: "rightElbow" },
       leftKnee: { ja: "左膝", code: "leftKnee" },
@@ -832,6 +832,13 @@ class PictoEngine {
       for (const bomb of this.state.bombs) {
         if (this.distance(canvasX, canvasY, bomb.x, bomb.y) <= 35) {
           return "爆弾";
+        }
+      }
+    }
+    if (this.state.hasItem && Array.isArray(this.state.items)) {
+      for (const item of this.state.items) {
+        if (this.distance(canvasX, canvasY, item.x, item.y) <= 35) {
+          return "ヒヨコ";
         }
       }
     }
