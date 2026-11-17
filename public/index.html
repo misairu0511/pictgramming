@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ピクトグラミング</title>
-  <link rel="stylesheet" href="css/style.css?v=20261117b">
+  <title>ピクトグラムコーディング</title>
+  <link rel="stylesheet" href="css/style.css?v=20261117l">
 </head>
 <body>
   <header class="app-header">
     <div class="header-title">
       <span class="logo-mark" aria-hidden="true">P</span>
       <div>
-        <h1>ピクトグラミング</h1>
+        <h1>ピクトグラムコーディング</h1>
       </div>
     </div>
         <div class="header-actions" style="display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 10px;">
@@ -242,10 +242,24 @@
     <div class="tutorial-overlay">
       <div id="tutorial-highlight" class="tutorial-highlight"></div>
     </div>
-    <button id="btn-tutorial-skip" class="btn-tutorial-skip">スキップ</button>
     <div id="tutorial-bubble" class="tutorial-bubble">
-      <p id="tutorial-text"></p>
-      <button id="btn-tutorial-next" class="btn btn-primary">次へ</button>
+      <div id="tutorial-bubble-header" class="tutorial-bubble-header" title="ドラッグして移動できます">
+        <div class="tutorial-step-meta">
+          <span class="tutorial-drag-grip" aria-hidden="true">⠿</span>
+          <span id="tutorial-step-counter" class="tutorial-step-counter">1 / 1</span>
+          <div id="tutorial-step-dots" class="tutorial-step-dots"></div>
+        </div>
+        <button id="btn-tutorial-skip" type="button" class="btn-tutorial-skip">本番へ進む ▶</button>
+      </div>
+      <div id="tutorial-slide-viewport" class="tutorial-slide-viewport">
+        <div id="tutorial-slide-content" class="tutorial-slide-content">
+          <p id="tutorial-text"></p>
+        </div>
+      </div>
+      <div class="tutorial-bubble-nav">
+        <button id="btn-tutorial-prev" type="button" class="btn btn-secondary tutorial-nav-btn">◀ 前へ</button>
+        <button id="btn-tutorial-next" type="button" class="btn btn-primary tutorial-nav-btn">次へ ▶</button>
+      </div>
     </div>
   </div>
 
@@ -256,7 +270,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <script src="js/engine.js?v=20261117e"></script>
-  <script src="js/app.js?v=20261117e"></script>
+  <script src="js/engine.js?v=20261117l"></script>
+  <script src="js/app.js?v=20261117l"></script>
 </body>
 </html>
